@@ -24,7 +24,7 @@ export function OrderDetailPage() {
   const { data: workflow } = useQuery({ queryKey: ['workflow'], queryFn: getWorkflow })
 
   const stateMutation = useMutation({
-    mutationFn: (payload: { kind: WorkflowKind; stateId: string }) => updateOrderState(id!, payload),
+    mutationFn: (payload: { kind: WorkflowKind; stateId: string; link?: string }) => updateOrderState(id!, payload),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['orders'] })
     },
