@@ -38,7 +38,7 @@ export function PublicOrderLinkPage() {
 
   if (isError) {
     return (
-      <div className="mx-auto max-w-md px-6 py-20">
+      <div className="mx-auto max-w-md px-4 py-16 sm:px-6 sm:py-20">
         <Alert>{apiErrorMessage(error)}</Alert>
         <p className="mt-4 text-center text-sm text-slate-500">
           Pedile al negocio que te envíe un link nuevo.
@@ -49,7 +49,7 @@ export function PublicOrderLinkPage() {
 
   if (confirmMutation.isSuccess) {
     return (
-      <div className="mx-auto max-w-md px-6 py-20 text-center">
+      <div className="mx-auto max-w-md px-4 py-16 text-center sm:px-6 sm:py-20">
         <CircleCheck size={56} className="mx-auto text-emerald-600" strokeWidth={1.5} />
         <h1 className="mt-4 text-xl font-bold text-slate-900">¡Pedido confirmado!</h1>
         <p className="mt-2 text-sm text-slate-500">
@@ -66,7 +66,7 @@ export function PublicOrderLinkPage() {
   }
 
   return (
-    <div className="mx-auto max-w-md space-y-5 px-6 py-10">
+    <div className="mx-auto max-w-md space-y-5 px-4 py-8 sm:px-6 sm:py-10">
       <div className="text-center">
         <h1 className="text-lg font-bold text-slate-900">{link?.tenant.name}</h1>
         <p className="text-sm text-slate-500">Confirmá tu pedido</p>
@@ -80,12 +80,14 @@ export function PublicOrderLinkPage() {
           <tbody className="divide-y divide-slate-100">
             {link?.items.map((item, i) => (
               <tr key={i}>
-                <td className="py-2.5">
+                <td className="w-full py-2.5 pr-2 break-words">
                   {item.product.name}
                   {item.variant && <span className="text-slate-500"> · {item.variant}</span>}
                 </td>
-                <td className="py-2.5 text-center text-slate-500">×{item.quantity}</td>
-                <td className="py-2.5 text-right">
+                <td className="py-2.5 pr-2 text-center whitespace-nowrap text-slate-500">
+                  ×{item.quantity}
+                </td>
+                <td className="py-2.5 text-right whitespace-nowrap">
                   {formatCurrency(item.product.price * item.quantity)}
                 </td>
               </tr>
@@ -124,6 +126,9 @@ export function PublicOrderLinkPage() {
           <Field label="Teléfono / WhatsApp" htmlFor="pc-phone">
             <Input
               id="pc-phone"
+              type="tel"
+              inputMode="tel"
+              autoComplete="tel"
               required
               value={customer.phone}
               onChange={(e) => setCustomer({ ...customer, phone: e.target.value })}
@@ -191,7 +196,7 @@ function ExpiryCountdown({ expiresAt }: { expiresAt: string }) {
   const seconds = Math.floor((remaining % 60_000) / 1000)
 
   return (
-    <div className="flex items-center justify-center gap-2 rounded-lg bg-amber-50 px-4 py-2.5 text-center text-sm text-amber-800 ring-1 ring-amber-200">
+    <div className="flex flex-wrap items-center justify-center gap-x-2 gap-y-0.5 rounded-lg bg-amber-50 px-4 py-2.5 text-center text-sm text-amber-800 ring-1 ring-amber-200">
       <Clock size={15} className="shrink-0" />
       Este link vence en{' '}
       <span className="font-mono font-semibold">

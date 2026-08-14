@@ -55,7 +55,7 @@ export function TrackOrderPage() {
 
   if (isError) {
     return (
-      <div className="mx-auto max-w-md px-6 py-20">
+      <div className="mx-auto max-w-md px-4 py-16 sm:px-6 sm:py-20">
         <Alert>{apiErrorMessage(error)}</Alert>
         <p className="mt-4 text-center text-sm text-slate-500">
           Revisá el enlace o pedile uno nuevo al negocio.
@@ -211,9 +211,9 @@ export function TrackOrderPage() {
           )}
 
           {data.deliveryAddress && (
-            <div className="flex justify-between gap-6 border-t border-slate-100 pt-2">
+            <div className="flex justify-between gap-4 border-t border-slate-100 pt-2">
               <dt className="shrink-0 text-slate-500">Entrega</dt>
-              <dd className="text-right">{data.deliveryAddress}</dd>
+              <dd className="min-w-0 text-right break-words">{data.deliveryAddress}</dd>
             </div>
           )}
         </dl>
@@ -314,7 +314,7 @@ export function TrackOrderPage() {
           <img
             src={lightbox.urls[lightbox.index]}
             alt=""
-            className="max-h-[80vh] max-w-[80vw] rounded-xl object-contain shadow-2xl"
+            className="max-h-[75dvh] max-w-[78vw] rounded-xl object-contain shadow-2xl"
           />
 
           {/* Cerrar */}

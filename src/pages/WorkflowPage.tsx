@@ -207,7 +207,7 @@ function SortableStateRow({
             type="button"
             ref={setActivatorNodeRef}
             aria-label={`Reordenar ${state.name}`}
-            className="cursor-grab touch-none rounded p-0.5 text-slate-400 hover:bg-white/60 hover:text-slate-700 active:cursor-grabbing"
+            className="shrink-0 cursor-grab touch-none rounded p-2 text-slate-400 hover:bg-white/60 hover:text-slate-700 active:cursor-grabbing sm:p-1"
             {...attributes}
             {...listeners}
           >
@@ -279,29 +279,38 @@ function StateRow({
     }))
   }
 
+  const tags = [
+    state.isInitial && 'inicial',
+    state.isFinal && 'final',
+    state.notifyCustomer && 'notifica',
+    state.isCancellation && 'cancelación',
+    state.vibrant && 'vibrante',
+    state.requiresLink && 'link',
+  ].filter(Boolean) as string[]
+
   return (
     <div className="rounded-lg" style={{ backgroundColor: `${state.color}12` }}>
-      <div className="flex items-center gap-2 px-2 py-2.5">
-        {dragHandle}
+      <div className="px-2 py-2">
+        <div className="flex items-center gap-2">
+          {dragHandle}
 
-        <StateIcon name={state.icon} size={18} color={state.color} />
-        <span className="font-medium" style={{ color: state.color }}>
-          {state.name}
-        </span>
+          <StateIcon name={state.icon} size={18} color={state.color} />
+          <span className="min-w-0 flex-1 truncate font-medium" style={{ color: state.color }}>
+            {state.name}
+          </span>
 
-        <div className="ml-auto flex items-center gap-1.5 text-xs">
-          {state.isInitial && <Tag>inicial</Tag>}
-          {state.isFinal && <Tag>final</Tag>}
-          {state.notifyCustomer && <Tag>notifica</Tag>}
-          {state.isCancellation && <Tag>cancelación</Tag>}
-          {state.vibrant && <Tag>vibrante</Tag>}
-          {state.requiresLink && <Tag>link</Tag>}
+          {/* En mobile los tags bajan a su propia línea: acá se desbordaban. */}
+          <div className="hidden items-center gap-1.5 text-xs sm:flex">
+            {tags.map((tag) => (
+              <Tag key={tag}>{tag}</Tag>
+            ))}
+          </div>
 
           <button
             type="button"
             aria-label={`Editar ${state.name}`}
             onClick={() => setOpen((v) => !v)}
-            className={`rounded p-1.5 transition-colors ${
+            className={`shrink-0 rounded p-2 transition-colors ${
               open ? 'bg-white text-slate-800' : 'text-slate-500 hover:bg-white hover:text-slate-800'
             }`}
           >
@@ -313,12 +322,20 @@ function StateRow({
               type="button"
               aria-label={`Eliminar ${state.name}`}
               onClick={() => setConfirmingDelete(true)}
-              className="rounded p-1.5 text-slate-400 transition-colors hover:bg-white hover:text-red-600"
+              className="shrink-0 rounded p-2 text-slate-400 transition-colors hover:bg-white hover:text-red-600"
             >
               <Trash2 size={14} />
             </button>
           )}
         </div>
+
+        {tags.length > 0 && (
+          <div className="mt-1 flex flex-wrap gap-1.5 pl-10 text-xs sm:hidden">
+            {tags.map((tag) => (
+              <Tag key={tag}>{tag}</Tag>
+            ))}
+          </div>
+        )}
       </div>
 
       {confirmingDelete && (
@@ -364,14 +381,14 @@ function StateRow({
 
           <div>
             <span className="mb-1.5 block text-sm font-medium text-slate-700">Color</span>
-            <div className="flex gap-1.5">
+            <div className="flex flex-wrap gap-2">
               {PALETTE.map((color) => (
                 <button
                   key={color}
                   type="button"
                   aria-label={`Color ${color}`}
                   onClick={() => setDraft({ ...draft, color })}
-                  className={`size-7 rounded-full transition-transform ${
+                  className={`size-8 rounded-full transition-transform sm:size-7 ${
                     draft.color === color ? 'scale-110 ring-2 ring-slate-900 ring-offset-2' : ''
                   }`}
                   style={{ backgroundColor: color }}
@@ -408,37 +425,51 @@ function StateRow({
             </div>
           </div>
 
-          <label className="flex items-center gap-2 text-sm text-slate-700">
+          {/* items-start + hint debajo: en mobile el hint inline empujaba el
+              texto fuera de la tarjeta. */}
+          <label className="flex items-start gap-2.5 text-sm text-slate-700">
             <input
               type="checkbox"
               checked={draft.notifyCustomer}
               onChange={(e) => setDraft({ ...draft, notifyCustomer: e.target.checked })}
-              className="size-4 rounded"
+              className="mt-0.5 size-4 shrink-0 rounded"
             />
-            Notificar al cliente al llegar a este estado
-            <span className="text-xs text-slate-400">(pendiente de integrar WhatsApp)</span>
+            <span className="min-w-0">
+              Notificar al cliente al llegar a este estado
+              <span className="block text-xs text-slate-400">
+                (pendiente de integrar WhatsApp)
+              </span>
+            </span>
           </label>
 
-          <label className="flex items-center gap-2 text-sm text-slate-700">
+          <label className="flex items-start gap-2.5 text-sm text-slate-700">
             <input
               type="checkbox"
               checked={draft.vibrant}
               onChange={(e) => setDraft({ ...draft, vibrant: e.target.checked })}
-              className="size-4 rounded"
+              className="mt-0.5 size-4 shrink-0 rounded"
             />
-            Estado vibrante
-            <span className="text-xs text-slate-400">el ícono pulsa en el link del cliente</span>
+            <span className="min-w-0">
+              Estado vibrante
+              <span className="block text-xs text-slate-400">
+                el ícono pulsa en el link del cliente
+              </span>
+            </span>
           </label>
 
-          <label className="flex items-center gap-2 text-sm text-slate-700">
+          <label className="flex items-start gap-2.5 text-sm text-slate-700">
             <input
               type="checkbox"
               checked={draft.requiresLink}
               onChange={(e) => setDraft({ ...draft, requiresLink: e.target.checked })}
-              className="size-4 rounded"
+              className="mt-0.5 size-4 shrink-0 rounded"
             />
-            Link necesario
-            <span className="text-xs text-slate-400">al pasar aquí pedirá pegar un link (ej. tracking del courier)</span>
+            <span className="min-w-0">
+              Link necesario
+              <span className="block text-xs text-slate-400">
+                al pasar aquí pedirá pegar un link (ej. tracking del courier)
+              </span>
+            </span>
           </label>
 
           <div className="flex flex-wrap items-center gap-2 border-t border-white/60 pt-3">
@@ -505,7 +536,7 @@ function IconPicker({
                     aria-pressed={selected}
                     title={name}
                     onClick={() => onChange(name)}
-                    className={`flex size-8 items-center justify-center rounded-md transition-colors ${
+                    className={`flex size-9 items-center justify-center rounded-md transition-colors sm:size-8 ${
                       selected ? 'ring-2 ring-slate-900' : 'hover:bg-slate-100'
                     }`}
                     style={selected ? { backgroundColor: `${color}1f` } : undefined}

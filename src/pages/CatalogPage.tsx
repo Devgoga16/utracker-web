@@ -138,7 +138,7 @@ export function CatalogPage() {
 
             {activeMutation.isError && <Alert>{apiErrorMessage(activeMutation.error)}</Alert>}
 
-            <div className="flex gap-2">
+            <div className="grid gap-2 sm:grid-cols-2">
               <KindOption
                 label="Producto"
                 hint="Algo que vendés tal cual"
@@ -242,6 +242,7 @@ export function CatalogPage() {
                 <Input
                   id="p-price"
                   type="number"
+                  inputMode="decimal"
                   min={0}
                   step="0.01"
                   required
@@ -271,10 +272,15 @@ export function CatalogPage() {
             </div>
 
             <div className="flex gap-2">
-              <Button type="submit" disabled={activeMutation.isPending}>
+              <Button type="submit" className="flex-1 sm:flex-none" disabled={activeMutation.isPending}>
                 {activeMutation.isPending ? 'Guardando...' : isEditing ? 'Guardar cambios' : 'Guardar'}
               </Button>
-              <Button type="button" variant="secondary" onClick={cancelForm}>
+              <Button
+                type="button"
+                variant="secondary"
+                className="flex-1 sm:flex-none"
+                onClick={cancelForm}
+              >
                 Cancelar
               </Button>
             </div>
@@ -282,7 +288,7 @@ export function CatalogPage() {
         </Card>
       )}
 
-      <div className="flex gap-2">
+      <div className="no-scrollbar -mx-4 flex gap-2 overflow-x-auto px-4 sm:mx-0 sm:flex-wrap sm:overflow-visible sm:px-0">
         {([
           ['all', `Todo (${counts.all})`],
           ['product', `Productos (${counts.product})`],
@@ -292,7 +298,7 @@ export function CatalogPage() {
             key={value}
             type="button"
             onClick={() => setFilter(value)}
-            className={`rounded-full px-3 py-1 text-xs font-medium ring-1 transition-colors ${
+            className={`shrink-0 rounded-full px-3 py-1.5 text-xs font-medium whitespace-nowrap ring-1 transition-colors ${
               filter === value
                 ? 'bg-slate-900 text-white ring-slate-900'
                 : 'bg-white text-slate-600 ring-slate-300 hover:bg-slate-50'
@@ -373,11 +379,11 @@ export function CatalogPage() {
                 <p className="mt-2 text-sm text-slate-500">{item.description}</p>
               )}
 
-              <div className="mt-4 flex items-center gap-3">
+              <div className="mt-3 flex items-center gap-1">
                 <button
                   type="button"
                   onClick={() => openEdit(item)}
-                  className="flex items-center gap-1 text-xs text-slate-400 hover:text-brand-600"
+                  className="flex items-center gap-1 rounded px-2 py-2 text-xs text-slate-400 hover:text-brand-600"
                 >
                   <Pencil size={12} />
                   Editar
@@ -385,7 +391,7 @@ export function CatalogPage() {
                 <button
                   type="button"
                   onClick={() => deleteMutation.mutate(item._id)}
-                  className="text-xs text-slate-400 hover:text-red-600"
+                  className="rounded px-2 py-2 text-xs text-slate-400 hover:text-red-600"
                 >
                   Eliminar
                 </button>
@@ -411,7 +417,7 @@ export function CatalogPage() {
           <img
             src={lightboxUrl}
             alt=""
-            className="max-h-[90vh] max-w-[90vw] rounded-xl object-contain shadow-2xl"
+            className="max-h-[85dvh] max-w-full rounded-xl object-contain shadow-2xl"
             onClick={(e) => e.stopPropagation()}
           />
         </div>
@@ -437,7 +443,7 @@ function KindOption({
     <button
       type="button"
       onClick={onClick}
-      className={`flex-1 rounded-lg px-4 py-3 text-left ring-1 transition-colors ${
+      className={`w-full rounded-lg px-4 py-3 text-left ring-1 transition-colors ${
         selected ? 'bg-brand-50 ring-2 ring-brand-500' : 'bg-white ring-slate-300 hover:bg-slate-50'
       }`}
     >

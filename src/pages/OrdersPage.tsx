@@ -26,19 +26,24 @@ export function OrdersPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-3">
         <h1 className="text-xl font-bold text-slate-900">Pedidos</h1>
-        <Link to="/orders/new">
-          <Button>+ Nuevo pedido</Button>
+        <Link to="/orders/new" className="shrink-0">
+          <Button>
+            <span className="sm:hidden">+ Nuevo</span>
+            <span className="hidden sm:inline">+ Nuevo pedido</span>
+          </Button>
         </Link>
       </div>
 
       {workflow && (
-        <div className="flex flex-wrap gap-2">
+        // En mobile la tira se desliza de costado en vez de apilarse en
+        // cuatro filas de chips.
+        <div className="no-scrollbar -mx-4 flex gap-2 overflow-x-auto px-4 sm:mx-0 sm:flex-wrap sm:overflow-visible sm:px-0">
           <button
             type="button"
             onClick={() => setStateFilter(null)}
-            className={`rounded-full px-3 py-1 text-xs font-medium ring-1 transition-colors ${
+            className={`shrink-0 rounded-full px-3 py-1.5 text-xs font-medium ring-1 transition-colors ${
               stateFilter === null
                 ? 'bg-slate-900 text-white ring-slate-900'
                 : 'bg-white text-slate-600 ring-slate-300 hover:bg-slate-50'
@@ -53,7 +58,7 @@ export function OrdersPage() {
                 key={state._id}
                 type="button"
                 onClick={() => setStateFilter(state._id)}
-                className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium ring-1 transition-colors ${
+                className={`inline-flex shrink-0 items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium whitespace-nowrap ring-1 transition-colors ${
                   stateFilter === state._id
                     ? 'bg-slate-900 text-white ring-slate-900'
                     : 'bg-white text-slate-600 ring-slate-300 hover:bg-slate-50'
@@ -75,7 +80,54 @@ export function OrdersPage() {
           description="Creá el primero o compartí un link de pedido con tu cliente."
         />
       ) : (
-        <div className="overflow-hidden rounded-xl bg-white ring-1 ring-slate-200">
+        <>
+        {/* Mobile: una tarjeta por pedido, tocable entera. */}
+        <ul className="space-y-3 lg:hidden">
+          {filtered.map((order) => (
+            <li key={order._id}>
+              <Link
+                to={`/orders/${order._id}`}
+                className="block rounded-xl bg-white p-4 ring-1 ring-slate-200 active:bg-slate-50"
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="truncate font-medium text-slate-900">
+                      {order.customer?.name ?? 'Sin cliente'}
+                    </p>
+                    <p className="truncate text-xs text-slate-500">{order.customer?.phone}</p>
+                  </div>
+                  <p className="shrink-0 font-semibold text-slate-900">
+                    {formatCurrency(order.totalAmount)}
+                  </p>
+                </div>
+
+                <div className="mt-3 flex flex-wrap items-center gap-1.5">
+                  {order.fulfillmentState && (
+                    <StateBadge
+                      name={order.fulfillmentState.name}
+                      color={order.fulfillmentState.color}
+                      icon={order.fulfillmentState.icon}
+                    />
+                  )}
+                  {order.paymentState && (
+                    <StateBadge
+                      name={order.paymentState.name}
+                      color={order.paymentState.color}
+                      icon={order.paymentState.icon}
+                    />
+                  )}
+                </div>
+
+                <div className="mt-2.5 flex items-center justify-between gap-3 text-xs text-slate-400">
+                  <span className="truncate">{orderTypeLabels[order.type]}</span>
+                  <span className="shrink-0">{formatDateTime(order.createdAt)}</span>
+                </div>
+              </Link>
+            </li>
+          ))}
+        </ul>
+
+        <div className="hidden overflow-hidden rounded-xl bg-white ring-1 ring-slate-200 lg:block">
           <table className="w-full text-sm">
             <thead className="border-b border-slate-200 bg-slate-50 text-left text-xs font-medium text-slate-500 uppercase">
               <tr>
@@ -126,6 +178,7 @@ export function OrdersPage() {
             </tbody>
           </table>
         </div>
+        </>
       )}
     </div>
   )

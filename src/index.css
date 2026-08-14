@@ -14,6 +14,49 @@ body,
   height: 100%;
 }
 
+/* Los anclajes de la landing se deslizan en vez de saltar. */
+@media (prefers-reduced-motion: no-preference) {
+  html {
+    scroll-behavior: smooth;
+  }
+}
+
 body {
   @apply bg-slate-50 text-slate-900 antialiased;
+  /* Nada debería empujar la página a lo ancho en un teléfono. */
+  overflow-x: hidden;
+  /* Evita que iOS reescale el texto al girar el teléfono. */
+  -webkit-text-size-adjust: 100%;
+}
+
+/* El gris de Android/iOS al tocar un botón se ve como un bug; el
+   estado :active de cada control ya da el feedback. */
+button,
+a,
+[role='button'] {
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Barra inferior y contenido tienen que respetar el notch / la barra
+   de gestos del teléfono. */
+@utility pb-safe {
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+@utility mb-safe {
+  margin-bottom: env(safe-area-inset-bottom);
+}
+
+@utility h-safe-bottom {
+  height: env(safe-area-inset-bottom);
+}
+
+/* Tiras de chips que se deslizan con el dedo: la barra de scroll sobra. */
+@utility no-scrollbar {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+
+  &::-webkit-scrollbar {
+    display: none;
+  }
 }

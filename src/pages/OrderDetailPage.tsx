@@ -4,7 +4,7 @@ import { deleteOrder, deletePayment, getOrder, registerPayment, updateOrderState
 import { getWorkflow } from '@/api/tenants'
 import { apiErrorMessage } from '@/api/client'
 import { useState } from 'react'
-import { CircleCheck, CircleX, ZoomIn } from 'lucide-react'
+import { CircleCheck, CircleX, Trash2, ZoomIn } from 'lucide-react'
 import { Alert, Button, Card, Field, Input, Spinner, StateBadge } from '@/components/ui'
 import { ImageUploader } from '@/components/ImageUploader'
 import { StateIcon } from '@/lib/icons'
@@ -64,13 +64,15 @@ export function OrderDetailPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-start justify-between gap-4">
-        <div>
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
           <Link to="/orders" className="text-sm text-slate-500 hover:text-brand-600">
             ← Volver a pedidos
           </Link>
-          <h1 className="mt-2 text-xl font-bold text-slate-900">{order.customer?.name}</h1>
-          <p className="text-sm text-slate-500">
+          <h1 className="mt-2 text-xl font-bold break-words text-slate-900">
+            {order.customer?.name}
+          </h1>
+          <p className="text-sm break-words text-slate-500">
             {order.customer?.phone} · Creado {formatDateTime(order.createdAt)} ·{' '}
             {order.createdVia === 'order_link' ? 'vía link' : 'carga manual'}
           </p>
@@ -83,15 +85,49 @@ export function OrderDetailPage() {
               deleteMutation.mutate()
             }
           }}
-          className="shrink-0 rounded-lg px-3 py-1.5 text-xs font-medium text-red-600 ring-1 ring-red-200 hover:bg-red-50 disabled:opacity-50"
+          aria-label="Eliminar pedido"
+          className="flex shrink-0 items-center gap-1.5 rounded-lg p-2 text-xs font-medium text-red-600 ring-1 ring-red-200 hover:bg-red-50 disabled:opacity-50 sm:px-3 sm:py-1.5"
         >
-          {deleteMutation.isPending ? 'Eliminando...' : 'Eliminar pedido'}
+          <Trash2 size={14} className="sm:hidden" />
+          <span className="hidden sm:inline">
+            {deleteMutation.isPending ? 'Eliminando...' : 'Eliminar pedido'}
+          </span>
         </button>
       </div>
 
       {stateMutation.isError && <Alert>{apiErrorMessage(stateMutation.error)}</Alert>}
 
       <div className="grid gap-6 lg:grid-cols-3">
+        {/* En mobile lo primero tiene que ser cambiar el estado, no leer el
+            detalle: la columna lateral sube arriba de todo. */}
+        <div className="order-first space-y-6 lg:order-last">
+          <StatePicker
+            title="Estado del pedido"
+            kind="fulfillment"
+            states={workflow?.fulfillment ?? []}
+            currentId={order.fulfillmentState?._id}
+            currentLink={order.fulfillmentLink}
+            isPending={stateMutation.isPending}
+            onSelect={(stateId, link) => stateMutation.mutate({ kind: 'fulfillment', stateId, link })}
+          />
+
+          <TrackingLinkCard token={order.trackingToken} />
+
+          <Card>
+            <h2 className="mb-3 text-sm font-semibold text-slate-900">Estado del pago</h2>
+            {order.paymentState && (
+              <StateBadge
+                name={order.paymentState.name}
+                color={order.paymentState.color}
+                icon={order.paymentState.icon}
+              />
+            )}
+            <p className="mt-2 text-xs text-slate-400">
+              Se actualiza automáticamente al registrar pagos.
+            </p>
+          </Card>
+        </div>
+
         <div className="space-y-6 lg:col-span-2">
           <Card>
             <h2 className="mb-4 text-sm font-semibold text-slate-900">Items</h2>
@@ -99,8 +135,8 @@ export function OrderDetailPage() {
               <tbody className="divide-y divide-slate-100">
                 {order.items.map((item, i) => (
                   <tr key={i}>
-                    <td className="py-2.5">
-                      {item.name}
+                    <td className="w-full py-2.5 pr-2">
+                      <span className="break-words">{item.name}</span>
                       {item.variant && <span className="text-slate-500"> · {item.variant}</span>}
                       {item.specs && (
                         <p className="mt-0.5 text-xs whitespace-pre-line text-slate-500">
@@ -108,8 +144,12 @@ export function OrderDetailPage() {
                         </p>
                       )}
                     </td>
-                    <td className="py-2.5 text-center text-slate-500">×{item.quantity}</td>
-                    <td className="py-2.5 text-right">{formatCurrency(item.unitPrice * item.quantity)}</td>
+                    <td className="py-2.5 pr-2 text-center whitespace-nowrap text-slate-500">
+                      ×{item.quantity}
+                    </td>
+                    <td className="py-2.5 text-right whitespace-nowrap">
+                      {formatCurrency(item.unitPrice * item.quantity)}
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -239,6 +279,7 @@ export function OrderDetailPage() {
                   <Input
                     id="pay-amount"
                     type="number"
+                    inputMode="decimal"
                     min={0}
                     step="0.01"
                     value={paymentForm.amount || ''}
@@ -263,12 +304,19 @@ export function OrderDetailPage() {
                 </div>
                 <div className="flex gap-2">
                   <Button
+                    className="flex-1 sm:flex-none"
                     disabled={!paymentForm.amount || paymentMutation.isPending}
                     onClick={() => paymentMutation.mutate()}
                   >
                     {paymentMutation.isPending ? 'Guardando...' : 'Guardar pago'}
                   </Button>
-                  <Button variant="secondary" onClick={() => setPaymentForm(null)}>Cancelar</Button>
+                  <Button
+                    variant="secondary"
+                    className="flex-1 sm:flex-none"
+                    onClick={() => setPaymentForm(null)}
+                  >
+                    Cancelar
+                  </Button>
                 </div>
               </div>
             )}
@@ -283,7 +331,7 @@ export function OrderDetailPage() {
               <img
                 src={proofLightbox}
                 alt=""
-                className="max-h-[90vh] max-w-[90vw] rounded-xl object-contain shadow-2xl"
+                className="max-h-[85dvh] max-w-full rounded-xl object-contain shadow-2xl"
                 onClick={(e) => e.stopPropagation()}
               />
             </div>
@@ -294,27 +342,27 @@ export function OrderDetailPage() {
               <h2 className="mb-3 text-sm font-semibold text-slate-900">Entrega</h2>
               <dl className="space-y-1.5 text-sm">
                 {order.delivery.address && (
-                  <div className="flex gap-2">
-                    <dt className="text-slate-500">Dirección:</dt>
-                    <dd>{order.delivery.address}</dd>
+                  <div className="flex flex-wrap gap-x-2">
+                    <dt className="shrink-0 text-slate-500">Dirección:</dt>
+                    <dd className="min-w-0 break-words">{order.delivery.address}</dd>
                   </div>
                 )}
                 {order.delivery.reference && (
-                  <div className="flex gap-2">
-                    <dt className="text-slate-500">Referencia:</dt>
-                    <dd>{order.delivery.reference}</dd>
+                  <div className="flex flex-wrap gap-x-2">
+                    <dt className="shrink-0 text-slate-500">Referencia:</dt>
+                    <dd className="min-w-0 break-words">{order.delivery.reference}</dd>
                   </div>
                 )}
                 {order.delivery.courierName && (
-                  <div className="flex gap-2">
-                    <dt className="text-slate-500">Courier:</dt>
-                    <dd>{order.delivery.courierName}</dd>
+                  <div className="flex flex-wrap gap-x-2">
+                    <dt className="shrink-0 text-slate-500">Courier:</dt>
+                    <dd className="min-w-0 break-words">{order.delivery.courierName}</dd>
                   </div>
                 )}
                 {order.delivery.trackingCode && (
-                  <div className="flex gap-2">
-                    <dt className="text-slate-500">Guía:</dt>
-                    <dd className="font-mono">{order.delivery.trackingCode}</dd>
+                  <div className="flex flex-wrap gap-x-2">
+                    <dt className="shrink-0 text-slate-500">Guía:</dt>
+                    <dd className="min-w-0 font-mono break-all">{order.delivery.trackingCode}</dd>
                   </div>
                 )}
               </dl>
@@ -350,8 +398,8 @@ export function OrderDetailPage() {
             <h2 className="mb-4 text-sm font-semibold text-slate-900">Historial</h2>
             <ol className="space-y-3">
               {order.stateHistory.map((entry, i) => (
-                <li key={i} className="flex items-center gap-3 text-sm">
-                  <span className="w-16 shrink-0 text-xs text-slate-400 uppercase">
+                <li key={i} className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
+                  <span className="w-14 shrink-0 text-xs text-slate-400 uppercase">
                     {entry.kind === 'payment' ? 'Pago' : 'Pedido'}
                   </span>
                   <StateBadge
@@ -359,39 +407,12 @@ export function OrderDetailPage() {
                     color={entry.stateColor}
                     icon={entry.stateIcon}
                   />
-                  <span className="ml-auto text-xs text-slate-400">
+                  <span className="ml-auto text-xs whitespace-nowrap text-slate-400">
                     {formatDateTime(entry.changedAt)}
                   </span>
                 </li>
               ))}
             </ol>
-          </Card>
-        </div>
-
-        <div className="space-y-6">
-          <TrackingLinkCard token={order.trackingToken} />
-
-          <StatePicker
-            title="Estado del pedido"
-            kind="fulfillment"
-            states={workflow?.fulfillment ?? []}
-            currentId={order.fulfillmentState?._id}
-            currentLink={order.fulfillmentLink}
-            isPending={stateMutation.isPending}
-            onSelect={(stateId, link) => stateMutation.mutate({ kind: 'fulfillment', stateId, link })}
-          />
-          <Card>
-            <h2 className="mb-3 text-sm font-semibold text-slate-900">Estado del pago</h2>
-            {order.paymentState && (
-              <StateBadge
-                name={order.paymentState.name}
-                color={order.paymentState.color}
-                icon={order.paymentState.icon}
-              />
-            )}
-            <p className="mt-2 text-xs text-slate-400">
-              Se actualiza automáticamente al registrar pagos.
-            </p>
           </Card>
         </div>
       </div>
@@ -503,11 +524,11 @@ function StatePicker({ title, states, currentId, currentLink, isPending, onSelec
                   : undefined
               }
             >
-              <StateIcon name={state.icon} size={16} />
-              <span className="font-medium">{state.name}</span>
-              {isCurrent && <span className="ml-auto text-xs">actual</span>}
+              <StateIcon name={state.icon} size={16} className="shrink-0" />
+              <span className="min-w-0 truncate font-medium">{state.name}</span>
+              {isCurrent && <span className="ml-auto shrink-0 text-xs">actual</span>}
               {state.requiresLink && !isCurrent && (
-                <span className="ml-auto text-xs text-slate-400">requiere link</span>
+                <span className="ml-auto shrink-0 text-xs text-slate-400">requiere link</span>
               )}
             </button>
           )
@@ -519,19 +540,23 @@ function StatePicker({ title, states, currentId, currentLink, isPending, onSelec
           <p className="text-xs text-slate-600">
             Pegá el link para el cliente al pasar a <strong>{pendingState.name}</strong>:
           </p>
-          <input
+          <Input
             autoFocus
             type="url"
+            inputMode="url"
             placeholder="https://..."
             value={linkDraft}
             onChange={(e) => setLinkDraft(e.target.value)}
-            className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500"
           />
           <div className="flex gap-2">
-            <Button onClick={confirmWithLink} disabled={isPending}>
+            <Button className="flex-1 sm:flex-none" onClick={confirmWithLink} disabled={isPending}>
               {isPending ? 'Guardando...' : 'Confirmar'}
             </Button>
-            <Button variant="secondary" onClick={() => setPendingState(null)}>
+            <Button
+              variant="secondary"
+              className="flex-1 sm:flex-none"
+              onClick={() => setPendingState(null)}
+            >
               Cancelar
             </Button>
           </div>

@@ -130,9 +130,9 @@ export function NewOrderPage() {
           <Card>
             <h2 className="mb-4 text-sm font-semibold text-slate-900">Qué incluye el pedido</h2>
 
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-col gap-2 sm:flex-row">
               <Select
-                className="flex-1"
+                className="sm:flex-1"
                 value=""
                 onChange={(e) => addFromCatalog(e.target.value)}
               >
@@ -149,7 +149,7 @@ export function NewOrderPage() {
                   </option>
                 ))}
               </Select>
-              <Button type="button" variant="secondary" onClick={addAdHoc}>
+              <Button type="button" variant="secondary" className="shrink-0" onClick={addAdHoc}>
                 + Línea libre
               </Button>
             </div>
@@ -183,17 +183,20 @@ export function NewOrderPage() {
                         type="button"
                         aria-label={`Quitar ${line.name || 'línea'}`}
                         onClick={() => setLines((prev) => prev.filter((l) => l.key !== line.key))}
-                        className="rounded p-1.5 text-slate-400 hover:bg-white hover:text-red-600"
+                        className="shrink-0 rounded p-2.5 text-slate-400 hover:bg-white hover:text-red-600"
                       >
                         <Trash2 size={14} />
                       </button>
                     </div>
 
-                    <div className="mt-2 grid grid-cols-[5rem_1fr_auto] items-end gap-2">
+                    {/* En mobile cantidad y precio comparten fila y el subtotal
+                        baja a la suya; desde sm entran los tres juntos. */}
+                    <div className="mt-2 grid grid-cols-2 items-end gap-2 sm:grid-cols-[5rem_1fr_auto]">
                       <Field label="Cant." htmlFor={`q-${line.key}`}>
                         <Input
                           id={`q-${line.key}`}
                           type="number"
+                          inputMode="numeric"
                           min={1}
                           value={line.quantity}
                           onChange={(e) =>
@@ -205,13 +208,14 @@ export function NewOrderPage() {
                         <Input
                           id={`p-${line.key}`}
                           type="number"
+                          inputMode="decimal"
                           min={0}
                           step="0.01"
                           value={line.unitPrice || ''}
                           onChange={(e) => update(line.key, { unitPrice: Number(e.target.value) })}
                         />
                       </Field>
-                      <p className="pb-2 text-right font-semibold whitespace-nowrap">
+                      <p className="col-span-2 border-t border-slate-200 pt-2 text-right font-semibold whitespace-nowrap sm:col-span-1 sm:border-0 sm:pt-0 sm:pb-2">
                         {formatCurrency(line.unitPrice * line.quantity)}
                       </p>
                     </div>
@@ -252,6 +256,9 @@ export function NewOrderPage() {
               <Field label="Teléfono" htmlFor="c-phone">
                 <Input
                   id="c-phone"
+                  type="tel"
+                  inputMode="tel"
+                  autoComplete="tel"
                   value={customer.phone}
                   onChange={(e) => setCustomer({ ...customer, phone: e.target.value })}
                 />
@@ -314,6 +321,7 @@ export function NewOrderPage() {
                   <Input
                     id="adv-amount"
                     type="number"
+                    inputMode="decimal"
                     min={0}
                     step="0.01"
                     value={advance.amount || ''}

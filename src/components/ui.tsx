@@ -19,7 +19,8 @@ export function Button({ variant = 'primary', className, ...props }: ButtonProps
   return (
     <button
       className={cn(
-        'inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50',
+        // min-h-11 en mobile: 44px es el mínimo cómodo para el dedo.
+        'inline-flex min-h-11 items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-colors select-none disabled:cursor-not-allowed disabled:opacity-50 sm:min-h-0',
         buttonVariants[variant],
         className,
       )}
@@ -51,7 +52,8 @@ export function Input({ className, ...props }: InputHTMLAttributes<HTMLInputElem
   return (
     <input
       className={cn(
-        'w-full rounded-lg border-0 bg-white px-3 py-2 text-sm text-slate-900 ring-1 ring-slate-300 placeholder:text-slate-400 focus:ring-2 focus:ring-brand-500 focus:outline-none',
+        // text-base en mobile: por debajo de 16px Safari hace zoom al enfocar.
+        'w-full rounded-lg border-0 bg-white px-3 py-2.5 text-base text-slate-900 ring-1 ring-slate-300 placeholder:text-slate-400 focus:ring-2 focus:ring-brand-500 focus:outline-none sm:py-2 sm:text-sm',
         className,
       )}
       {...props}
@@ -63,7 +65,7 @@ export function Select({ className, ...props }: SelectHTMLAttributes<HTMLSelectE
   return (
     <select
       className={cn(
-        'w-full rounded-lg border-0 bg-white px-3 py-2 text-sm text-slate-900 ring-1 ring-slate-300 focus:ring-2 focus:ring-brand-500 focus:outline-none',
+        'w-full rounded-lg border-0 bg-white px-3 py-2.5 text-base text-slate-900 ring-1 ring-slate-300 focus:ring-2 focus:ring-brand-500 focus:outline-none sm:py-2 sm:text-sm',
         className,
       )}
       {...props}
@@ -73,7 +75,9 @@ export function Select({ className, ...props }: SelectHTMLAttributes<HTMLSelectE
 
 export function Card({ className, children }: { className?: string; children: ReactNode }) {
   return (
-    <div className={cn('rounded-xl bg-white p-5 ring-1 ring-slate-200', className)}>{children}</div>
+    <div className={cn('rounded-xl bg-white p-4 ring-1 ring-slate-200 sm:p-5', className)}>
+      {children}
+    </div>
   )
 }
 
@@ -107,9 +111,11 @@ export function Alert({ children }: { children: ReactNode }) {
 
 export function EmptyState({ title, description }: { title: string; description?: string }) {
   return (
-    <div className="rounded-xl border-2 border-dashed border-slate-200 py-14 text-center">
+    <div className="rounded-xl border-2 border-dashed border-slate-200 px-4 py-10 text-center sm:py-14">
       <p className="font-medium text-slate-700">{title}</p>
-      {description && <p className="mt-1 text-sm text-slate-500">{description}</p>}
+      {description && (
+        <p className="mx-auto mt-1 max-w-xs text-sm text-slate-500 sm:max-w-none">{description}</p>
+      )}
     </div>
   )
 }

@@ -71,11 +71,13 @@ export function ImageUploader({ value, onChange, max = 4, folder = 'catalog' }: 
                 Portada
               </span>
             )}
+            {/* En un teléfono no hay hover: si el botón sólo aparece al pasar
+                el mouse, la foto no se puede quitar. */}
             <button
               type="button"
               aria-label="Quitar imagen"
               onClick={() => removeMutation.mutate(url)}
-              className="absolute -top-1.5 -right-1.5 rounded-full bg-slate-900 p-1 text-white opacity-0 transition-opacity group-hover:opacity-100 focus:opacity-100"
+              className="absolute -top-1.5 -right-1.5 rounded-full bg-slate-900 p-1.5 text-white transition-opacity sm:p-1 sm:opacity-0 sm:group-hover:opacity-100 sm:focus:opacity-100"
             >
               <X size={12} />
             </button>

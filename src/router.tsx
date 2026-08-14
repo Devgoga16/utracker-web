@@ -1,6 +1,7 @@
 import { createBrowserRouter, Navigate } from 'react-router-dom'
 import { AppLayout } from '@/components/AppLayout'
 import { RequireAuth, RequireTenant } from '@/components/guards'
+import { LandingPage } from '@/pages/LandingPage'
 import { LoginPage } from '@/pages/LoginPage'
 import { RegisterPage } from '@/pages/RegisterPage'
 import { TenantsPage } from '@/pages/TenantsPage'
@@ -15,6 +16,7 @@ import { TrackOrderPage } from '@/pages/TrackOrderPage'
 import { StorePage } from '@/pages/StorePage'
 
 export const router = createBrowserRouter([
+  { path: '/', element: <LandingPage /> },
   { path: '/login', element: <LoginPage /> },
   { path: '/register', element: <RegisterPage /> },
   { path: '/order/:token', element: <PublicOrderLinkPage /> },
@@ -31,7 +33,6 @@ export const router = createBrowserRouter([
           {
             element: <AppLayout />,
             children: [
-              { path: '/', element: <Navigate to="/orders" replace /> },
               { path: '/orders', element: <OrdersPage /> },
               { path: '/orders/new', element: <NewOrderPage /> },
               { path: '/orders/:id', element: <OrderDetailPage /> },

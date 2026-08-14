@@ -49,7 +49,7 @@ export function StorePage() {
     <div className="min-h-screen bg-slate-50">
       {/* Header */}
       <header className="border-b border-slate-200 bg-white">
-        <div className="mx-auto flex max-w-4xl items-center gap-4 px-6 py-5">
+        <div className="mx-auto flex max-w-4xl items-center gap-3 px-4 py-4 sm:gap-4 sm:px-6 sm:py-5">
           {tenant.logoUrl ? (
             <img
               src={tenant.logoUrl}
@@ -61,14 +61,14 @@ export function StorePage() {
               {tenant.name.charAt(0).toUpperCase()}
             </div>
           )}
-          <div>
-            <h1 className="text-xl font-bold text-slate-900">{tenant.name}</h1>
+          <div className="min-w-0">
+            <h1 className="truncate text-lg font-bold text-slate-900 sm:text-xl">{tenant.name}</h1>
             <p className="text-xs text-slate-400">Catálogo de productos y servicios</p>
           </div>
         </div>
       </header>
 
-      <main className="mx-auto max-w-4xl px-6 py-10 space-y-10">
+      <main className="mx-auto max-w-4xl space-y-10 px-4 py-8 sm:px-6 sm:py-10">
         {products.length === 0 ? (
           <p className="text-center text-slate-400 py-20">Este negocio todavía no tiene productos publicados.</p>
         ) : (
@@ -117,8 +117,8 @@ export function StorePage() {
                       {item.description && (
                         <p className="mt-1 text-sm text-slate-500 flex-1">{item.description}</p>
                       )}
-                      <div className="mt-3 flex items-center justify-between">
-                        <div>
+                      <div className="mt-3 flex items-center justify-between gap-3">
+                        <div className="min-w-0">
                           <p className="font-bold text-slate-900">{formatCurrency(item.price)}</p>
                           {item.pricingMode === 'quoted' && (
                             <p className="text-xs text-amber-600">precio de referencia · se cotiza</p>
@@ -127,7 +127,7 @@ export function StorePage() {
                         <button
                           type="button"
                           disabled
-                          className="rounded-lg bg-brand-600 px-3 py-1.5 text-xs font-semibold text-white opacity-40 cursor-not-allowed"
+                          className="shrink-0 cursor-not-allowed rounded-lg bg-brand-600 px-3 py-2 text-xs font-semibold whitespace-nowrap text-white opacity-40"
                           title="Próximamente"
                         >
                           Hacer pedido

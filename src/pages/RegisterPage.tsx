@@ -22,7 +22,7 @@ export function RegisterPage() {
   })
 
   return (
-    <div className="flex min-h-full items-center justify-center px-6 py-16">
+    <div className="flex min-h-full items-center justify-center px-4 py-10 sm:px-6 sm:py-16">
       <div className="w-full max-w-sm space-y-6">
         <div className="text-center">
           <h1 className="text-2xl font-bold text-brand-600">uTracker</h1>
