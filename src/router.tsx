@@ -1,6 +1,7 @@
 import { createBrowserRouter, Navigate } from 'react-router-dom'
 import { AppLayout } from '@/components/AppLayout'
-import { RequireAuth, RequireTenant } from '@/components/guards'
+import { SuperadminLayout } from '@/components/SuperadminLayout'
+import { RequireAuth, RequireSuperAdmin, RequireTenant } from '@/components/guards'
 import { LandingPage } from '@/pages/LandingPage'
 import { LoginPage } from '@/pages/LoginPage'
 import { RegisterPage } from '@/pages/RegisterPage'
@@ -16,6 +17,9 @@ import { InventoryPage } from '@/pages/InventoryPage'
 import { PublicOrderLinkPage } from '@/pages/PublicOrderLinkPage'
 import { TrackOrderPage } from '@/pages/TrackOrderPage'
 import { StorePage } from '@/pages/StorePage'
+import { SuperadminDashboardPage } from '@/pages/superadmin/SuperadminDashboardPage'
+import { SuperadminPlansPage } from '@/pages/superadmin/SuperadminPlansPage'
+import { SuperadminTenantsPage } from '@/pages/superadmin/SuperadminTenantsPage'
 
 export const router = createBrowserRouter([
   { path: '/', element: <LandingPage /> },
@@ -29,6 +33,19 @@ export const router = createBrowserRouter([
     element: <RequireAuth />,
     children: [
       { path: '/tenants', element: <TenantsPage /> },
+      {
+        element: <RequireSuperAdmin />,
+        children: [
+          {
+            element: <SuperadminLayout />,
+            children: [
+              { path: '/superadmin', element: <SuperadminDashboardPage /> },
+              { path: '/superadmin/plans', element: <SuperadminPlansPage /> },
+              { path: '/superadmin/tenants', element: <SuperadminTenantsPage /> },
+            ],
+          },
+        ],
+      },
       {
         element: <RequireTenant />,
         children: [

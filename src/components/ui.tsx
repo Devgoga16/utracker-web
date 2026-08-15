@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import type {
   ButtonHTMLAttributes,
   InputHTMLAttributes,
@@ -6,7 +6,7 @@ import type {
   SelectHTMLAttributes,
 } from 'react'
 import { Link } from 'react-router-dom'
-import { ArrowLeft, X } from 'lucide-react'
+import { ArrowLeft, ChevronLeft, ChevronRight, X } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import { cn } from '@/lib/cn'
 import { StateIcon } from '@/lib/icons'
@@ -404,18 +404,44 @@ export function Spinner({ inline }: { inline?: boolean }) {
 
 /* ─────────────────────────── Lightbox ─────────────────────────── */
 
-/** Visor de imagen a pantalla completa; cierra con Escape o clic fuera. */
-export function Lightbox({ url, onClose }: { url: string | null; onClose: () => void }) {
+/**
+ * Visor de imagen a pantalla completa; cierra con Escape o clic fuera.
+ * Si le pasas `images`, se vuelve galería: flechas, contador y teclas ← →.
+ */
+export function Lightbox({
+  url,
+  images,
+  onClose,
+}: {
+  url: string | null
+  images?: string[]
+  onClose: () => void
+}) {
+  const gallery = images && images.length > 1 ? images : null
+  const [index, setIndex] = useState(0)
+
+  // Al abrir, arranca en la imagen sobre la que hicieron clic.
+  useEffect(() => {
+    if (!url || !gallery) return
+    const found = gallery.indexOf(url)
+    setIndex(found === -1 ? 0 : found)
+  }, [url, gallery])
+
   useEffect(() => {
     if (!url) return
     const handler = (e: KeyboardEvent) => {
       if (e.key === 'Escape') onClose()
+      if (!gallery) return
+      if (e.key === 'ArrowRight') setIndex((i) => (i + 1) % gallery.length)
+      if (e.key === 'ArrowLeft') setIndex((i) => (i - 1 + gallery.length) % gallery.length)
     }
     window.addEventListener('keydown', handler)
     return () => window.removeEventListener('keydown', handler)
-  }, [url, onClose])
+  }, [url, gallery, onClose])
 
   if (!url) return null
+
+  const current = gallery ? gallery[index] : url
 
   return (
     <div
@@ -430,8 +456,39 @@ export function Lightbox({ url, onClose }: { url: string | null; onClose: () => 
       >
         <X size={20} />
       </button>
+
+      {gallery && (
+        <>
+          <button
+            type="button"
+            aria-label="Anterior"
+            onClick={(e) => {
+              e.stopPropagation()
+              setIndex((i) => (i - 1 + gallery.length) % gallery.length)
+            }}
+            className="absolute left-3 rounded-full bg-white/10 p-2.5 text-white transition-colors hover:bg-white/20 sm:left-6"
+          >
+            <ChevronLeft size={22} />
+          </button>
+          <button
+            type="button"
+            aria-label="Siguiente"
+            onClick={(e) => {
+              e.stopPropagation()
+              setIndex((i) => (i + 1) % gallery.length)
+            }}
+            className="absolute right-3 rounded-full bg-white/10 p-2.5 text-white transition-colors hover:bg-white/20 sm:right-6"
+          >
+            <ChevronRight size={22} />
+          </button>
+          <span className="absolute bottom-6 rounded-full bg-white/10 px-3 py-1 text-xs font-medium text-white tabular-nums">
+            {index + 1} / {gallery.length}
+          </span>
+        </>
+      )}
+
       <img
-        src={url}
+        src={current}
         alt=""
         className="max-h-[85dvh] max-w-full rounded-xl object-contain shadow-2xl"
         onClick={(e) => e.stopPropagation()}

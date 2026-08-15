@@ -13,6 +13,7 @@ export function SettingsPage() {
   const queryClient = useQueryClient()
 
   const [name, setName] = useState(activeTenant?.name ?? '')
+  const [phone, setPhone] = useState(activeTenant?.phone ?? '')
   const [logoUrls, setLogoUrls] = useState<string[]>(
     activeTenant?.logoUrl ? [activeTenant.logoUrl] : [],
   )
@@ -23,6 +24,7 @@ export function SettingsPage() {
       updateTenantSettings({
         name: name.trim() || undefined,
         logoUrl: logoUrls[0] ?? null,
+        phone: phone.replace(/\D/g, '') || null,
       }),
     onSuccess: (tenant) => {
       setActiveTenant({ ...activeTenant!, ...tenant })
@@ -57,7 +59,8 @@ export function SettingsPage() {
 
   const dirty =
     name.trim() !== (activeTenant?.name ?? '') ||
-    (logoUrls[0] ?? null) !== (activeTenant?.logoUrl ?? null)
+    (logoUrls[0] ?? null) !== (activeTenant?.logoUrl ?? null) ||
+    phone.replace(/\D/g, '') !== (activeTenant?.phone ?? '')
 
   return (
     <div className="max-w-2xl space-y-6">
@@ -91,6 +94,24 @@ export function SettingsPage() {
                 setSaved(false)
               }}
             />
+          </Field>
+
+          <Field label="WhatsApp del negocio" htmlFor="s-phone">
+            <Input
+              id="s-phone"
+              type="tel"
+              inputMode="tel"
+              placeholder="51987654321"
+              value={phone}
+              onChange={(e) => {
+                setPhone(e.target.value)
+                setSaved(false)
+              }}
+            />
+            <p className="mt-1.5 text-xs text-slate-500">
+              Con código de país y sin espacios. Tus clientes lo usan para consultarte desde la
+              tienda; si lo dejas vacío, el botón no aparece.
+            </p>
           </Field>
         </div>
       </Card>

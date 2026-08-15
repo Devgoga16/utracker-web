@@ -11,7 +11,11 @@ export async function createTenant(payload: { name: string }) {
   return data.tenant
 }
 
-export async function updateTenantSettings(payload: { name?: string; logoUrl?: string | null }) {
+export async function updateTenantSettings(payload: {
+  name?: string
+  logoUrl?: string | null
+  phone?: string | null
+}) {
   const { data } = await api.patch<{ tenant: Tenant }>('/tenants/settings', payload)
   return data.tenant
 }

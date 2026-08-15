@@ -16,7 +16,7 @@ export function LoginPage() {
     mutationFn: () => login({ email, password }),
     onSuccess: (session) => {
       setSession(session)
-      navigate('/tenants')
+      navigate(session.user.isSuperAdmin ? '/superadmin' : '/tenants')
     },
   })
 

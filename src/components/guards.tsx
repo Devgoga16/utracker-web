@@ -21,3 +21,13 @@ export function RequireTenant() {
 
   return <Outlet />
 }
+
+export function RequireSuperAdmin() {
+  const user = useAuthStore((s) => s.user)
+
+  if (!user?.isSuperAdmin) {
+    return <Navigate to="/tenants" replace />
+  }
+
+  return <Outlet />
+}

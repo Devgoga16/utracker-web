@@ -9,6 +9,44 @@ export interface User {
   id: string
   name: string
   email: string
+  isSuperAdmin?: boolean
+}
+
+export type SubscriptionStatus = 'trial' | 'active' | 'suspended'
+
+export interface PlanFeatures {
+  maxOrdersPerMonth: number
+  maxCatalogItems: number
+  maxMembers: number
+  maxWorkflowStates: number
+  workflowCustomization: boolean
+  publicOrderLinks: boolean
+  imageUploads: boolean
+  deliveryTypes: boolean
+  publicTracking: boolean
+  advancePayments: boolean
+  inventory: boolean
+  finances: boolean
+}
+
+export interface Plan {
+  _id: string
+  name: string
+  description?: string
+  price: number
+  features: PlanFeatures
+  isActive: boolean
+  createdAt: string
+}
+
+export interface Subscription {
+  _id: string
+  tenant: string
+  plan: Plan
+  status: SubscriptionStatus
+  expiresAt?: string
+  notes?: string
+  createdAt: string
 }
 
 export interface Category {
@@ -23,6 +61,8 @@ export interface Tenant {
   name: string
   slug: string
   logoUrl?: string
+  /** Solo dígitos con código de país, ej. 51987654321. */
+  phone?: string
   isActive: boolean
   role?: MembershipRole
 }

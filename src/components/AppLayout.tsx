@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import {
+  AlertTriangle,
   BarChart2,
   ChevronDown,
   ChevronsLeft,
@@ -13,19 +14,21 @@ import {
 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import { useAuthStore } from '@/stores/authStore'
+import { useSubscription } from '@/hooks/useSubscription'
 import { cn } from '@/lib/cn'
 
 interface NavItem {
   to: string
   label: string
   icon: LucideIcon
+  featureKey?: string
 }
 
-const mainNav: NavItem[] = [
+const ALL_MAIN_NAV: NavItem[] = [
   { to: '/orders', label: 'Pedidos', icon: ClipboardList },
   { to: '/catalog', label: 'Catálogo', icon: Package },
-  { to: '/inventory', label: 'Inventario', icon: PackageSearch },
-  { to: '/finances', label: 'Finanzas', icon: BarChart2 },
+  { to: '/inventory', label: 'Inventario', icon: PackageSearch, featureKey: 'inventory' },
+  { to: '/finances', label: 'Finanzas', icon: BarChart2, featureKey: 'finances' },
 ]
 
 const configNav: NavItem[] = [
@@ -33,19 +36,20 @@ const configNav: NavItem[] = [
   { to: '/settings', label: 'Ajustes', icon: Settings },
 ]
 
-/** Solo cinco entran cómodas en la barra inferior; Ajustes vive en el menú de cuenta. */
-const mobileNav: NavItem[] = [...mainNav, configNav[0]]
-
 const COLLAPSE_KEY = 'utracker:sidebar-collapsed'
 
 export function AppLayout() {
   const navigate = useNavigate()
   const location = useLocation()
   const { user, activeTenant, setActiveTenant, logout } = useAuthStore()
+  const { can, isSuspended } = useSubscription()
   const [menuOpen, setMenuOpen] = useState(false)
   const [collapsed, setCollapsed] = useState(
     () => localStorage.getItem(COLLAPSE_KEY) === '1',
   )
+
+  const mainNav = ALL_MAIN_NAV.filter((item) => !item.featureKey || can(item.featureKey))
+  const mobileNav = [...mainNav, configNav[0]].slice(0, 5)
 
   // Un menú abierto sobreviviendo a la navegación tapa la pantalla nueva.
   useEffect(() => setMenuOpen(false), [location.pathname])
@@ -261,6 +265,13 @@ export function AppLayout() {
         </header>
 
         <main className="mx-auto max-w-6xl px-4 py-6 sm:px-6 sm:py-8">
+          {isSuspended && (
+            <div className="mb-6 flex items-center gap-3 rounded-xl bg-red-50 px-4 py-3 text-sm text-red-700 ring-1 ring-red-200">
+              <AlertTriangle size={16} className="shrink-0" />
+              Tu suscripción está suspendida. Algunas funciones pueden no estar disponibles.
+              Contacta al administrador para reactivarla.
+            </div>
+          )}
           <Outlet />
         </main>
       </div>

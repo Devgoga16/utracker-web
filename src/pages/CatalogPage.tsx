@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Package, Pencil, Plus, Trash2, Wrench, X } from 'lucide-react'
+import { Package, Pencil, Plus, Trash2, Wrench, X, ZoomIn } from 'lucide-react'
 import {
   createProduct,
   deleteProduct,
@@ -456,13 +456,17 @@ function ProductCard({
         <button
           type="button"
           onClick={() => onImageClick(item.images[0])}
-          className="group block aspect-[4/3] w-full overflow-hidden bg-slate-100 focus:outline-none"
+          className="group relative block aspect-[4/3] w-full overflow-hidden bg-slate-100 focus:outline-none"
         >
           <img
             src={item.images[0]}
             alt=""
             className="size-full object-cover transition-transform duration-300 group-hover:scale-105"
           />
+          <span className="absolute bottom-2 right-2 flex items-center gap-1 rounded-full bg-black/40 px-2 py-1 text-[11px] font-medium text-white backdrop-blur-sm transition-opacity group-hover:opacity-0">
+            <ZoomIn size={11} />
+            Ver foto
+          </span>
         </button>
       ) : (
         <div className="flex aspect-[4/3] w-full items-center justify-center bg-slate-50 text-slate-300">
