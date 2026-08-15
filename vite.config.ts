@@ -14,7 +14,7 @@ export default defineConfig({
   server: {
     proxy: {
       '/api': {
-        target: 'https://utracker-api.unify-tc.com',
+        target: 'http://localhost:4000',
         changeOrigin: true,
       },
     },

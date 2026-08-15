@@ -19,6 +19,7 @@ export interface UpdateStateInput {
   notifyCustomer?: boolean
   vibrant?: boolean
   requiresLink?: boolean
+  deductsStock?: boolean
   allowedRoles?: MembershipRole[]
 }
 

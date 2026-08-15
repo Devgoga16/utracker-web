@@ -1,12 +1,12 @@
 import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { Check, Copy, ExternalLink, Plus, X } from 'lucide-react'
 import { updateTenantSettings } from '@/api/tenants'
 import { createCategory, deleteCategory, listCategories } from '@/api/categories'
 import { apiErrorMessage } from '@/api/client'
-import { Alert, Button, Card, Field, Input } from '@/components/ui'
+import { Alert, Button, Card, Field, IconButton, Input, PageHeader } from '@/components/ui'
 import { ImageUploader } from '@/components/ImageUploader'
 import { useAuthStore } from '@/stores/authStore'
-import { X } from 'lucide-react'
 
 export function SettingsPage() {
   const { activeTenant, setActiveTenant } = useAuthStore()
@@ -60,76 +60,79 @@ export function SettingsPage() {
     (logoUrls[0] ?? null) !== (activeTenant?.logoUrl ?? null)
 
   return (
-    <div className="space-y-6">
-      <h1 className="text-xl font-bold text-slate-900">Ajustes del negocio</h1>
+    <div className="max-w-2xl space-y-6">
+      <PageHeader title="Ajustes" description="La identidad de tu negocio y su tienda pública." />
 
-      <Card className="max-w-lg">
-        <h2 className="mb-1 text-sm font-semibold text-slate-900">Link de tu tienda pública</h2>
-        <p className="mb-3 text-xs text-slate-500">
-          Compartí este link para que tus clientes vean tu catálogo.
-        </p>
-        <div className="mb-2 rounded-lg bg-slate-50 p-2.5">
+      <Card
+        title="Identidad"
+        description="Así te ven tus clientes en la tienda y en el seguimiento de sus pedidos."
+      >
+        <div className="space-y-5">
+          <div>
+            <span className="mb-1.5 block text-sm font-medium text-slate-700">Logo</span>
+            <ImageUploader max={1} folder="logos" value={logoUrls} onChange={setLogoUrls} />
+            {logoUrls[0] && (
+              <button
+                type="button"
+                onClick={() => setLogoUrls([])}
+                className="mt-2 text-xs text-slate-400 transition-colors hover:text-red-600"
+              >
+                Quitar logo
+              </button>
+            )}
+          </div>
+
+          <Field label="Nombre del negocio" htmlFor="s-name">
+            <Input
+              id="s-name"
+              value={name}
+              onChange={(e) => {
+                setName(e.target.value)
+                setSaved(false)
+              }}
+            />
+          </Field>
+        </div>
+      </Card>
+
+      <Card
+        title="Tienda pública"
+        description="Comparte este link para que tus clientes vean tu catálogo."
+      >
+        <div className="rounded-lg bg-slate-50 px-3 py-2.5 ring-1 ring-slate-200">
           <p className="font-mono text-xs break-all text-slate-600">{storeUrl}</p>
         </div>
-        <div className="flex gap-2">
+        <div className="mt-3 flex flex-wrap gap-2">
           <Button variant="secondary" onClick={copyStoreUrl}>
+            {copied ? <Check size={15} /> : <Copy size={15} />}
             {copied ? 'Copiado' : 'Copiar link'}
           </Button>
           <a href={storeUrl} target="_blank" rel="noreferrer">
-            <Button variant="ghost">Ver tienda</Button>
+            <Button variant="ghost">
+              <ExternalLink size={15} />
+              Ver tienda
+            </Button>
           </a>
         </div>
       </Card>
 
-      <Card className="max-w-lg">
-        <h2 className="mb-4 text-sm font-semibold text-slate-900">Logo</h2>
-        <ImageUploader
-          max={1}
-          folder="logos"
-          value={logoUrls}
-          onChange={setLogoUrls}
-        />
-        {logoUrls[0] && (
-          <button
-            type="button"
-            onClick={() => setLogoUrls([])}
-            className="mt-2 text-xs text-slate-400 hover:text-red-600"
-          >
-            Quitar logo
-          </button>
-        )}
-      </Card>
-
-      <Card className="max-w-lg">
-        <h2 className="mb-4 text-sm font-semibold text-slate-900">Nombre del negocio</h2>
-        <Field label="Nombre" htmlFor="s-name">
-          <Input
-            id="s-name"
-            value={name}
-            onChange={(e) => { setName(e.target.value); setSaved(false) }}
-          />
-        </Field>
-      </Card>
-
-      <Card className="max-w-lg">
-        <h2 className="mb-1 text-sm font-semibold text-slate-900">Categorías del catálogo</h2>
-        <p className="mb-4 text-xs text-slate-500">
-          Definí las categorías una vez y reutilizalas al crear o editar productos.
-        </p>
-
+      <Card
+        title="Categorías del catálogo"
+        description="Defínelas una vez y reutilízalas al crear o editar productos."
+      >
         {categories && categories.length > 0 && (
           <div className="mb-4 flex flex-wrap gap-2">
             {categories.map((cat) => (
               <span
                 key={cat._id}
-                className="inline-flex items-center gap-1.5 rounded-full bg-slate-100 pl-3 pr-1.5 py-1 text-xs font-medium text-slate-700"
+                className="inline-flex items-center gap-1 rounded-full bg-slate-100 py-1 pr-1.5 pl-3 text-xs font-medium text-slate-700"
               >
                 {cat.name}
                 <button
                   type="button"
                   aria-label={`Eliminar ${cat.name}`}
                   onClick={() => deleteCatMutation.mutate(cat._id)}
-                  className="rounded-full p-0.5 hover:bg-slate-200 hover:text-red-600"
+                  className="rounded-full p-1 transition-colors hover:bg-slate-200 hover:text-red-600"
                 >
                   <X size={11} />
                 </button>
@@ -150,10 +153,15 @@ export function SettingsPage() {
             value={newCatName}
             onChange={(e) => setNewCatName(e.target.value)}
           />
-          <Button type="submit" variant="secondary" disabled={!newCatName.trim() || addCatMutation.isPending}>
-            Agregar
-          </Button>
+          <IconButton
+            label="Agregar categoría"
+            onClick={() => newCatName.trim() && addCatMutation.mutate()}
+            className="ring-1 ring-slate-300 hover:bg-slate-50 hover:text-brand-600"
+          >
+            <Plus size={16} />
+          </IconButton>
         </form>
+
         {addCatMutation.isError && (
           <p className="mt-2 text-xs text-red-600">{apiErrorMessage(addCatMutation.error)}</p>
         )}
@@ -161,15 +169,34 @@ export function SettingsPage() {
 
       {mutation.isError && <Alert>{apiErrorMessage(mutation.error)}</Alert>}
 
-      <div className="flex items-center gap-3">
-        <Button
-          disabled={!dirty || mutation.isPending}
-          onClick={() => mutation.mutate()}
-        >
-          {mutation.isPending ? 'Guardando...' : 'Guardar cambios'}
-        </Button>
-        {saved && <span className="text-sm text-emerald-600">Guardado</span>}
-      </div>
+      {/* Sticky en vez de fixed: así respeta el ancho del contenedor y no
+          hay que replicar el ancho del sidebar, que puede estar contraído. */}
+      {(dirty || saved) && (
+        <div className="sticky bottom-4 z-20">
+          <div className="flex items-center gap-3 rounded-xl bg-slate-900 px-4 py-3 shadow-lg shadow-slate-900/20">
+            {saved && !dirty ? (
+              <p className="flex items-center gap-2 text-sm font-medium text-emerald-400">
+                <Check size={16} />
+                Cambios guardados
+              </p>
+            ) : (
+              <>
+                <p className="min-w-0 flex-1 truncate text-sm text-slate-300">
+                  Tienes cambios sin guardar
+                </p>
+                <Button
+                  size="sm"
+                  disabled={mutation.isPending}
+                  onClick={() => mutation.mutate()}
+                  className="shrink-0"
+                >
+                  {mutation.isPending ? 'Guardando...' : 'Guardar'}
+                </Button>
+              </>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   )
 }

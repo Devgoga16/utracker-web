@@ -67,7 +67,7 @@ export function LoginPage() {
         </Card>
 
         <p className="text-center text-sm text-slate-500">
-          ¿No tenés cuenta?{' '}
+          ¿No tienes cuenta?{' '}
           <Link to="/register" className="font-medium text-brand-600 hover:underline">
             Crear una
           </Link>

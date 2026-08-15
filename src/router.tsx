@@ -11,6 +11,8 @@ import { NewOrderPage } from '@/pages/NewOrderPage'
 import { CatalogPage } from '@/pages/CatalogPage'
 import { WorkflowPage } from '@/pages/WorkflowPage'
 import { SettingsPage } from '@/pages/SettingsPage'
+import { FinancesPage } from '@/pages/FinancesPage'
+import { InventoryPage } from '@/pages/InventoryPage'
 import { PublicOrderLinkPage } from '@/pages/PublicOrderLinkPage'
 import { TrackOrderPage } from '@/pages/TrackOrderPage'
 import { StorePage } from '@/pages/StorePage'
@@ -39,6 +41,8 @@ export const router = createBrowserRouter([
               { path: '/catalog', element: <CatalogPage /> },
               { path: '/products', element: <Navigate to="/catalog" replace /> },
               { path: '/workflow', element: <WorkflowPage /> },
+              { path: '/finances', element: <FinancesPage /> },
+              { path: '/inventory', element: <InventoryPage /> },
               { path: '/settings', element: <SettingsPage /> },
             ],
           },

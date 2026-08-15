@@ -58,7 +58,7 @@ export function TrackOrderPage() {
       <div className="mx-auto max-w-md px-4 py-16 sm:px-6 sm:py-20">
         <Alert>{apiErrorMessage(error)}</Alert>
         <p className="mt-4 text-center text-sm text-slate-500">
-          Revisá el enlace o pedile uno nuevo al negocio.
+          Revisa el enlace o pídele uno nuevo al negocio.
         </p>
       </div>
     )
@@ -116,7 +116,7 @@ export function TrackOrderPage() {
             </p>
 
             <p className="text-xs text-slate-400 underline underline-offset-2">
-              Tocá para ver qué pediste
+              Toca para ver qué pediste
             </p>
           </button>
 
@@ -220,7 +220,7 @@ export function TrackOrderPage() {
       </Card>
 
       <p className="pb-4 text-center text-xs text-slate-400">
-        Esta página se actualiza sola. Podés volver cuando quieras.
+        Esta página se actualiza sola. Puedes volver cuando quieras.
       </p>
 
       {/* ── Modal centrado — detalle del pedido ── */}

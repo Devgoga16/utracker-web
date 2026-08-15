@@ -41,7 +41,7 @@ export function PublicOrderLinkPage() {
       <div className="mx-auto max-w-md px-4 py-16 sm:px-6 sm:py-20">
         <Alert>{apiErrorMessage(error)}</Alert>
         <p className="mt-4 text-center text-sm text-slate-500">
-          Pedile al negocio que te envíe un link nuevo.
+          Pídele al negocio que te envíe un link nuevo.
         </p>
       </div>
     )
@@ -59,7 +59,7 @@ export function PublicOrderLinkPage() {
           <Button className="mt-6">Seguir mi pedido →</Button>
         </a>
         <p className="mt-3 text-xs text-slate-400">
-          Guardá este enlace para consultar el estado cuando quieras.
+          Guarda este enlace para consultar el estado cuando quieras.
         </p>
       </div>
     )
@@ -69,7 +69,7 @@ export function PublicOrderLinkPage() {
     <div className="mx-auto max-w-md space-y-5 px-4 py-8 sm:px-6 sm:py-10">
       <div className="text-center">
         <h1 className="text-lg font-bold text-slate-900">{link?.tenant.name}</h1>
-        <p className="text-sm text-slate-500">Confirmá tu pedido</p>
+        <p className="text-sm text-slate-500">Confirma tu pedido</p>
       </div>
 
       {link && <ExpiryCountdown expiresAt={link.expiresAt} />}
@@ -145,7 +145,7 @@ export function PublicOrderLinkPage() {
           </Field>
 
           {link?.deliveryType === 'customer_choice' && (
-            <Field label="¿Cómo lo querés recibir?" htmlFor="pc-delivery">
+            <Field label="¿Cómo lo quieres recibir?" htmlFor="pc-delivery">
               <Select
                 id="pc-delivery"
                 value={deliveryType}
@@ -188,7 +188,7 @@ function ExpiryCountdown({ expiresAt }: { expiresAt: string }) {
   }, [expiresAt])
 
   if (remaining <= 0) {
-    return <Alert>Este link expiró. Pedile al negocio que te envíe uno nuevo.</Alert>
+    return <Alert>Este link expiró. Pídele al negocio que te envíe uno nuevo.</Alert>
   }
 
   const hours = Math.floor(remaining / 3_600_000)

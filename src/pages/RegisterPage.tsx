@@ -26,7 +26,7 @@ export function RegisterPage() {
       <div className="w-full max-w-sm space-y-6">
         <div className="text-center">
           <h1 className="text-2xl font-bold text-brand-600">uTracker</h1>
-          <p className="mt-1 text-sm text-slate-500">Creá tu cuenta</p>
+          <p className="mt-1 text-sm text-slate-500">Crea tu cuenta</p>
         </div>
 
         <Card>
@@ -73,7 +73,7 @@ export function RegisterPage() {
         </Card>
 
         <p className="text-center text-sm text-slate-500">
-          ¿Ya tenés cuenta?{' '}
+          ¿Ya tienes cuenta?{' '}
           <Link to="/login" className="font-medium text-brand-600 hover:underline">
             Ingresar
           </Link>

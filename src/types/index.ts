@@ -83,6 +83,7 @@ export interface WorkflowState {
   notifyCustomer: boolean
   vibrant: boolean
   requiresLink: boolean
+  deductsStock: boolean
   allowedRoles: MembershipRole[]
 }
 
@@ -171,4 +172,27 @@ export interface OrderLink {
 export interface Workflow {
   fulfillment: WorkflowState[]
   payment: WorkflowState[]
+}
+
+export type StockMovementReason = 'order' | 'adjustment'
+
+export interface StockMovement {
+  _id: string
+  tenant: string
+  product: string
+  order?: { _id: string; trackingToken: string; createdAt: string }
+  delta: number
+  reason: StockMovementReason
+  note?: string
+  createdBy?: { _id: string; name: string; email: string }
+  createdAt: string
+}
+
+export interface FinanceSummary {
+  totalRevenue: number
+  totalCollected: number
+  totalPending: number
+  orderCount: number
+  avgOrderValue: number
+  topProducts: { productId: string; name: string; revenue: number; quantity: number }[]
 }

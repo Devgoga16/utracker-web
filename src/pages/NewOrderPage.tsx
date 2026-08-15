@@ -1,11 +1,23 @@
 import { useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
 import { useMutation, useQuery } from '@tanstack/react-query'
-import { Trash2, Wrench } from 'lucide-react'
+import { Check, Copy, Link2, Package, Plus, Trash2, Wrench } from 'lucide-react'
 import { createOrder, createOrderLink } from '@/api/orders'
 import { listProducts } from '@/api/products'
 import { apiErrorMessage } from '@/api/client'
-import { Alert, Button, Card, Field, Input, Select, Spinner } from '@/components/ui'
+import {
+  Alert,
+  Badge,
+  Button,
+  Card,
+  CheckboxField,
+  Field,
+  IconButton,
+  Input,
+  PageHeader,
+  Select,
+  Spinner,
+} from '@/components/ui'
 import { ImageUploader } from '@/components/ImageUploader'
 import { formatCurrency } from '@/lib/cn'
 import type { OrderType } from '@/types'
@@ -35,6 +47,7 @@ export function NewOrderPage() {
   const [generatedLink, setGeneratedLink] = useState<{ url: string; expiresAt: string } | null>(null)
   const [hasAdvance, setHasAdvance] = useState(false)
   const [advance, setAdvance] = useState({ amount: 0, proofImageUrl: '' })
+  const [copied, setCopied] = useState(false)
 
   const total = lines.reduce((sum, l) => sum + l.unitPrice * l.quantity, 0)
 
@@ -57,9 +70,10 @@ export function NewOrderPage() {
         type,
         delivery: type === 'pickup' ? undefined : { address: customer.address },
         notes: notes || undefined,
-        advance: hasAdvance && advance.amount > 0
-          ? { amount: advance.amount, proofImageUrl: advance.proofImageUrl || undefined }
-          : undefined,
+        advance:
+          hasAdvance && advance.amount > 0
+            ? { amount: advance.amount, proofImageUrl: advance.proofImageUrl || undefined }
+            : undefined,
       }),
     onSuccess: (order) => navigate(`/orders/${order._id}`),
   })
@@ -98,7 +112,15 @@ export function NewOrderPage() {
   function addAdHoc() {
     setLines((prev) => [
       ...prev,
-      { key: nextKey(), name: '', unitPrice: 0, quantity: 1, specs: '', isService: true, isQuoted: false },
+      {
+        key: nextKey(),
+        name: '',
+        unitPrice: 0,
+        quantity: 1,
+        specs: '',
+        isService: true,
+        isQuoted: false,
+      },
     ])
   }
 
@@ -106,20 +128,21 @@ export function NewOrderPage() {
     setLines((prev) => prev.map((l) => (l.key === key ? { ...l, ...patch } : l)))
   }
 
+  function copyLink() {
+    if (!generatedLink) return
+    navigator.clipboard.writeText(generatedLink.url)
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2000)
+  }
+
   const missingAdHocName = lines.some((l) => !l.productId && !l.name.trim())
-  const canCreate =
-    lines.length > 0 && !!customer.name && !!customer.phone && !missingAdHocName
+  const canCreate = lines.length > 0 && !!customer.name && !!customer.phone && !missingAdHocName
 
   if (isLoading) return <Spinner />
 
   return (
     <div className="space-y-6">
-      <div>
-        <Link to="/orders" className="text-sm text-slate-500 hover:text-brand-600">
-          ← Volver a pedidos
-        </Link>
-        <h1 className="mt-2 text-xl font-bold text-slate-900">Nuevo pedido</h1>
-      </div>
+      <PageHeader backTo="/orders" backLabel="Volver a pedidos" title="Nuevo pedido" />
 
       {(orderMutation.isError || linkMutation.isError) && (
         <Alert>{apiErrorMessage(orderMutation.error ?? linkMutation.error)}</Alert>
@@ -127,15 +150,9 @@ export function NewOrderPage() {
 
       <div className="grid gap-6 lg:grid-cols-3">
         <div className="space-y-6 lg:col-span-2">
-          <Card>
-            <h2 className="mb-4 text-sm font-semibold text-slate-900">Qué incluye el pedido</h2>
-
+          <Card title="Qué incluye el pedido">
             <div className="flex flex-col gap-2 sm:flex-row">
-              <Select
-                className="sm:flex-1"
-                value=""
-                onChange={(e) => addFromCatalog(e.target.value)}
-              >
+              <Select className="sm:flex-1" value="" onChange={(e) => addFromCatalog(e.target.value)}>
                 <option value="" disabled>
                   Agregar del catálogo...
                 </option>
@@ -150,14 +167,24 @@ export function NewOrderPage() {
                 ))}
               </Select>
               <Button type="button" variant="secondary" className="shrink-0" onClick={addAdHoc}>
-                + Línea libre
+                <Plus size={15} />
+                Línea libre
               </Button>
             </div>
 
-            {lines.length > 0 && (
+            {lines.length === 0 ? (
+              <div className="mt-4 rounded-xl border-2 border-dashed border-slate-200 px-4 py-8 text-center">
+                <span className="mx-auto mb-2 flex size-10 items-center justify-center rounded-full bg-slate-100 text-slate-400">
+                  <Package size={18} />
+                </span>
+                <p className="text-sm text-slate-500">
+                  Elige del catálogo o agrega una línea libre para empezar.
+                </p>
+              </div>
+            ) : (
               <ul className="mt-4 space-y-3">
                 {lines.map((line) => (
-                  <li key={line.key} className="rounded-lg bg-slate-50 p-3">
+                  <li key={line.key} className="rounded-xl bg-slate-50 p-3">
                     <div className="flex items-start gap-2">
                       <div className="min-w-0 flex-1">
                         {line.productId ? (
@@ -174,19 +201,19 @@ export function NewOrderPage() {
                         )}
                         {line.isQuoted && (
                           <p className="mt-1 text-xs text-amber-600">
-                            Se cotiza por trabajo — indicá el precio acordado
+                            Se cotiza por trabajo — indica el precio acordado
                           </p>
                         )}
                       </div>
 
-                      <button
-                        type="button"
-                        aria-label={`Quitar ${line.name || 'línea'}`}
+                      <IconButton
+                        label={`Quitar ${line.name || 'línea'}`}
+                        tone="danger"
                         onClick={() => setLines((prev) => prev.filter((l) => l.key !== line.key))}
-                        className="shrink-0 rounded p-2.5 text-slate-400 hover:bg-white hover:text-red-600"
+                        className="hover:bg-white"
                       >
                         <Trash2 size={14} />
-                      </button>
+                      </IconButton>
                     </div>
 
                     {/* En mobile cantidad y precio comparten fila y el subtotal
@@ -215,7 +242,7 @@ export function NewOrderPage() {
                           onChange={(e) => update(line.key, { unitPrice: Number(e.target.value) })}
                         />
                       </Field>
-                      <p className="col-span-2 border-t border-slate-200 pt-2 text-right font-semibold whitespace-nowrap sm:col-span-1 sm:border-0 sm:pt-0 sm:pb-2">
+                      <p className="col-span-2 border-t border-slate-200 pt-2 text-right font-semibold tabular-nums whitespace-nowrap sm:col-span-1 sm:border-0 sm:pt-0 sm:pb-2">
                         {formatCurrency(line.unitPrice * line.quantity)}
                       </p>
                     </div>
@@ -236,15 +263,14 @@ export function NewOrderPage() {
             )}
 
             {lines.length > 0 && (
-              <div className="mt-4 flex items-center justify-between border-t-2 border-slate-200 pt-3">
+              <div className="mt-4 flex items-center justify-between border-t-2 border-slate-100 pt-3">
                 <span className="font-semibold">Total</span>
-                <span className="text-base font-bold">{formatCurrency(total)}</span>
+                <span className="text-lg font-bold tabular-nums">{formatCurrency(total)}</span>
               </div>
             )}
           </Card>
 
-          <Card>
-            <h2 className="mb-4 text-sm font-semibold text-slate-900">Cliente</h2>
+          <Card title="Cliente">
             <div className="grid gap-4 sm:grid-cols-2">
               <Field label="Nombre" htmlFor="c-name">
                 <Input
@@ -302,34 +328,32 @@ export function NewOrderPage() {
           </Card>
 
           <Card>
-            <label className="flex cursor-pointer items-center gap-3">
-              <input
-                type="checkbox"
-                checked={hasAdvance}
-                onChange={(e) => setHasAdvance(e.target.checked)}
-                className="h-4 w-4 rounded border-slate-300 text-brand-600 focus:ring-brand-500"
-              />
-              <div>
-                <p className="text-sm font-semibold text-slate-900">El cliente dejó un adelanto</p>
-                <p className="text-xs text-slate-500">Podés cargarlo ahora o registrarlo después desde el detalle del pedido.</p>
-              </div>
-            </label>
+            <CheckboxField
+              label="El cliente dejó un adelanto"
+              hint="Puedes cargarlo ahora o registrarlo después desde el detalle del pedido."
+              checked={hasAdvance}
+              onChange={setHasAdvance}
+            />
 
             {hasAdvance && (
               <div className="mt-4 space-y-4 border-t border-slate-100 pt-4">
-                <Field label="Monto del adelanto" htmlFor="adv-amount">
-                  <Input
-                    id="adv-amount"
-                    type="number"
-                    inputMode="decimal"
-                    min={0}
-                    step="0.01"
-                    value={advance.amount || ''}
-                    onChange={(e) => setAdvance({ ...advance, amount: Number(e.target.value) })}
-                  />
-                </Field>
+                <div className="max-w-[14rem]">
+                  <Field label="Monto del adelanto" htmlFor="adv-amount">
+                    <Input
+                      id="adv-amount"
+                      type="number"
+                      inputMode="decimal"
+                      min={0}
+                      step="0.01"
+                      value={advance.amount || ''}
+                      onChange={(e) => setAdvance({ ...advance, amount: Number(e.target.value) })}
+                    />
+                  </Field>
+                </div>
                 <div>
-                  <p className="mb-1.5 text-sm font-medium text-slate-700">Foto del comprobante (opcional)</p>
+                  <p className="mb-1.5 text-sm font-medium text-slate-700">
+                    Foto del comprobante (opcional)
+                  </p>
                   <ImageUploader
                     max={1}
                     folder="payments"
@@ -343,11 +367,7 @@ export function NewOrderPage() {
         </div>
 
         <div className="space-y-6">
-          <Card>
-            <h2 className="mb-1 text-sm font-semibold text-slate-900">Cargar ahora</h2>
-            <p className="mb-4 text-xs text-slate-500">
-              Registrás el pedido con los datos que ya tenés.
-            </p>
+          <Card title="Cargar ahora" description="Registras el pedido con los datos que ya tienes.">
             <Button
               className="w-full"
               disabled={!canCreate || orderMutation.isPending}
@@ -355,25 +375,28 @@ export function NewOrderPage() {
             >
               {orderMutation.isPending ? 'Creando...' : 'Crear pedido'}
             </Button>
+
+            {lines.length > 0 && !canCreate && (
+              <p className="mt-2 text-xs text-slate-500">
+                {missingAdHocName
+                  ? 'Falta nombrar una línea libre.'
+                  : 'Falta el nombre o el teléfono del cliente.'}
+              </p>
+            )}
           </Card>
 
-          <Card>
-            <h2 className="mb-1 text-sm font-semibold text-slate-900">Enviar link al cliente</h2>
-            <p className="mb-4 text-xs text-slate-500">
-              El cliente completa sus datos. El link vence en 24 horas.
-            </p>
-
+          <Card
+            title="Enviar link al cliente"
+            description="El cliente completa sus datos. El link vence en 24 horas."
+          >
             {generatedLink ? (
               <div className="space-y-3">
-                <div className="rounded-lg bg-slate-50 p-3">
-                  <p className="font-mono text-xs break-all text-slate-700">{generatedLink.url}</p>
+                <div className="rounded-lg bg-slate-50 px-3 py-2.5 ring-1 ring-slate-200">
+                  <p className="font-mono text-xs break-all text-slate-600">{generatedLink.url}</p>
                 </div>
-                <Button
-                  variant="secondary"
-                  className="w-full"
-                  onClick={() => navigator.clipboard.writeText(generatedLink.url)}
-                >
-                  Copiar link
+                <Button variant="secondary" className="w-full" onClick={copyLink}>
+                  {copied ? <Check size={15} /> : <Copy size={15} />}
+                  {copied ? 'Copiado' : 'Copiar link'}
                 </Button>
                 <Button variant="ghost" className="w-full" onClick={() => setGeneratedLink(null)}>
                   Generar otro
@@ -387,14 +410,19 @@ export function NewOrderPage() {
                   disabled={!canSendLink || linkMutation.isPending}
                   onClick={() => linkMutation.mutate()}
                 >
+                  <Link2 size={15} />
                   {linkMutation.isPending ? 'Generando...' : 'Generar link'}
                 </Button>
+
                 {lines.length > 0 && !canSendLink && (
-                  <p className="mt-2 text-xs text-slate-500">
-                    {quotedLines > 0
-                      ? 'Hay ítems que se cotizan por trabajo: el cliente vería un precio que no acordaron. Cargá el pedido vos.'
-                      : 'Hay líneas libres, que no existen en el catálogo. Cargá el pedido vos.'}
-                  </p>
+                  <div className="mt-2 space-y-1.5">
+                    <Badge tone="amber">No se puede enviar por link</Badge>
+                    <p className="text-xs text-slate-500">
+                      {quotedLines > 0
+                        ? 'Hay ítems que se cotizan por trabajo: el cliente vería un precio que no acordaron. Carga el pedido tú.'
+                        : 'Hay líneas libres, que no existen en el catálogo. Carga el pedido tú.'}
+                    </p>
+                  </div>
                 )}
               </>
             )}

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, Navigate } from 'react-router-dom'
 import {
   ArrowRight,
   BadgeCheck,
@@ -182,7 +182,7 @@ function TrackingMock() {
           </div>
           <p className="mt-1.5 text-sm font-bold text-brand-600">En camino</p>
           <p className="text-[8px] text-slate-400 underline underline-offset-2">
-            Tocá para ver qué pediste
+            Toca para ver qué pediste
           </p>
           <span className="mt-2 inline-block rounded-full bg-brand-600 px-3 py-1 text-[9px] font-medium text-white">
             Seguir mi pedido →
@@ -512,7 +512,7 @@ const catalogHighlights: { icon: LucideIcon; title: string; body: string }[] = [
   {
     icon: ChefHat,
     title: 'Precio a cotizar',
-    body: 'Para el trabajo a medida: el precio real lo ponés en cada pedido.',
+    body: 'Para el trabajo a medida: el precio real lo pones en cada pedido.',
   },
   {
     icon: Package,
@@ -522,7 +522,7 @@ const catalogHighlights: { icon: LucideIcon; title: string; body: string }[] = [
   {
     icon: Store,
     title: 'Tienda pública',
-    body: 'Compartí tu catálogo en un link propio para tus redes.',
+    body: 'Comparte tu catálogo en un link propio para tus redes.',
   },
 ]
 
@@ -536,17 +536,17 @@ const capabilities: { icon: LucideIcon; title: string; body: string }[] = [
   {
     icon: Bell,
     title: 'Estados que avisan',
-    body: 'Marcá un estado como “notifica” y dejá de contestar el mismo mensaje diez veces al día.',
+    body: 'Marca un estado como “notifica” y deja de contestar el mismo mensaje diez veces al día.',
   },
   {
     icon: Users,
     title: 'Permisos por rol',
-    body: 'Definí quién puede mover un pedido a cada estado: dueño, admin, staff o repartidor.',
+    body: 'Define quién puede mover un pedido a cada estado: dueño, admin, staff o repartidor.',
   },
   {
     icon: Link2,
     title: 'Link con vencimiento',
-    body: 'Mandá un link para que el cliente complete sus datos. Vence solo a las 24 horas.',
+    body: 'Manda un link para que el cliente complete sus datos. Vence solo a las 24 horas.',
   },
   {
     icon: Store,
@@ -556,7 +556,7 @@ const capabilities: { icon: LucideIcon; title: string; body: string }[] = [
   {
     icon: Wallet,
     title: 'Estado de pago automático',
-    body: 'Registrás el adelanto y el saldo; el estado de pago se acomoda solo.',
+    body: 'Registras el adelanto y el saldo; el estado de pago se acomoda solo.',
   },
   {
     icon: BadgeCheck,
@@ -580,16 +580,20 @@ export function LandingPage() {
   const [menuOpen, setMenuOpen] = useState(false)
 
   const loggedIn = Boolean(accessToken)
-  const ctaTo = loggedIn ? (activeTenant ? '/orders' : '/tenants') : '/login'
-  const ctaLabel = loggedIn ? 'Ir al panel' : 'Ingresar'
+
+  // Quien ya entró y viene al dominio pelado busca su panel, no el pitch.
+  if (loggedIn) {
+    return <Navigate to={activeTenant ? '/orders' : '/tenants'} replace />
+  }
 
   return (
     <div className="bg-white">
       {/* ── Navbar ── */}
       <header className="sticky top-0 z-50 border-b border-slate-900/10 bg-white/80 backdrop-blur-xl">
         <div className="mx-auto flex max-w-6xl items-center gap-6 px-4 py-3 sm:px-6">
-          <a href="#top" className="text-lg font-semibold tracking-tight text-slate-900">
-            uTracker
+          <a href="#top" className="flex items-center gap-2">
+            <img src="/uTrackerLogo.png" alt="" className="size-8" />
+            <span className="text-lg font-semibold tracking-tight text-slate-900">uTracker</span>
           </a>
 
           <nav className="hidden gap-6 md:flex">
@@ -606,10 +610,10 @@ export function LandingPage() {
 
           <div className="ml-auto flex items-center gap-2">
             <Link
-              to={ctaTo}
+              to="/login"
               className="rounded-full bg-brand-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-brand-700"
             >
-              {ctaLabel}
+              Ingresar
             </Link>
             <button
               type="button"
@@ -649,6 +653,13 @@ export function LandingPage() {
 
         <div className="relative mx-auto max-w-4xl px-4 pt-16 pb-10 text-center sm:px-6 sm:pt-24">
           <Reveal>
+            <img
+              src="/uTrackerLogo.png"
+              alt="uTracker"
+              width={96}
+              height={96}
+              className="mx-auto mb-6 size-20 drop-shadow-xl sm:size-24"
+            />
             <p className="text-sm font-semibold text-brand-600 sm:text-base">
               Gestor de pedidos para negocios que crecen
             </p>
@@ -660,18 +671,18 @@ export function LandingPage() {
               </span>
             </h1>
             <p className="mx-auto mt-5 max-w-xl text-lg leading-relaxed text-slate-500 sm:text-xl">
-              Pedidos, pagos y clientes en un solo lugar. Con un flujo de trabajo que armás vos, y
-              un link de seguimiento que le contesta al cliente por vos.
+              Pedidos, pagos y clientes en un solo lugar. Con un flujo de trabajo que armas tú, y
+              un link de seguimiento que le contesta al cliente por ti.
             </p>
           </Reveal>
 
           <Reveal delay={120}>
             <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
               <Link
-                to={ctaTo}
+                to="/register"
                 className="inline-flex w-full items-center justify-center gap-2 rounded-full bg-brand-600 px-7 py-3.5 text-base font-medium text-white transition-colors hover:bg-brand-700 sm:w-auto"
               >
-                {loggedIn ? 'Ir al panel' : 'Empezar ahora'}
+                Empezar ahora
                 <ArrowRight size={17} />
               </Link>
               <a
@@ -705,8 +716,8 @@ export function LandingPage() {
             </Headline>
             <div className="mt-5">
               <Lede dark>
-                Quién pidió, en qué estado está, cuánto debe y cuándo entró. Filtrá por estado y
-                mirá el tablero completo sin abrir un solo pedido.
+                Quién pidió, en qué estado está, cuánto debe y cuándo entró. Filtra por estado y
+                mira el tablero completo sin abrir un solo pedido.
               </Lede>
             </div>
           </Reveal>
@@ -744,16 +755,16 @@ export function LandingPage() {
             </Headline>
             <div className="mt-5">
               <Lede>
-                Ningún negocio trabaja igual. Creá los estados que usás de verdad, ponéles nombre,
-                color e ícono, y arrastralos hasta que el orden sea el tuyo.
+                Ningún negocio trabaja igual. Crea los estados que usas de verdad, ponles nombre,
+                color e ícono, y arrástralos hasta que el orden sea el tuyo.
               </Lede>
             </div>
 
             <ul className="mt-8 space-y-4">
               {[
-                'Arrastrá para reordenar; los pedidos en curso se acomodan solos.',
-                'Marcá un estado como inicial, final o de cancelación.',
-                'Elegí qué roles pueden mover un pedido hasta ahí.',
+                'Arrastra para reordenar; los pedidos en curso se acomodan solos.',
+                'Marca un estado como inicial, final o de cancelación.',
+                'Elige qué roles pueden mover un pedido hasta ahí.',
                 'Un estado “vibrante” late en la pantalla del cliente para llamar la atención.',
                 'Un estado con “link necesario” te pide la URL del courier al pasar.',
               ].map((item) => (
@@ -785,7 +796,7 @@ export function LandingPage() {
             </Headline>
             <div className="mt-5">
               <Lede dark>
-                Cada pedido nace con su propio link. Se lo mandás por WhatsApp y ahí ve el estado,
+                Cada pedido nace con su propio link. Se lo mandas por WhatsApp y ahí ve el estado,
                 la línea de tiempo, lo que pidió con fotos, cuánto adelantó y cuánto resta.
               </Lede>
             </div>
@@ -803,7 +814,7 @@ export function LandingPage() {
                   {
                     icon: Clock,
                     title: 'Se actualiza solo',
-                    body: 'La página se refresca sola cada medio minuto. No tenés que avisar nada.',
+                    body: 'La página se refresca sola cada medio minuto. No tienes que avisar nada.',
                   },
                   {
                     icon: CreditCard,
@@ -853,17 +864,17 @@ export function LandingPage() {
             </Headline>
             <div className="mt-5">
               <Lede>
-                Cargá el adelanto cuando armás el pedido o registralo después. Subí la foto del
-                Yape, del Plin o del depósito y quedá con el respaldo guardado.
+                Carga el adelanto cuando armas el pedido o regístralo después. Sube la foto del
+                Yape, del Plin o del depósito y el respaldo queda guardado.
               </Lede>
             </div>
 
             <div className="mt-8 grid gap-6 sm:grid-cols-2">
               {[
-                ['El estado se acomoda solo', 'Pendiente, adelanto o pagado: no lo tocás vos.'],
+                ['El estado se acomoda solo', 'Pendiente, adelanto o pagado: no lo tocas tú.'],
                 ['Foto del comprobante', 'Queda pegada al pago, con fecha y nota.'],
                 ['Saldo siempre a la vista', 'En el pedido y en el link del cliente.'],
-                ['Se puede corregir', 'Eliminá un pago mal cargado y todo se recalcula.'],
+                ['Se puede corregir', 'Elimina un pago mal cargado y todo se recalcula.'],
               ].map(([title, body]) => (
                 <div key={title}>
                   <p className="text-sm font-semibold text-slate-900">{title}</p>
@@ -887,7 +898,7 @@ export function LandingPage() {
             </Headline>
             <div className="mt-5">
               <Lede>
-                Lo que vendés tal cual y lo que cotizás por trabajo conviven sin pelearse. Con
+                Lo que vendes tal cual y lo que cotizas por trabajo conviven sin pelearse. Con
                 fotos, categorías y precio fijo o de referencia.
               </Lede>
             </div>
@@ -941,8 +952,8 @@ export function LandingPage() {
             <Headline className="mt-3">Hecho para el teléfono.</Headline>
             <div className="mt-5">
               <Lede dark>
-                Movés un pedido de estado mientras cerrás la tienda, cargás un adelanto en la
-                vereda y mandás el link de seguimiento sin sentarte a una computadora.
+                Mueves un pedido de estado mientras cierras la tienda, cargas un adelanto en la
+                vereda y mandas el link de seguimiento sin sentarte a una computadora.
               </Lede>
             </div>
           </Reveal>
@@ -971,29 +982,27 @@ export function LandingPage() {
         />
         <div className="relative mx-auto max-w-2xl px-4 text-center sm:px-6">
           <Reveal>
-            <Headline className="text-slate-900">Empezá hoy.</Headline>
+            <Headline className="text-slate-900">Empieza hoy.</Headline>
             <div className="mt-5">
               <Lede>
-                Creá tu negocio, cargá tu catálogo y mandá el primer link de seguimiento en la misma
+                Crea tu negocio, carga tu catálogo y manda el primer link de seguimiento en la misma
                 tarde.
               </Lede>
             </div>
             <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
               <Link
-                to={ctaTo}
+                to="/register"
                 className="inline-flex w-full items-center justify-center gap-2 rounded-full bg-brand-600 px-7 py-3.5 text-base font-medium text-white transition-colors hover:bg-brand-700 sm:w-auto"
               >
-                {loggedIn ? 'Ir al panel' : 'Crear mi cuenta'}
+                Crear mi cuenta
                 <ArrowRight size={17} />
               </Link>
-              {!loggedIn && (
-                <Link
-                  to="/login"
-                  className="inline-flex w-full items-center justify-center rounded-full px-7 py-3.5 text-base font-medium text-brand-600 transition-colors hover:bg-brand-50 sm:w-auto"
-                >
-                  Ya tengo cuenta
-                </Link>
-              )}
+              <Link
+                to="/login"
+                className="inline-flex w-full items-center justify-center rounded-full px-7 py-3.5 text-base font-medium text-brand-600 transition-colors hover:bg-brand-50 sm:w-auto"
+              >
+                Ya tengo cuenta
+              </Link>
             </div>
           </Reveal>
         </div>
@@ -1002,9 +1011,12 @@ export function LandingPage() {
       {/* ── Footer ── */}
       <footer className="border-t border-slate-200 bg-slate-50 py-10">
         <div className="mx-auto flex max-w-6xl flex-col items-center gap-4 px-4 text-center sm:flex-row sm:justify-between sm:px-6 sm:text-left">
-          <div>
-            <p className="font-semibold tracking-tight text-slate-900">uTracker</p>
-            <p className="text-sm text-slate-500">Gestor de pedidos</p>
+          <div className="flex items-center gap-3">
+            <img src="/uTrackerLogo.png" alt="" className="size-9" />
+            <div>
+              <p className="font-semibold tracking-tight text-slate-900">uTracker</p>
+              <p className="text-sm text-slate-500">Gestor de pedidos</p>
+            </div>
           </div>
           <nav className="flex flex-wrap justify-center gap-x-6 gap-y-2">
             {navSections.map((section) => (
@@ -1016,8 +1028,8 @@ export function LandingPage() {
                 {section.label}
               </a>
             ))}
-            <Link to={ctaTo} className="text-sm font-medium text-brand-600 hover:underline">
-              {ctaLabel}
+            <Link to="/login" className="text-sm font-medium text-brand-600 hover:underline">
+              Ingresar
             </Link>
           </nav>
         </div>
