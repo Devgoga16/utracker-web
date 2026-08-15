@@ -16,12 +16,14 @@ import type { LucideIcon } from 'lucide-react'
 import { useAuthStore } from '@/stores/authStore'
 import { useSubscription } from '@/hooks/useSubscription'
 import { cn } from '@/lib/cn'
+import type { PlanFeatures } from '@/types'
 
 interface NavItem {
   to: string
   label: string
   icon: LucideIcon
-  featureKey?: string
+  /** Si está, el ítem solo se muestra cuando el plan incluye esa feature. */
+  featureKey?: keyof PlanFeatures
 }
 
 const ALL_MAIN_NAV: NavItem[] = [

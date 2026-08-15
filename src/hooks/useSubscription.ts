@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
 import { getMySubscription } from '@/api/subscription'
 import { useAuthStore } from '@/stores/authStore'
+import type { PlanFeatures } from '@/types'
 
 export function useSubscription() {
   const activeTenant = useAuthStore((s) => s.activeTenant)
@@ -18,9 +19,9 @@ export function useSubscription() {
     subscription,
     isLoading,
     isSuspended: subscription?.status === 'suspended',
-    can: (key: string) => {
+    can: (key: keyof PlanFeatures) => {
       if (!features) return true // sin suscripción = sin restricción (backward compat)
-      return !!(features as Record<string, unknown>)[key]
+      return !!features[key]
     },
   }
 }
