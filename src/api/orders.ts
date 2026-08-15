@@ -1,5 +1,5 @@
 import { api } from './client'
-import type { Order, OrderLink, OrderType, PaymentKind, WorkflowKind } from '@/types'
+import type { Franja, Order, OrderLink, OrderType, PaymentKind, WorkflowKind } from '@/types'
 
 export interface CreateOrderItemInput {
   /** Omit for an ad-hoc line; then name and unitPrice are required. */
@@ -18,6 +18,7 @@ export interface CreateOrderInput {
   delivery?: { address?: string; reference?: string; courierName?: string; driver?: string }
   notes?: string
   advance?: { amount: number; proofImageUrl?: string }
+  scheduledFor?: { date: string; franja: Franja }
 }
 
 export interface RegisterPaymentInput {

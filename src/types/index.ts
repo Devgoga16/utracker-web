@@ -1,4 +1,16 @@
 export type MembershipRole = 'owner' | 'admin' | 'staff' | 'driver'
+export type Franja = 'morning' | 'afternoon' | 'evening'
+
+export interface DaySchedule {
+  day: number // 0=Dom, 1=Lun … 6=Sab
+  open: string // "09:00"
+  close: string // "18:00"
+}
+
+export interface ScheduledFor {
+  date: string // "2026-08-20"
+  franja: Franja
+}
 export type WorkflowKind = 'fulfillment' | 'payment'
 export type OrderType = 'pickup' | 'delivery_third_party' | 'delivery_own'
 export type OrderCreatedVia = 'manual' | 'order_link'
@@ -63,6 +75,7 @@ export interface Tenant {
   logoUrl?: string
   /** Solo dígitos con código de país, ej. 51987654321. */
   phone?: string
+  schedule?: DaySchedule[]
   isActive: boolean
   role?: MembershipRole
 }
@@ -192,6 +205,7 @@ export interface Order {
   createdVia: OrderCreatedVia
   orderLink?: string
   fulfillmentLink?: string
+  scheduledFor?: ScheduledFor
   notes?: string
   createdAt: string
   updatedAt: string

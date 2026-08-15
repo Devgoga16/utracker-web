@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
+  Calendar,
   Check,
   CircleCheck,
   CircleX,
@@ -36,7 +37,13 @@ import {
 import { ImageUploader } from '@/components/ImageUploader'
 import { StateIcon } from '@/lib/icons'
 import { cn, formatCurrency, formatDateTime } from '@/lib/cn'
-import type { PaymentKind, WorkflowKind, WorkflowState } from '@/types'
+import type { Franja, PaymentKind, WorkflowKind, WorkflowState } from '@/types'
+
+const FRANJA_LABEL: Record<Franja, string> = {
+  morning: 'por la mañana',
+  afternoon: 'por la tarde',
+  evening: 'por la noche',
+}
 
 export function OrderDetailPage() {
   const { id } = useParams<{ id: string }>()
@@ -220,6 +227,21 @@ export function OrderDetailPage() {
               </tfoot>
             </table>
           </Card>
+
+          {order.scheduledFor && (
+            <div className="flex items-center gap-2.5 rounded-xl bg-slate-50 px-4 py-3 text-sm ring-1 ring-slate-200">
+              <Calendar size={15} className="shrink-0 text-slate-400" />
+              <span className="text-slate-600">
+                <span className="font-medium text-slate-900">Entrega preferida:</span>{' '}
+                {new Date(order.scheduledFor.date + 'T12:00:00').toLocaleDateString('es-PE', {
+                  weekday: 'long',
+                  day: 'numeric',
+                  month: 'long',
+                })}{' '}
+                {FRANJA_LABEL[order.scheduledFor.franja]}
+              </span>
+            </div>
+          )}
 
           <Card
             title="Pagos"

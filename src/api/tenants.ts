@@ -1,5 +1,5 @@
 import { api } from './client'
-import type { Tenant, Workflow } from '@/types'
+import type { DaySchedule, Tenant, Workflow } from '@/types'
 
 export async function listMyTenants() {
   const { data } = await api.get<{ tenants: Tenant[] }>('/tenants')
@@ -15,6 +15,7 @@ export async function updateTenantSettings(payload: {
   name?: string
   logoUrl?: string | null
   phone?: string | null
+  schedule?: DaySchedule[]
 }) {
   const { data } = await api.patch<{ tenant: Tenant }>('/tenants/settings', payload)
   return data.tenant

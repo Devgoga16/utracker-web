@@ -19,8 +19,29 @@ import {
   Spinner,
 } from '@/components/ui'
 import { ImageUploader } from '@/components/ImageUploader'
-import { formatCurrency } from '@/lib/cn'
-import type { OrderType } from '@/types'
+import { formatCurrency, cn } from '@/lib/cn'
+import { useAuthStore } from '@/stores/authStore'
+import type { DaySchedule, Franja, OrderType } from '@/types'
+
+const FRANJA_LABELS: Record<Franja, string> = {
+  morning: 'Mañana',
+  afternoon: 'Tarde',
+  evening: 'Noche',
+}
+const ALL_FRANJAS: Franja[] = ['morning', 'afternoon', 'evening']
+
+function getAvailableFranjas(schedule: DaySchedule[], dateStr: string): Franja[] {
+  const day = new Date(dateStr + 'T12:00:00').getDay()
+  const entry = schedule.find((d) => d.day === day)
+  if (!entry) return []
+  const openH = parseInt(entry.open.split(':')[0])
+  const closeH = parseInt(entry.close.split(':')[0])
+  const result: Franja[] = []
+  if (openH < 12) result.push('morning')
+  if (openH < 18 && closeH > 12) result.push('afternoon')
+  if (closeH > 18) result.push('evening')
+  return result
+}
 
 interface DraftLine {
   key: string
@@ -38,6 +59,7 @@ const nextKey = () => `line-${lineCounter++}`
 
 export function NewOrderPage() {
   const navigate = useNavigate()
+  const { activeTenant } = useAuthStore()
   const { data: catalog, isLoading } = useQuery({ queryKey: ['products'], queryFn: listProducts })
 
   const [lines, setLines] = useState<DraftLine[]>([])
@@ -48,6 +70,15 @@ export function NewOrderPage() {
   const [hasAdvance, setHasAdvance] = useState(false)
   const [advance, setAdvance] = useState({ amount: 0, proofImageUrl: '' })
   const [copied, setCopied] = useState(false)
+  const [scheduledDate, setScheduledDate] = useState('')
+  const [scheduledFranja, setScheduledFranja] = useState<Franja | null>(null)
+
+  const tenantSchedule = activeTenant?.schedule ?? []
+  const hasScheduleConfig = tenantSchedule.length > 0
+  const availableFranjas = scheduledDate && hasScheduleConfig
+    ? getAvailableFranjas(tenantSchedule, scheduledDate)
+    : ALL_FRANJAS
+  const isClosedDay = scheduledDate && hasScheduleConfig && availableFranjas.length === 0
 
   const total = lines.reduce((sum, l) => sum + l.unitPrice * l.quantity, 0)
 
@@ -73,6 +104,10 @@ export function NewOrderPage() {
         advance:
           hasAdvance && advance.amount > 0
             ? { amount: advance.amount, proofImageUrl: advance.proofImageUrl || undefined }
+            : undefined,
+        scheduledFor:
+          scheduledDate && scheduledFranja
+            ? { date: scheduledDate, franja: scheduledFranja }
             : undefined,
       }),
     onSuccess: (order) => navigate(`/orders/${order._id}`),
@@ -319,6 +354,52 @@ export function NewOrderPage() {
                   </Field>
                 </div>
               )}
+              <div className="sm:col-span-2">
+                <Field label="Fecha y franja de entrega (opcional)" htmlFor="sched-date">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Input
+                      id="sched-date"
+                      type="date"
+                      className="w-auto"
+                      value={scheduledDate}
+                      min={new Date().toISOString().slice(0, 10)}
+                      onChange={(e) => {
+                        setScheduledDate(e.target.value)
+                        setScheduledFranja(null)
+                      }}
+                    />
+                    {scheduledDate && availableFranjas.map((f) => (
+                      <button
+                        key={f}
+                        type="button"
+                        onClick={() => setScheduledFranja(scheduledFranja === f ? null : f)}
+                        className={cn(
+                          'rounded-full px-3 py-1.5 text-sm font-medium transition-colors',
+                          scheduledFranja === f
+                            ? 'bg-brand-600 text-white'
+                            : 'bg-slate-100 text-slate-700 hover:bg-slate-200',
+                        )}
+                      >
+                        {FRANJA_LABELS[f]}
+                      </button>
+                    ))}
+                    {scheduledDate && (
+                      <button
+                        type="button"
+                        onClick={() => { setScheduledDate(''); setScheduledFranja(null) }}
+                        className="text-xs text-slate-400 hover:text-red-500"
+                      >
+                        Limpiar
+                      </button>
+                    )}
+                  </div>
+                  {isClosedDay && (
+                    <p className="mt-1.5 text-xs text-amber-600">
+                      Este día no está en tu horario de atención configurado.
+                    </p>
+                  )}
+                </Field>
+              </div>
               <div className="sm:col-span-2">
                 <Field label="Notas internas (opcional)" htmlFor="o-notes">
                   <Input id="o-notes" value={notes} onChange={(e) => setNotes(e.target.value)} />

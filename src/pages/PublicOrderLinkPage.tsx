@@ -5,9 +5,30 @@ import { CircleCheck, Clock } from 'lucide-react'
 import { confirmPublicOrderLink, getPublicOrderLink } from '@/api/orderLinks'
 import { apiErrorMessage } from '@/api/client'
 import { Alert, Button, Card, Field, Input, Select, Spinner } from '@/components/ui'
-import { formatCurrency } from '@/lib/cn'
+import { cn, formatCurrency } from '@/lib/cn'
+import type { DaySchedule, Franja } from '@/types'
 
 type DeliveryChoice = 'pickup' | 'delivery_third_party' | 'delivery_own'
+
+const FRANJA_LABELS: Record<Franja, string> = {
+  morning: 'Mañana',
+  afternoon: 'Tarde',
+  evening: 'Noche',
+}
+const ALL_FRANJAS: Franja[] = ['morning', 'afternoon', 'evening']
+
+function getAvailableFranjas(schedule: DaySchedule[], dateStr: string): Franja[] {
+  const day = new Date(dateStr + 'T12:00:00').getDay()
+  const entry = schedule.find((d) => d.day === day)
+  if (!entry) return []
+  const openH = parseInt(entry.open.split(':')[0])
+  const closeH = parseInt(entry.close.split(':')[0])
+  const result: Franja[] = []
+  if (openH < 12) result.push('morning')
+  if (openH < 18 && closeH > 12) result.push('afternoon')
+  if (closeH > 18) result.push('evening')
+  return result
+}
 
 export function PublicOrderLinkPage() {
   const { token } = useParams<{ token: string }>()
@@ -21,6 +42,16 @@ export function PublicOrderLinkPage() {
 
   const [customer, setCustomer] = useState({ name: '', phone: '', email: '', address: '' })
   const [deliveryType, setDeliveryType] = useState<DeliveryChoice>('pickup')
+  const [scheduledDate, setScheduledDate] = useState('')
+  const [scheduledFranja, setScheduledFranja] = useState<Franja | null>(null)
+
+  const tenantSchedule = link?.tenant.schedule ?? []
+  const hasScheduleConfig = tenantSchedule.length > 0
+  const availableFranjas =
+    scheduledDate && hasScheduleConfig
+      ? getAvailableFranjas(tenantSchedule, scheduledDate)
+      : ALL_FRANJAS
+  const isClosedDay = scheduledDate && hasScheduleConfig && availableFranjas.length === 0
 
   const confirmMutation = useMutation({
     mutationFn: () =>
@@ -28,6 +59,10 @@ export function PublicOrderLinkPage() {
         customer,
         deliveryType,
         delivery: deliveryType === 'pickup' ? undefined : { address: customer.address },
+        scheduledFor:
+          deliveryType !== 'pickup' && scheduledDate && scheduledFranja
+            ? { date: scheduledDate, franja: scheduledFranja }
+            : undefined,
       }),
   })
 
@@ -158,14 +193,61 @@ export function PublicOrderLinkPage() {
           )}
 
           {deliveryType !== 'pickup' && (
-            <Field label="Dirección de entrega" htmlFor="pc-address">
-              <Input
-                id="pc-address"
-                required
-                value={customer.address}
-                onChange={(e) => setCustomer({ ...customer, address: e.target.value })}
-              />
-            </Field>
+            <>
+              <Field label="Dirección de entrega" htmlFor="pc-address">
+                <Input
+                  id="pc-address"
+                  required
+                  value={customer.address}
+                  onChange={(e) => setCustomer({ ...customer, address: e.target.value })}
+                />
+              </Field>
+
+              <Field label="¿Cuándo te enviamos el pedido? (opcional)" htmlFor="pc-sched-date">
+                <div className="flex flex-wrap items-center gap-2">
+                  <Input
+                    id="pc-sched-date"
+                    type="date"
+                    className="w-auto"
+                    value={scheduledDate}
+                    min={new Date().toISOString().slice(0, 10)}
+                    onChange={(e) => {
+                      setScheduledDate(e.target.value)
+                      setScheduledFranja(null)
+                    }}
+                  />
+                  {scheduledDate && availableFranjas.map((f) => (
+                    <button
+                      key={f}
+                      type="button"
+                      onClick={() => setScheduledFranja(scheduledFranja === f ? null : f)}
+                      className={cn(
+                        'rounded-full px-3 py-1.5 text-sm font-medium transition-colors',
+                        scheduledFranja === f
+                          ? 'bg-brand-600 text-white'
+                          : 'bg-slate-100 text-slate-700 hover:bg-slate-200',
+                      )}
+                    >
+                      {FRANJA_LABELS[f]}
+                    </button>
+                  ))}
+                  {scheduledDate && (
+                    <button
+                      type="button"
+                      onClick={() => { setScheduledDate(''); setScheduledFranja(null) }}
+                      className="text-xs text-slate-400 hover:text-red-500"
+                    >
+                      Limpiar
+                    </button>
+                  )}
+                </div>
+                {isClosedDay && (
+                  <p className="mt-1.5 text-xs text-amber-600">
+                    El negocio no atiende ese día. Elige otra fecha.
+                  </p>
+                )}
+              </Field>
+            </>
           )}
 
           <Button type="submit" className="w-full" disabled={confirmMutation.isPending}>

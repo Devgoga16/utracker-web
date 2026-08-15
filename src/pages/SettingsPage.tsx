@@ -7,6 +7,32 @@ import { apiErrorMessage } from '@/api/client'
 import { Alert, Button, Card, Field, IconButton, Input, PageHeader } from '@/components/ui'
 import { ImageUploader } from '@/components/ImageUploader'
 import { useAuthStore } from '@/stores/authStore'
+import type { DaySchedule } from '@/types'
+
+type ScheduleDay = { day: number; enabled: boolean; open: string; close: string }
+
+const DAYS: { day: number; label: string }[] = [
+  { day: 1, label: 'Lunes' },
+  { day: 2, label: 'Martes' },
+  { day: 3, label: 'Miércoles' },
+  { day: 4, label: 'Jueves' },
+  { day: 5, label: 'Viernes' },
+  { day: 6, label: 'Sábado' },
+  { day: 0, label: 'Domingo' },
+]
+
+function initSchedule(saved?: DaySchedule[]): ScheduleDay[] {
+  return DAYS.map(({ day }) => {
+    const found = saved?.find((d) => d.day === day)
+    return { day, enabled: !!found, open: found?.open ?? '09:00', close: found?.close ?? '18:00' }
+  })
+}
+
+function scheduleToPayload(days: ScheduleDay[]): DaySchedule[] {
+  return days
+    .filter((d) => d.enabled)
+    .map(({ day, open, close }) => ({ day, open, close }))
+}
 
 export function SettingsPage() {
   const { activeTenant, setActiveTenant } = useAuthStore()
@@ -17,7 +43,15 @@ export function SettingsPage() {
   const [logoUrls, setLogoUrls] = useState<string[]>(
     activeTenant?.logoUrl ? [activeTenant.logoUrl] : [],
   )
+  const [scheduleState, setScheduleState] = useState<ScheduleDay[]>(() =>
+    initSchedule(activeTenant?.schedule),
+  )
   const [saved, setSaved] = useState(false)
+
+  function updateDay(day: number, patch: Partial<ScheduleDay>) {
+    setScheduleState((prev) => prev.map((d) => (d.day === day ? { ...d, ...patch } : d)))
+    setSaved(false)
+  }
 
   const mutation = useMutation({
     mutationFn: () =>
@@ -25,6 +59,7 @@ export function SettingsPage() {
         name: name.trim() || undefined,
         logoUrl: logoUrls[0] ?? null,
         phone: phone.replace(/\D/g, '') || null,
+        schedule: scheduleToPayload(scheduleState),
       }),
     onSuccess: (tenant) => {
       setActiveTenant({ ...activeTenant!, ...tenant })
@@ -57,10 +92,18 @@ export function SettingsPage() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['categories'] }),
   })
 
+  const savedScheduleStr = JSON.stringify(
+    (activeTenant?.schedule ?? []).slice().sort((a, b) => a.day - b.day),
+  )
+  const currentScheduleStr = JSON.stringify(
+    scheduleToPayload(scheduleState).sort((a, b) => a.day - b.day),
+  )
+
   const dirty =
     name.trim() !== (activeTenant?.name ?? '') ||
     (logoUrls[0] ?? null) !== (activeTenant?.logoUrl ?? null) ||
-    phone.replace(/\D/g, '') !== (activeTenant?.phone ?? '')
+    phone.replace(/\D/g, '') !== (activeTenant?.phone ?? '') ||
+    currentScheduleStr !== savedScheduleStr
 
   return (
     <div className="max-w-2xl space-y-6">
@@ -135,6 +178,51 @@ export function SettingsPage() {
             </Button>
           </a>
         </div>
+      </Card>
+
+      <Card
+        title="Horarios de atención"
+        description="Indica cuándo puedes atender pedidos. La franja de entrega se muestra al crear un pedido."
+      >
+        <ul className="divide-y divide-slate-100">
+          {scheduleState.map((d) => {
+            const meta = DAYS.find((x) => x.day === d.day)!
+            return (
+              <li key={d.day} className="flex flex-wrap items-center gap-x-3 gap-y-2 py-3">
+                <label className="flex cursor-pointer items-center gap-2.5">
+                  <input
+                    type="checkbox"
+                    checked={d.enabled}
+                    onChange={(e) => updateDay(d.day, { enabled: e.target.checked })}
+                    className="h-4 w-4 rounded border-slate-300 text-brand-600 accent-brand-600"
+                  />
+                  <span className="w-24 text-sm font-medium text-slate-700">{meta.label}</span>
+                </label>
+
+                {d.enabled ? (
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="time"
+                      value={d.open}
+                      onChange={(e) => updateDay(d.day, { open: e.target.value })}
+                      className="rounded-lg border border-slate-300 px-2 py-1 text-sm text-slate-800 focus:border-brand-500 focus:outline-none"
+                    />
+                    <span className="text-slate-400">—</span>
+                    <input
+                      type="time"
+                      value={d.close}
+                      min={d.open}
+                      onChange={(e) => updateDay(d.day, { close: e.target.value })}
+                      className="rounded-lg border border-slate-300 px-2 py-1 text-sm text-slate-800 focus:border-brand-500 focus:outline-none"
+                    />
+                  </div>
+                ) : (
+                  <span className="text-sm text-slate-400">Cerrado</span>
+                )}
+              </li>
+            )
+          })}
+        </ul>
       </Card>
 
       <Card
