@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { assignSubscription, listSuperadminPlans, listSuperadminTenants } from '@/api/superadmin'
+import { toggleTenantSubscription } from '@/api/billing'
 import type { TenantRow } from '@/api/superadmin'
 import { apiErrorMessage } from '@/api/client'
 import { Alert, Button, Field, Input, PageHeader, Select, Spinner } from '@/components/ui'
@@ -108,6 +109,34 @@ function AssignForm({ tenant, onClose }: { tenant: TenantRow; onClose: () => voi
   )
 }
 
+function ToggleButton({ tenant }: { tenant: TenantRow }) {
+  const qc = useQueryClient()
+  const status = tenant.subscription?.status as SubscriptionStatus | undefined
+
+  const mutation = useMutation({
+    mutationFn: () => toggleTenantSubscription(tenant._id),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['superadmin-tenants'] }),
+  })
+
+  if (!status || status === 'trial') return null
+
+  return (
+    <Button
+      size="sm"
+      variant={status === 'suspended' ? 'secondary' : 'ghost'}
+      disabled={mutation.isPending}
+      onClick={() => mutation.mutate()}
+      className={status === 'active' ? 'text-red-600 hover:text-red-700' : ''}
+    >
+      {mutation.isPending
+        ? '...'
+        : status === 'active'
+          ? 'Suspender'
+          : 'Activar'}
+    </Button>
+  )
+}
+
 export function SuperadminTenantsPage() {
   const { data: tenants, isLoading } = useQuery({
     queryKey: ['superadmin-tenants'],
@@ -192,15 +221,18 @@ export function SuperadminTenantsPage() {
                       )}
                     </td>
                     <td className="px-4 py-3 text-right">
-                      <Button
-                        size="sm"
-                        variant="secondary"
-                        onClick={() =>
-                          setAssigning((prev) => (prev === tenant._id ? null : tenant._id))
-                        }
-                      >
-                        {assigning === tenant._id ? 'Cancelar' : 'Asignar plan'}
-                      </Button>
+                      <div className="flex items-center justify-end gap-2">
+                        <ToggleButton tenant={tenant} />
+                        <Button
+                          size="sm"
+                          variant="secondary"
+                          onClick={() =>
+                            setAssigning((prev) => (prev === tenant._id ? null : tenant._id))
+                          }
+                        >
+                          {assigning === tenant._id ? 'Cancelar' : 'Asignar plan'}
+                        </Button>
+                      </div>
                     </td>
                   </tr>
                   {assigning === tenant._id && (

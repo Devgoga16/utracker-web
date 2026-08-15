@@ -1,11 +1,12 @@
 import { NavLink, Outlet } from 'react-router-dom'
-import { BarChart2, Building2, CreditCard, LogOut } from 'lucide-react'
+import { BarChart2, Building2, CreditCard, LogOut, Receipt } from 'lucide-react'
 import { useAuthStore } from '@/stores/authStore'
 
 const nav = [
   { to: '/superadmin', label: 'Dashboard', icon: BarChart2, end: true },
   { to: '/superadmin/plans', label: 'Planes', icon: CreditCard },
   { to: '/superadmin/tenants', label: 'Negocios', icon: Building2 },
+  { to: '/superadmin/billing', label: 'Facturación', icon: Receipt },
 ]
 
 export function SuperadminLayout() {

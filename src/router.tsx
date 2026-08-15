@@ -20,6 +20,8 @@ import { StorePage } from '@/pages/StorePage'
 import { SuperadminDashboardPage } from '@/pages/superadmin/SuperadminDashboardPage'
 import { SuperadminPlansPage } from '@/pages/superadmin/SuperadminPlansPage'
 import { SuperadminTenantsPage } from '@/pages/superadmin/SuperadminTenantsPage'
+import { SuperadminBillingPage } from '@/pages/superadmin/SuperadminBillingPage'
+import { BillingPage } from '@/pages/BillingPage'
 
 export const router = createBrowserRouter([
   { path: '/', element: <LandingPage /> },
@@ -42,6 +44,7 @@ export const router = createBrowserRouter([
               { path: '/superadmin', element: <SuperadminDashboardPage /> },
               { path: '/superadmin/plans', element: <SuperadminPlansPage /> },
               { path: '/superadmin/tenants', element: <SuperadminTenantsPage /> },
+              { path: '/superadmin/billing', element: <SuperadminBillingPage /> },
             ],
           },
         ],
@@ -61,6 +64,7 @@ export const router = createBrowserRouter([
               { path: '/finances', element: <FinancesPage /> },
               { path: '/inventory', element: <InventoryPage /> },
               { path: '/settings', element: <SettingsPage /> },
+              { path: '/billing', element: <BillingPage /> },
             ],
           },
         ],

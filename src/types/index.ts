@@ -25,6 +25,22 @@ export interface User {
 }
 
 export type SubscriptionStatus = 'trial' | 'active' | 'suspended'
+export type BillStatus = 'pending' | 'reviewing' | 'paid' | 'overdue'
+
+export interface Bill {
+  _id: string
+  tenant: string | { _id: string; name: string; slug: string }
+  period: string // "2026-08"
+  planName: string
+  amount: number
+  dueDate: string
+  status: BillStatus
+  proofImageUrl?: string
+  proofUploadedAt?: string
+  paidAt?: string
+  notes?: string
+  createdAt: string
+}
 
 export interface PlanFeatures {
   maxOrdersPerMonth: number

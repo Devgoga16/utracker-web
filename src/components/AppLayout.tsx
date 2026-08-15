@@ -6,6 +6,7 @@ import {
   ChevronDown,
   ChevronsLeft,
   ClipboardList,
+  CreditCard,
   LogOut,
   Package,
   PackageSearch,
@@ -36,6 +37,7 @@ const ALL_MAIN_NAV: NavItem[] = [
 const configNav: NavItem[] = [
   { to: '/workflow', label: 'Workflow', icon: Workflow },
   { to: '/settings', label: 'Ajustes', icon: Settings },
+  { to: '/billing', label: 'Suscripción', icon: CreditCard },
 ]
 
 const COLLAPSE_KEY = 'utracker:sidebar-collapsed'
