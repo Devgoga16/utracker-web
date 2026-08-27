@@ -12,6 +12,7 @@ import {
   PackageSearch,
   Settings,
   Workflow,
+  Zap,
 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import { useAuthStore } from '@/stores/authStore'
@@ -30,6 +31,7 @@ interface NavItem {
 const ALL_MAIN_NAV: NavItem[] = [
   { to: '/orders', label: 'Pedidos', icon: ClipboardList },
   { to: '/catalog', label: 'Catálogo', icon: Package },
+  { to: '/campaigns', label: 'Campañas', icon: Zap },
   { to: '/inventory', label: 'Inventario', icon: PackageSearch, featureKey: 'inventory' },
   { to: '/finances', label: 'Finanzas', icon: BarChart2, featureKey: 'finances' },
 ]

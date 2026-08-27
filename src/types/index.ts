@@ -26,6 +26,35 @@ export interface User {
 
 export type SubscriptionStatus = 'trial' | 'active' | 'suspended'
 export type BillStatus = 'pending' | 'reviewing' | 'paid' | 'overdue'
+export type CampaignStatus = 'draft' | 'active' | 'ended' | 'cancelled'
+
+export interface CampaignItem {
+  product: string
+  name: string
+  price: number
+  imageUrl?: string
+  stock: number
+  sold: number
+}
+
+export type CampaignDeliveryType = 'pickup' | 'delivery_own'
+
+export interface Campaign {
+  _id: string
+  tenant: string
+  token: string
+  name: string
+  description?: string
+  coverImageUrl?: string
+  startDate: string
+  endDate: string
+  items: CampaignItem[]
+  deliveryTypes: CampaignDeliveryType[]
+  schedule?: { franjas: Franja[] }
+  status: CampaignStatus
+  createdAt: string
+  updatedAt: string
+}
 
 export interface Bill {
   _id: string
@@ -220,6 +249,7 @@ export interface Order {
   payments: PaymentEntry[]
   createdVia: OrderCreatedVia
   orderLink?: string
+  campaign?: string
   fulfillmentLink?: string
   scheduledFor?: ScheduledFor
   notes?: string

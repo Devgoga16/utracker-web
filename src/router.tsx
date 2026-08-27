@@ -22,6 +22,8 @@ import { SuperadminPlansPage } from '@/pages/superadmin/SuperadminPlansPage'
 import { SuperadminTenantsPage } from '@/pages/superadmin/SuperadminTenantsPage'
 import { SuperadminBillingPage } from '@/pages/superadmin/SuperadminBillingPage'
 import { BillingPage } from '@/pages/BillingPage'
+import { CampaignsPage } from '@/pages/CampaignsPage'
+import { PublicCampaignPage } from '@/pages/PublicCampaignPage'
 
 export const router = createBrowserRouter([
   { path: '/', element: <LandingPage /> },
@@ -30,6 +32,7 @@ export const router = createBrowserRouter([
   { path: '/order/:token', element: <PublicOrderLinkPage /> },
   { path: '/track/:token', element: <TrackOrderPage /> },
   { path: '/store/:slug', element: <StorePage /> },
+  { path: '/c/:token', element: <PublicCampaignPage /> },
 
   {
     element: <RequireAuth />,
@@ -60,6 +63,7 @@ export const router = createBrowserRouter([
               { path: '/orders/:id', element: <OrderDetailPage /> },
               { path: '/catalog', element: <CatalogPage /> },
               { path: '/products', element: <Navigate to="/catalog" replace /> },
+              { path: '/campaigns', element: <CampaignsPage /> },
               { path: '/workflow', element: <WorkflowPage /> },
               { path: '/finances', element: <FinancesPage /> },
               { path: '/inventory', element: <InventoryPage /> },

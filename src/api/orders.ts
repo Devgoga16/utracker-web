@@ -28,8 +28,8 @@ export interface RegisterPaymentInput {
   note?: string
 }
 
-export async function listOrders() {
-  const { data } = await api.get<{ orders: Order[] }>('/orders')
+export async function listOrders(params?: { campaign?: string }) {
+  const { data } = await api.get<{ orders: Order[] }>('/orders', { params })
   return data.orders
 }
 

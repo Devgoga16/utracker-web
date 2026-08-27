@@ -1,8 +1,9 @@
 import { useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
-import { ChevronRight, ClipboardList, Plus } from 'lucide-react'
+import { ChevronRight, ClipboardList, Plus, Zap } from 'lucide-react'
 import { listOrders } from '@/api/orders'
+import { listCampaigns } from '@/api/campaigns'
 import { getWorkflow } from '@/api/tenants'
 import {
   Button,
@@ -25,10 +26,23 @@ const orderTypeLabels: Record<OrderType, string> = {
 }
 
 export function OrdersPage() {
+  const [searchParams] = useSearchParams()
+  const campaignId = searchParams.get('campaign') ?? undefined
+
   const [stateFilter, setStateFilter] = useState<string | null>(null)
 
-  const { data: orders, isLoading } = useQuery({ queryKey: ['orders'], queryFn: listOrders })
+  const { data: orders, isLoading } = useQuery({
+    queryKey: ['orders', { campaign: campaignId }],
+    queryFn: () => listOrders({ campaign: campaignId }),
+  })
   const { data: workflow } = useQuery({ queryKey: ['workflow'], queryFn: getWorkflow })
+  const { data: campaigns } = useQuery({
+    queryKey: ['campaigns'],
+    queryFn: listCampaigns,
+    enabled: !!campaignId,
+  })
+
+  const activeCampaign = campaignId ? campaigns?.find((c) => c._id === campaignId) : undefined
 
   const filtered = stateFilter
     ? orders?.filter((o) => o.fulfillmentState?._id === stateFilter)
@@ -41,22 +55,45 @@ export function OrdersPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Pedidos"
+        title={activeCampaign ? `Pedidos · ${activeCampaign.name}` : 'Pedidos'}
         description={
           orders?.length
             ? `${orders.length} pedido${orders.length === 1 ? '' : 's'} en total`
             : undefined
         }
         actions={
-          <Link to="/orders/new">
-            <Button>
-              <Plus size={16} />
-              <span className="sm:hidden">Nuevo</span>
-              <span className="hidden sm:inline">Nuevo pedido</span>
-            </Button>
-          </Link>
+          <div className="flex items-center gap-2">
+            {campaignId && (
+              <Link to="/orders">
+                <Button variant="secondary" size="sm">
+                  Ver todos
+                </Button>
+              </Link>
+            )}
+            <Link to="/orders/new">
+              <Button>
+                <Plus size={16} />
+                <span className="sm:hidden">Nuevo</span>
+                <span className="hidden sm:inline">Nuevo pedido</span>
+              </Button>
+            </Link>
+          </div>
         }
       />
+
+      {/* Banner de campaña */}
+      {activeCampaign && (
+        <div className="flex items-center gap-3 rounded-2xl border border-violet-200 bg-violet-50 px-4 py-3">
+          <Zap size={16} className="shrink-0 text-violet-500" />
+          <div className="min-w-0">
+            <p className="text-sm font-semibold text-violet-800">Filtrando por campaña</p>
+            <p className="truncate text-xs text-violet-600">{activeCampaign.name}</p>
+          </div>
+          <Link to="/orders" className="ml-auto shrink-0 text-xs font-medium text-violet-600 hover:underline">
+            Quitar filtro
+          </Link>
+        </div>
+      )}
 
       {workflow && (
         <ChipBar>

@@ -12,14 +12,15 @@ import {
   Share2,
   Wrench,
   X,
+  Zap,
 } from 'lucide-react'
 import { api } from '@/api/client'
 import { Lightbox, Spinner } from '@/components/ui'
 import { cn, formatCurrency } from '@/lib/cn'
-import type { Product, Tenant } from '@/types'
+import type { Campaign, Product, Tenant } from '@/types'
 
 async function getStoreCatalog(slug: string) {
-  const { data } = await api.get<{ tenant: Tenant; products: Product[] }>(`/store/${slug}`)
+  const { data } = await api.get<{ tenant: Tenant; products: Product[]; campaigns?: Campaign[] }>(`/store/${slug}`)
   return data
 }
 
@@ -67,6 +68,10 @@ export function StorePage() {
   })
 
   const products = data?.products ?? []
+  const campaigns = (data?.campaigns ?? []).filter((c) => {
+    const now = new Date()
+    return new Date(c.endDate) > now && c.status !== 'cancelled'
+  })
 
   const categories = useMemo(
     () => Array.from(new Set(products.map((p) => p.category ?? '').filter(Boolean))),
@@ -138,6 +143,56 @@ export function StorePage() {
   return (
     <div className="min-h-screen bg-slate-50">
       <StoreHeader tenant={tenant} productCount={products.length} />
+
+      {/* Campaigns section */}
+      {campaigns.length > 0 && (
+        <div className="border-b border-slate-100 bg-white">
+          <div className="mx-auto max-w-5xl px-4 py-5 sm:px-6">
+            <p className="mb-3 flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-slate-500">
+              <Zap size={13} className="text-amber-500" />
+              Ventas especiales
+            </p>
+            <div className="flex gap-3 overflow-x-auto pb-1">
+              {campaigns.map((c) => {
+                const now = new Date()
+                const isActive = c.status === 'active' && new Date(c.startDate) <= now
+                const totalLeft = c.items.reduce((s, i) => s + (i.stock - i.sold), 0)
+                return (
+                  <a
+                    key={c._id}
+                    href={`/c/${c.token}`}
+                    className="group flex w-56 shrink-0 flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm hover:border-brand-400 hover:shadow-md transition"
+                  >
+                    {c.coverImageUrl ? (
+                      <img src={c.coverImageUrl} alt="" className="h-24 w-full object-cover" />
+                    ) : (
+                      <div className="flex h-24 w-full items-center justify-center bg-gradient-to-br from-brand-50 to-violet-50">
+                        <Zap size={28} className="text-brand-400" />
+                      </div>
+                    )}
+                    <div className="flex flex-col gap-1 p-3">
+                      <div className="flex items-center gap-1.5">
+                        {isActive ? (
+                          <span className="flex items-center gap-1 text-[10px] font-semibold text-emerald-600">
+                            <span className="size-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                            En vivo
+                          </span>
+                        ) : (
+                          <span className="text-[10px] font-semibold text-amber-600">Próximamente</span>
+                        )}
+                      </div>
+                      <p className="line-clamp-2 text-sm font-semibold text-slate-900 leading-tight">
+                        {c.name}
+                      </p>
+                      <p className="text-xs text-slate-500">{totalLeft} unidades disponibles</p>
+                    </div>
+                  </a>
+                )
+              })}
+            </div>
+          </div>
+        </div>
+      )}
 
       {products.length > 0 && (
         <div className="sticky top-0 z-20 border-b border-slate-200 bg-white/95 backdrop-blur">

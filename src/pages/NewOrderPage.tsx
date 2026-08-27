@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useMutation, useQuery } from '@tanstack/react-query'
-import { Check, Copy, Link2, Package, Plus, Trash2, Wrench } from 'lucide-react'
+import { Check, Copy, Image, Link2, Package, Plus, Search, Trash2, Wrench, X } from 'lucide-react'
 import { createOrder, createOrderLink } from '@/api/orders'
 import { listProducts } from '@/api/products'
 import { apiErrorMessage } from '@/api/client'
@@ -21,7 +21,7 @@ import {
 import { ImageUploader } from '@/components/ImageUploader'
 import { formatCurrency, cn } from '@/lib/cn'
 import { useAuthStore } from '@/stores/authStore'
-import type { DaySchedule, Franja, OrderType } from '@/types'
+import type { DaySchedule, Franja, OrderType, Product } from '@/types'
 
 const FRANJA_LABELS: Record<Franja, string> = {
   morning: 'Mañana',
@@ -57,12 +57,184 @@ interface DraftLine {
 let lineCounter = 0
 const nextKey = () => `line-${lineCounter++}`
 
+// ─── Catalog Picker ───────────────────────────────────────────────────────────
+
+function ProductCard({
+  product,
+  onAdd,
+}: {
+  product: Product
+  onAdd: (product: Product) => void
+}) {
+  const thumb = product.images[0]
+  const isService = product.kind === 'service'
+  const isQuoted = product.pricingMode === 'quoted'
+
+  return (
+    <button
+      type="button"
+      onClick={() => onAdd(product)}
+      className="group flex flex-col overflow-hidden rounded-xl border border-slate-200 bg-white text-left transition hover:border-brand-400 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
+    >
+      {/* Image area */}
+      <div className="relative aspect-square w-full overflow-hidden bg-slate-100">
+        {thumb ? (
+          <img
+            src={thumb}
+            alt={product.name}
+            className="h-full w-full object-cover transition group-hover:scale-105"
+          />
+        ) : (
+          <div className="flex h-full w-full items-center justify-center text-slate-300">
+            {isService ? <Wrench size={28} /> : <Image size={28} />}
+          </div>
+        )}
+        {/* Kind badge */}
+        <span
+          className={cn(
+            'absolute left-2 top-2 rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide',
+            isService
+              ? 'bg-violet-100 text-violet-700'
+              : 'bg-slate-100 text-slate-600',
+          )}
+        >
+          {isService ? 'Servicio' : 'Producto'}
+        </span>
+      </div>
+
+      {/* Info */}
+      <div className="flex flex-1 flex-col gap-0.5 p-3">
+        <p className="line-clamp-2 text-sm font-semibold leading-snug text-slate-900">
+          {product.name}
+        </p>
+        <p className="mt-auto pt-1 text-sm font-bold text-brand-600">
+          {isQuoted ? (
+            <span className="text-amber-600">A cotizar</span>
+          ) : (
+            formatCurrency(product.price)
+          )}
+        </p>
+        {product.trackStock && product.stock !== undefined && (
+          <p className="text-[11px] text-slate-400">Stock: {product.stock}</p>
+        )}
+      </div>
+
+      {/* Add overlay on hover */}
+      <div className="flex items-center justify-center gap-1 border-t border-slate-100 bg-slate-50 py-2 text-xs font-medium text-slate-500 transition group-hover:bg-brand-50 group-hover:text-brand-700">
+        <Plus size={13} />
+        Agregar
+      </div>
+    </button>
+  )
+}
+
+function CatalogPicker({
+  catalog,
+  onAdd,
+  onClose,
+}: {
+  catalog: Product[]
+  onAdd: (product: Product) => void
+  onClose: () => void
+}) {
+  const [search, setSearch] = useState('')
+  const [kindFilter, setKindFilter] = useState<'all' | 'product' | 'service'>('all')
+
+  const filtered = catalog.filter((p) => {
+    if (!p.isActive) return false
+    if (kindFilter !== 'all' && p.kind !== kindFilter) return false
+    if (search && !p.name.toLowerCase().includes(search.toLowerCase())) return false
+    return true
+  })
+
+  return (
+    /* Backdrop */
+    <div
+      className="fixed inset-0 z-40 flex items-end justify-center bg-black/40 sm:items-center"
+      onClick={onClose}
+    >
+      {/* Panel */}
+      <div
+        className="relative flex h-[85vh] w-full flex-col overflow-hidden rounded-t-2xl bg-white shadow-2xl sm:h-[75vh] sm:max-w-2xl sm:rounded-2xl"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Header */}
+        <div className="flex items-center justify-between border-b border-slate-100 px-4 py-3">
+          <h2 className="font-semibold text-slate-800">Seleccionar del catálogo</h2>
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-700"
+          >
+            <X size={18} />
+          </button>
+        </div>
+
+        {/* Search + filters */}
+        <div className="flex flex-col gap-2 border-b border-slate-100 px-4 py-3">
+          <div className="relative">
+            <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+            <input
+              autoFocus
+              placeholder="Buscar producto o servicio..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="w-full rounded-lg border border-slate-200 bg-slate-50 py-2 pl-9 pr-3 text-sm outline-none focus:border-brand-400 focus:ring-2 focus:ring-brand-100"
+            />
+          </div>
+          <div className="flex gap-2">
+            {(['all', 'product', 'service'] as const).map((k) => (
+              <button
+                key={k}
+                type="button"
+                onClick={() => setKindFilter(k)}
+                className={cn(
+                  'rounded-full px-3 py-1 text-xs font-medium transition',
+                  kindFilter === k
+                    ? 'bg-slate-800 text-white'
+                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200',
+                )}
+              >
+                {k === 'all' ? 'Todos' : k === 'product' ? 'Productos' : 'Servicios'}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Grid */}
+        <div className="flex-1 overflow-y-auto px-4 py-4">
+          {filtered.length === 0 ? (
+            <div className="flex flex-col items-center gap-2 py-12 text-slate-400">
+              <Package size={32} />
+              <p className="text-sm">No hay resultados.</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+              {filtered.map((p) => (
+                <ProductCard
+                  key={p._id}
+                  product={p}
+                  onAdd={(prod) => {
+                    onAdd(prod)
+                    onClose()
+                  }}
+                />
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
+
 export function NewOrderPage() {
   const navigate = useNavigate()
   const { activeTenant } = useAuthStore()
   const { data: catalog, isLoading } = useQuery({ queryKey: ['products'], queryFn: listProducts })
 
   const [lines, setLines] = useState<DraftLine[]>([])
+  const [pickerOpen, setPickerOpen] = useState(false)
   const [type, setType] = useState<OrderType>('pickup')
   const [customer, setCustomer] = useState({ name: '', phone: '', email: '', address: '' })
   const [notes, setNotes] = useState('')
@@ -185,22 +357,24 @@ export function NewOrderPage() {
 
       <div className="grid gap-6 lg:grid-cols-3">
         <div className="space-y-6 lg:col-span-2">
+          {pickerOpen && catalog && (
+            <CatalogPicker
+              catalog={catalog}
+              onAdd={(product) => addFromCatalog(product._id)}
+              onClose={() => setPickerOpen(false)}
+            />
+          )}
+
           <Card title="Qué incluye el pedido">
-            <div className="flex flex-col gap-2 sm:flex-row">
-              <Select className="sm:flex-1" value="" onChange={(e) => addFromCatalog(e.target.value)}>
-                <option value="" disabled>
-                  Agregar del catálogo...
-                </option>
-                {catalog?.map((item) => (
-                  <option key={item._id} value={item._id}>
-                    {item.kind === 'service' ? '[Servicio] ' : ''}
-                    {item.name}
-                    {item.pricingMode === 'quoted'
-                      ? ' — a cotizar'
-                      : ` — ${formatCurrency(item.price)}`}
-                  </option>
-                ))}
-              </Select>
+            <div className="flex gap-2">
+              <Button
+                type="button"
+                className="flex-1"
+                onClick={() => setPickerOpen(true)}
+              >
+                <Package size={15} />
+                Agregar del catálogo
+              </Button>
               <Button type="button" variant="secondary" className="shrink-0" onClick={addAdHoc}>
                 <Plus size={15} />
                 Línea libre
