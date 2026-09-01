@@ -1,5 +1,5 @@
 import { api } from './client'
-import type { Campaign, CampaignStatus } from '@/types'
+import type { Campaign, CampaignStatus, Tenant } from '@/types'
 
 // ─── Owner ────────────────────────────────────────────────────────────────────
 
@@ -21,7 +21,6 @@ export interface CampaignItemInput {
 export interface CreateCampaignInput {
   name: string
   description?: string
-  coverImageUrl?: string
   startDate: string
   endDate: string
   items: CampaignItemInput[]
@@ -48,9 +47,15 @@ export async function updateCampaign(
 
 // ─── Public ───────────────────────────────────────────────────────────────────
 
+/** La vista pública muestra la campaña con la identidad de la tienda. */
+export interface PublicCampaignResponse {
+  campaign: Campaign
+  tenant: Pick<Tenant, '_id' | 'name' | 'slug' | 'logoUrl' | 'phone' | 'brandColor'> | null
+}
+
 export async function getPublicCampaign(token: string) {
-  const { data } = await api.get<{ campaign: Campaign }>(`/campaigns/public/${token}`)
-  return data.campaign
+  const { data } = await api.get<PublicCampaignResponse>(`/campaigns/public/${token}`)
+  return data
 }
 
 export interface CampaignOrderInput {

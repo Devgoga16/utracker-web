@@ -182,10 +182,14 @@ function CampaignForm({
           <Field label="Descripción (opcional)" htmlFor="cp-desc">
             <Input
               id="cp-desc"
-              placeholder="Breve descripción visible para tus clientes"
+              placeholder="Ej. Solo 30 porciones, hechas el mismo día"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
             />
+            <p className="mt-1.5 text-xs text-slate-500">
+              Aparece debajo del nombre en la página que ven tus clientes. Las fotos salen de los
+              productos que elijas abajo.
+            </p>
           </Field>
         </div>
         <Field label="Fecha de inicio" htmlFor="cp-start">
@@ -200,10 +204,15 @@ function CampaignForm({
           <Input
             id="cp-end"
             type="date"
+            min={startDate || undefined}
             value={endDate}
             onChange={(e) => setEndDate(e.target.value)}
           />
         </Field>
+        <p className="text-xs text-slate-500 sm:col-span-2">
+          Tus clientes pueden reservar desde que actives la campaña, aunque aún no llegue la fecha
+          de inicio.
+        </p>
       </div>
 
       {/* Tipo de entrega */}

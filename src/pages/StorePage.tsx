@@ -5,6 +5,8 @@ import { useQuery } from '@tanstack/react-query'
 import {
   ArrowDownUp,
   Check,
+  ChevronRight,
+  Clock,
   MessageCircle,
   Package,
   PackageX,
@@ -17,10 +19,13 @@ import {
 import { api } from '@/api/client'
 import { Lightbox, Spinner } from '@/components/ui'
 import { cn, formatCurrency } from '@/lib/cn'
+import { applyBrandColor } from '@/lib/brandColor'
 import type { Campaign, Product, Tenant } from '@/types'
 
 async function getStoreCatalog(slug: string) {
-  const { data } = await api.get<{ tenant: Tenant; products: Product[]; campaigns?: Campaign[] }>(`/store/${slug}`)
+  const { data } = await api.get<{ tenant: Tenant; products: Product[]; campaigns?: Campaign[] }>(
+    `/store/${slug}`,
+  )
   return data
 }
 
@@ -32,6 +37,8 @@ const SORT_LABELS: Record<SortKey, string> = {
   price_desc: 'Precio: mayor a menor',
   name_asc: 'Nombre A–Z',
 }
+
+const SIN_CATEGORIA = 'Otros'
 
 function isOutOfStock(p: Product) {
   return p.kind === 'product' && p.trackStock && (p.stock ?? 0) <= 0
@@ -47,7 +54,7 @@ function waLink(phone: string, item?: Product) {
   return `https://wa.me/${phone}?text=${encodeURIComponent(text)}`
 }
 
-/* ─────────────────────────── Página ─────────────────────────── */
+/* ═══════════════════════════ Página ═══════════════════════════ */
 
 export function StorePage() {
   const { slug } = useParams<{ slug: string }>()
@@ -67,11 +74,13 @@ export function StorePage() {
     enabled: Boolean(slug),
   })
 
+  // El color del negocio tiñe toda la tienda; al salir vuelve el índigo.
+  useEffect(() => applyBrandColor(data?.tenant?.brandColor), [data?.tenant?.brandColor])
+
   const products = data?.products ?? []
-  const campaigns = (data?.campaigns ?? []).filter((c) => {
-    const now = new Date()
-    return new Date(c.endDate) > now && c.status !== 'cancelled'
-  })
+  const campaigns = (data?.campaigns ?? []).filter(
+    (c) => new Date(c.endDate) > new Date() && c.status !== 'cancelled',
+  )
 
   const categories = useMemo(
     () => Array.from(new Set(products.map((p) => p.category ?? '').filter(Boolean))),
@@ -106,10 +115,28 @@ export function StorePage() {
     return list
   }, [products, search, activeCategory, sort, onlyAvailable])
 
-  function openLightbox(images: string[], url: string) {
-    setLightboxImages(images)
-    setLightboxUrl(url)
-  }
+  /**
+   * Sin filtros la lista va agrupada por categoría, como el menú de una app de
+   * delivery. Con búsqueda o filtro activo eso estorba: ahí va lista plana.
+   */
+  const grouped = useMemo(() => {
+    const flat = search.trim() || activeCategory || sort !== 'default'
+    if (flat) return [{ label: null as string | null, items: filtered }]
+
+    const map = new Map<string, Product[]>()
+    for (const p of filtered) {
+      const key = p.category || SIN_CATEGORIA
+      const bucket = map.get(key)
+      if (bucket) bucket.push(p)
+      else map.set(key, [p])
+    }
+    // "Otros" siempre al final.
+    return Array.from(map.entries())
+      .sort((a, b) =>
+        a[0] === SIN_CATEGORIA ? 1 : b[0] === SIN_CATEGORIA ? -1 : a[0].localeCompare(b[0]),
+      )
+      .map(([label, items]) => ({ label, items }))
+  }, [filtered, search, activeCategory, sort])
 
   function clearFilters() {
     setSearch('')
@@ -138,94 +165,47 @@ export function StorePage() {
 
   const { tenant } = data
   const activeFilters =
-    (activeCategory ? 1 : 0) + (onlyAvailable ? 1 : 0) + (sort !== 'default' ? 1 : 0) + (search ? 1 : 0)
+    (activeCategory ? 1 : 0) +
+    (onlyAvailable ? 1 : 0) +
+    (sort !== 'default' ? 1 : 0) +
+    (search ? 1 : 0)
 
   return (
-    <div className="min-h-screen bg-slate-50">
-      <StoreHeader tenant={tenant} productCount={products.length} />
+    <div className="min-h-screen bg-slate-100">
+      <div className="mx-auto min-h-screen max-w-2xl bg-white">
+        <StoreHeader tenant={tenant} productCount={products.length} />
 
-      {/* Campaigns section */}
-      {campaigns.length > 0 && (
-        <div className="border-b border-slate-100 bg-white">
-          <div className="mx-auto max-w-5xl px-4 py-5 sm:px-6">
-            <p className="mb-3 flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-slate-500">
-              <Zap size={13} className="text-amber-500" />
-              Ventas especiales
-            </p>
-            <div className="flex gap-3 overflow-x-auto pb-1">
-              {campaigns.map((c) => {
-                const now = new Date()
-                const isActive = c.status === 'active' && new Date(c.startDate) <= now
-                const totalLeft = c.items.reduce((s, i) => s + (i.stock - i.sold), 0)
-                return (
-                  <a
-                    key={c._id}
-                    href={`/c/${c.token}`}
-                    className="group flex w-56 shrink-0 flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm hover:border-brand-400 hover:shadow-md transition"
-                  >
-                    {c.coverImageUrl ? (
-                      <img src={c.coverImageUrl} alt="" className="h-24 w-full object-cover" />
-                    ) : (
-                      <div className="flex h-24 w-full items-center justify-center bg-gradient-to-br from-brand-50 to-violet-50">
-                        <Zap size={28} className="text-brand-400" />
-                      </div>
-                    )}
-                    <div className="flex flex-col gap-1 p-3">
-                      <div className="flex items-center gap-1.5">
-                        {isActive ? (
-                          <span className="flex items-center gap-1 text-[10px] font-semibold text-emerald-600">
-                            <span className="size-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                            En vivo
-                          </span>
-                        ) : (
-                          <span className="text-[10px] font-semibold text-amber-600">Próximamente</span>
-                        )}
-                      </div>
-                      <p className="line-clamp-2 text-sm font-semibold text-slate-900 leading-tight">
-                        {c.name}
-                      </p>
-                      <p className="text-xs text-slate-500">{totalLeft} unidades disponibles</p>
-                    </div>
-                  </a>
-                )
-              })}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {products.length > 0 && (
-        <div className="sticky top-0 z-20 border-b border-slate-200 bg-white/95 backdrop-blur">
-          <div className="mx-auto max-w-5xl space-y-2 px-4 py-3 sm:px-6">
-            {/* Buscador + orden */}
-            <div className="flex gap-2">
+        {/* Buscador + filtros: se pegan arriba al hacer scroll. */}
+        {products.length > 0 && (
+          <div className="sticky top-0 z-20 border-b border-slate-200 bg-white/95 backdrop-blur">
+            <div className="flex gap-2 px-4 pt-3">
               <div className="relative min-w-0 flex-1">
                 <Search
-                  size={15}
+                  size={16}
                   className="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-slate-400"
                 />
                 <input
                   type="search"
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
-                  placeholder="Buscar en el catálogo..."
-                  className="w-full rounded-full border-0 bg-slate-100 py-2 pr-3 pl-9 text-base ring-1 ring-transparent transition-shadow outline-none placeholder:text-slate-400 focus:bg-white focus:ring-brand-500 sm:text-sm"
+                  placeholder="Buscar en el catálogo"
+                  className="w-full rounded-xl border-0 bg-slate-100 py-2.5 pr-3 pl-9 text-base ring-1 ring-transparent transition outline-none placeholder:text-slate-400 focus:bg-white focus:ring-brand-500 sm:text-sm"
                 />
               </div>
 
               <div className="relative shrink-0">
                 <button
                   type="button"
+                  aria-label="Ordenar"
                   onClick={() => setShowSortMenu((v) => !v)}
                   className={cn(
-                    'flex h-full items-center gap-1.5 rounded-full px-3.5 text-xs font-medium transition-colors',
+                    'flex size-full items-center gap-1.5 rounded-xl px-3 text-xs font-semibold transition-colors',
                     sort !== 'default'
-                      ? 'bg-brand-50 text-brand-700 ring-1 ring-brand-200'
+                      ? 'bg-brand-600 text-white'
                       : 'bg-slate-100 text-slate-600 hover:bg-slate-200',
                   )}
                 >
-                  <ArrowDownUp size={13} />
-                  <span className="hidden sm:inline">Ordenar</span>
+                  <ArrowDownUp size={14} />
                 </button>
 
                 {showSortMenu && (
@@ -236,7 +216,7 @@ export function StorePage() {
                       onClick={() => setShowSortMenu(false)}
                       className="fixed inset-0 z-10 cursor-default"
                     />
-                    <div className="absolute top-full right-0 z-20 mt-1.5 w-52 overflow-hidden rounded-xl bg-white py-1 shadow-lg ring-1 ring-slate-200">
+                    <div className="absolute top-full right-0 z-20 mt-1.5 w-52 overflow-hidden rounded-xl bg-white py-1 shadow-xl ring-1 ring-slate-200">
                       {(Object.entries(SORT_LABELS) as [SortKey, string][]).map(([key, label]) => (
                         <button
                           key={key}
@@ -265,9 +245,9 @@ export function StorePage() {
 
             {/* Chips de categoría */}
             {(categories.length > 0 || hasTrackedStock) && (
-              <div className="no-scrollbar -mx-1 flex gap-1.5 overflow-x-auto px-1 pb-0.5">
+              <div className="no-scrollbar flex gap-2 overflow-x-auto px-4 py-2.5">
                 <Chip active={activeCategory === null} onClick={() => setActiveCategory(null)}>
-                  Todo
+                  Todos
                 </Chip>
                 {categories.map((cat) => (
                   <Chip
@@ -291,92 +271,106 @@ export function StorePage() {
             )}
 
             {activeFilters > 0 && (
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 px-4 pb-2">
                 <span className="text-[11px] text-slate-400">
                   {filtered.length} resultado{filtered.length !== 1 && 's'}
                 </span>
                 <button
                   type="button"
                   onClick={clearFilters}
-                  className="text-[11px] font-medium text-brand-600 hover:underline"
+                  className="text-[11px] font-semibold text-brand-600 hover:underline"
                 >
                   Limpiar
                 </button>
               </div>
             )}
           </div>
-        </div>
-      )}
-
-      <main className="mx-auto max-w-5xl px-4 py-6 sm:px-6 sm:py-8">
-        {products.length === 0 ? (
-          <EmptyState
-            title="Todavía no hay nada publicado"
-            hint="Este negocio aún no cargó su catálogo. Vuelve en un rato."
-          />
-        ) : filtered.length === 0 ? (
-          <EmptyState
-            title="Nada coincide con tu búsqueda"
-            hint="Prueba con otra palabra o quita algún filtro."
-            action={
-              <button
-                type="button"
-                onClick={clearFilters}
-                className="text-sm font-medium text-brand-600 hover:underline"
-              >
-                Limpiar filtros
-              </button>
-            }
-          />
-        ) : (
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {filtered.map((item) => (
-              <ProductCard
-                key={item._id}
-                item={item}
-                phone={tenant.phone}
-                onOpen={() => setDetail(item)}
-              />
-            ))}
-          </div>
         )}
-      </main>
 
-      <footer className="border-t border-slate-200 bg-white py-8 text-center">
-        {tenant.phone && (
-          <a
-            href={waLink(tenant.phone)}
-            target="_blank"
-            rel="noreferrer"
-            className="mb-4 inline-flex items-center gap-2 rounded-full bg-emerald-600 px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-emerald-700"
-          >
-            <MessageCircle size={16} />
-            Escríbenos por WhatsApp
-          </a>
-        )}
-        <p className="text-xs text-slate-400">
-          Catálogo de {tenant.name} · hecho con{' '}
-          <span className="font-medium text-slate-500">uTracker</span>
-        </p>
-      </footer>
+        {/* Ventas programadas */}
+        {campaigns.length > 0 && <CampaignStrip campaigns={campaigns} />}
+
+        {/* Catálogo */}
+        <main className="pb-10">
+          {products.length === 0 ? (
+            <EmptyState
+              title="Todavía no hay nada publicado"
+              hint="Este negocio aún no cargó su catálogo. Vuelve en un rato."
+            />
+          ) : filtered.length === 0 ? (
+            <EmptyState
+              title="Nada coincide con tu búsqueda"
+              hint="Prueba con otra palabra o quita algún filtro."
+              action={
+                <button
+                  type="button"
+                  onClick={clearFilters}
+                  className="text-sm font-semibold text-brand-600 hover:underline"
+                >
+                  Limpiar filtros
+                </button>
+              }
+            />
+          ) : (
+            grouped.map((group) => (
+              <section key={group.label ?? '_flat'}>
+                {group.label && (
+                  <h2 className="flex items-baseline gap-2 bg-slate-50 px-4 py-2.5 text-sm font-bold text-slate-900">
+                    {group.label}
+                    <span className="text-xs font-medium text-slate-400">
+                      {group.items.length}
+                    </span>
+                  </h2>
+                )}
+                <ul className="divide-y divide-slate-100">
+                  {group.items.map((item) => (
+                    <ProductRow
+                      key={item._id}
+                      item={item}
+                      phone={tenant.phone}
+                      onOpen={() => setDetail(item)}
+                    />
+                  ))}
+                </ul>
+              </section>
+            ))
+          )}
+        </main>
+
+        <footer className="border-t border-slate-200 bg-slate-50 px-4 py-8 text-center">
+          {tenant.phone && (
+            <a
+              href={waLink(tenant.phone)}
+              target="_blank"
+              rel="noreferrer"
+              className="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-5 py-3 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-emerald-700 active:scale-[0.98]"
+            >
+              <MessageCircle size={16} />
+              Escríbenos por WhatsApp
+            </a>
+          )}
+          <p className="mt-5 text-xs text-slate-400">
+            {tenant.name} · hecho con <span className="font-medium text-slate-500">uTracker</span>
+          </p>
+        </footer>
+      </div>
 
       <ProductDetail
         item={detail}
         phone={tenant.phone}
         onClose={() => setDetail(null)}
-        onZoom={openLightbox}
+        onZoom={(images, url) => {
+          setLightboxImages(images)
+          setLightboxUrl(url)
+        }}
       />
 
-      <Lightbox
-        url={lightboxUrl}
-        images={lightboxImages}
-        onClose={() => setLightboxUrl(null)}
-      />
+      <Lightbox url={lightboxUrl} images={lightboxImages} onClose={() => setLightboxUrl(null)} />
     </div>
   )
 }
 
-/* ─────────────────────────── Header ─────────────────────────── */
+/* ═══════════════════════════ Cabecera ═══════════════════════════ */
 
 function StoreHeader({ tenant, productCount }: { tenant: Tenant; productCount: number }) {
   const [copied, setCopied] = useState(false)
@@ -392,61 +386,208 @@ function StoreHeader({ tenant, productCount }: { tenant: Tenant; productCount: n
     setTimeout(() => setCopied(false), 2000)
   }
 
+  // Horario de hoy, para decir si está abierto ahora mismo.
+  const today = new Date().getDay()
+  const todaySchedule = tenant.schedule?.find((d) => d.day === today)
+  const nowHM = new Date().toTimeString().slice(0, 5)
+  const isOpen = todaySchedule ? nowHM >= todaySchedule.open && nowHM < todaySchedule.close : null
+
   return (
-    <header className="border-b border-slate-200 bg-white">
-      <div className="mx-auto flex max-w-5xl items-center gap-4 px-4 py-5 sm:px-6 sm:py-6">
+    <header>
+      {/* Banner corto: el logo difuminado le da color propio a cada tienda. */}
+      <div className="relative h-24 overflow-hidden sm:h-28">
         {tenant.logoUrl ? (
-          <img
-            src={tenant.logoUrl}
-            alt={tenant.name}
-            className="size-14 shrink-0 rounded-2xl object-cover ring-1 ring-slate-200 sm:size-16"
-          />
+          <>
+            <img
+              src={tenant.logoUrl}
+              alt=""
+              aria-hidden
+              className="size-full scale-150 object-cover blur-2xl"
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-white/40 to-transparent" />
+          </>
         ) : (
-          <div className="flex size-14 shrink-0 items-center justify-center rounded-2xl bg-brand-100 text-2xl font-bold text-brand-600 sm:size-16">
-            {tenant.name.charAt(0).toUpperCase()}
-          </div>
+          <div className="size-full bg-gradient-to-br from-brand-500 via-brand-600 to-brand-800" />
         )}
 
-        <div className="min-w-0 flex-1">
-          <h1 className="truncate text-xl font-bold text-slate-900 sm:text-2xl">{tenant.name}</h1>
-          <p className="mt-0.5 text-sm text-slate-400">
-            {productCount === 0
-              ? 'Catálogo en preparación'
-              : `${productCount} ${productCount === 1 ? 'ítem disponible' : 'ítems disponibles'}`}
-          </p>
-        </div>
+        <button
+          type="button"
+          onClick={share}
+          title="Compartir catálogo"
+          aria-label="Compartir catálogo"
+          className="absolute top-3 right-3 rounded-full bg-white/85 p-2 text-slate-600 shadow-sm backdrop-blur transition-colors hover:bg-white"
+        >
+          {copied ? <Check size={16} className="text-emerald-600" /> : <Share2 size={16} />}
+        </button>
+      </div>
 
-        <div className="flex shrink-0 items-center gap-2">
-          <button
-            type="button"
-            onClick={share}
-            title="Compartir catálogo"
-            aria-label="Compartir catálogo"
-            className="rounded-full p-2.5 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-600"
-          >
-            {copied ? <Check size={18} className="text-emerald-600" /> : <Share2 size={18} />}
-          </button>
-
-          {tenant.phone && (
-            <a
-              href={waLink(tenant.phone)}
-              target="_blank"
-              rel="noreferrer"
-              className="flex items-center gap-1.5 rounded-full bg-emerald-600 px-3 py-2 text-sm font-semibold text-white transition-colors hover:bg-emerald-700 sm:px-4"
-            >
-              <MessageCircle size={15} />
-              <span className="hidden sm:inline">WhatsApp</span>
-            </a>
+      {/* Ficha del negocio: el logo monta sobre el banner. */}
+      <div className="px-4 pb-4">
+        <div className="-mt-9 flex items-end gap-3">
+          {tenant.logoUrl ? (
+            <img
+              src={tenant.logoUrl}
+              alt={tenant.name}
+              className="size-18 shrink-0 rounded-2xl border-4 border-white bg-white object-cover shadow-md"
+            />
+          ) : (
+            <div className="flex size-18 shrink-0 items-center justify-center rounded-2xl border-4 border-white bg-brand-100 text-2xl font-bold text-brand-700 shadow-md">
+              {tenant.name.charAt(0).toUpperCase()}
+            </div>
           )}
         </div>
+
+        <h1 className="mt-2.5 text-xl leading-tight font-bold text-slate-900">{tenant.name}</h1>
+
+        <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-[13px] text-slate-500">
+          <span>
+            {productCount === 0
+              ? 'Catálogo en preparación'
+              : `${productCount} ${productCount === 1 ? 'producto' : 'productos'}`}
+          </span>
+          {isOpen !== null && (
+            <>
+              <span className="text-slate-300">·</span>
+              <span
+                className={cn(
+                  'inline-flex items-center gap-1 font-medium',
+                  isOpen ? 'text-emerald-600' : 'text-slate-400',
+                )}
+              >
+                <Clock size={11} />
+                {isOpen ? 'Abierto ahora' : 'Cerrado'}
+              </span>
+            </>
+          )}
+        </div>
+
+        {tenant.phone && (
+          <a
+            href={waLink(tenant.phone)}
+            target="_blank"
+            rel="noreferrer"
+            className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-600 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-emerald-700 active:scale-[0.99]"
+          >
+            <MessageCircle size={15} />
+            Escríbenos por WhatsApp
+          </a>
+        )}
       </div>
     </header>
   )
 }
 
-/* ─────────────────────────── Tarjeta ─────────────────────────── */
+/* ═══════════════════════════ Campañas ═══════════════════════════ */
 
-function ProductCard({
+/**
+ * La campaña no tiene foto propia: se arma un mosaico con las fotos de sus
+ * productos. Sin fotos cae a un bloque con el color de la tienda.
+ */
+function CampaignThumb({ campaign }: { campaign: Campaign }) {
+  const images = campaign.items.map((i) => i.imageUrl).filter(Boolean).slice(0, 4) as string[]
+
+  if (images.length === 0) {
+    return (
+      <div className="flex size-16 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-brand-500 to-brand-700">
+        <Zap size={22} className="text-white" />
+      </div>
+    )
+  }
+
+  if (images.length === 1) {
+    return (
+      <img
+        src={images[0]}
+        alt=""
+        loading="lazy"
+        className="size-16 shrink-0 rounded-lg object-cover"
+      />
+    )
+  }
+
+  // Con 2 fotos van en dos filas; con 3 o más, mosaico de cuatro celdas.
+  return (
+    <div
+      className={cn(
+        'grid size-16 shrink-0 gap-px overflow-hidden rounded-lg bg-slate-200',
+        images.length === 2 ? 'grid-rows-2' : 'grid-cols-2 grid-rows-2',
+      )}
+    >
+      {images.slice(0, images.length === 2 ? 2 : 4).map((url, i) => (
+        <img key={i} src={url} alt="" loading="lazy" className="size-full object-cover" />
+      ))}
+    </div>
+  )
+}
+
+function CampaignStrip({ campaigns }: { campaigns: Campaign[] }) {
+  return (
+    <section className="border-b border-slate-200 bg-slate-50 py-3.5">
+      <h2 className="mb-2.5 flex items-center gap-1.5 px-4 text-sm font-bold text-slate-900">
+        <Zap size={14} className="text-amber-500" />
+        Ventas especiales
+      </h2>
+
+      <div className="no-scrollbar flex gap-2.5 overflow-x-auto px-4">
+        {campaigns.map((c) => {
+          const isLive = c.status === 'active' && new Date(c.startDate) <= new Date()
+          const isDraft = c.status === 'draft'
+          const left = c.items.reduce((s, i) => s + (i.stock - i.sold), 0)
+          const total = c.items.reduce((s, i) => s + i.stock, 0)
+          const almostGone = total > 0 && left / total <= 0.25
+
+          return (
+            <a
+              key={c._id}
+              href={`/c/${c.token}`}
+              className="group flex w-64 shrink-0 gap-3 rounded-xl bg-white p-2.5 shadow-sm ring-1 ring-slate-200 transition-colors hover:ring-brand-400"
+            >
+              <CampaignThumb campaign={c} />
+
+              <div className="flex min-w-0 flex-1 flex-col justify-center gap-1">
+                {isLive ? (
+                  <span className="inline-flex w-fit items-center gap-1 rounded bg-emerald-100 px-1.5 py-0.5 text-[10px] font-bold text-emerald-700 uppercase">
+                    <span className="size-1 animate-pulse rounded-full bg-emerald-500" />
+                    En vivo
+                  </span>
+                ) : isDraft ? (
+                  <span className="w-fit rounded bg-slate-100 px-1.5 py-0.5 text-[10px] font-bold text-slate-500 uppercase">
+                    Pronto
+                  </span>
+                ) : (
+                  <span className="w-fit rounded bg-violet-100 px-1.5 py-0.5 text-[10px] font-bold text-violet-700 uppercase">
+                    Reserva ya
+                  </span>
+                )}
+
+                <p className="line-clamp-1 text-sm leading-tight font-semibold text-slate-900">
+                  {c.name}
+                </p>
+                <p
+                  className={cn(
+                    'text-[11px]',
+                    almostGone && left > 0 ? 'font-semibold text-red-600' : 'text-slate-500',
+                  )}
+                >
+                  {left > 0 ? `${left} disponibles` : 'Agotado'}
+                </p>
+              </div>
+
+              <ChevronRight
+                size={16}
+                className="self-center text-slate-300 transition-transform group-hover:translate-x-0.5 group-hover:text-brand-500"
+              />
+            </a>
+          )
+        })}
+      </div>
+    </section>
+  )
+}
+
+/* ═══════════════════════════ Fila de producto ═══════════════════════════ */
+
+function ProductRow({
   item,
   phone,
   onOpen,
@@ -459,105 +600,84 @@ function ProductCard({
   const isService = item.kind === 'service'
 
   return (
-    <article
-      className={cn(
-        'group flex flex-col overflow-hidden rounded-2xl bg-white ring-1 ring-slate-200 transition-all',
-        outOfStock ? 'opacity-70' : 'hover:-translate-y-0.5 hover:shadow-lg hover:shadow-slate-900/5',
-      )}
-    >
-      <button
-        type="button"
-        onClick={onOpen}
-        className="relative block aspect-[4/3] w-full overflow-hidden bg-slate-100 text-left focus:outline-none"
+    <li>
+      <div
+        className={cn(
+          'flex w-full items-center gap-3 px-4 py-3 transition-colors',
+          outOfStock ? 'opacity-60' : 'hover:bg-slate-50',
+        )}
       >
-        {item.images?.[0] ? (
-          <img
-            src={item.images[0]}
-            alt={item.name}
-            loading="lazy"
-            className="size-full object-cover transition-transform duration-500 group-hover:scale-105"
-          />
-        ) : (
-          <span className="flex size-full items-center justify-center bg-slate-50 text-slate-300">
-            {isService ? <Wrench size={30} /> : <Package size={30} />}
-          </span>
-        )}
-
-        {outOfStock ? (
-          <span className="absolute inset-0 flex items-center justify-center bg-white/60">
-            <span className="rounded-full bg-slate-900/80 px-3 py-1 text-xs font-semibold text-white">
-              Sin stock
-            </span>
-          </span>
-        ) : (
-          <span className="absolute inset-x-0 bottom-0 flex items-center justify-center bg-gradient-to-t from-black/60 to-transparent py-2 text-xs font-medium text-white opacity-0 transition-opacity group-hover:opacity-100">
-            Ver detalle
-          </span>
-        )}
-
-        {item.images && item.images.length > 1 && (
-          <span className="absolute top-2 right-2 rounded-full bg-black/50 px-2 py-0.5 text-[11px] font-medium text-white backdrop-blur-sm">
-            {item.images.length} fotos
-          </span>
-        )}
-      </button>
-
-      <div className="flex flex-1 flex-col p-4">
-        <div className="mb-1.5 flex items-center gap-1.5">
-          <span className="inline-flex items-center gap-1 text-[11px] font-medium tracking-wide text-slate-400 uppercase">
-            {isService ? <Wrench size={11} /> : <Package size={11} />}
-            {isService ? 'Servicio' : 'Producto'}
-          </span>
-          {item.category && (
-            <span className="ml-auto truncate rounded-full bg-slate-100 px-2 py-0.5 text-[11px] text-slate-500">
-              {item.category}
-            </span>
-          )}
-        </div>
-
+        {/* Foto */}
         <button
           type="button"
           onClick={onOpen}
-          className="text-left font-semibold text-slate-900 transition-colors hover:text-brand-600 focus:outline-none"
+          aria-label={`Ver ${item.name}`}
+          className="relative size-20 shrink-0 overflow-hidden rounded-xl bg-slate-100 focus:outline-none"
         >
-          {item.name}
+          {item.images?.[0] ? (
+            <img
+              src={item.images[0]}
+              alt={item.name}
+              loading="lazy"
+              className="size-full object-cover"
+            />
+          ) : (
+            <span className="flex size-full items-center justify-center text-slate-300">
+              {isService ? <Wrench size={22} /> : <Package size={22} />}
+            </span>
+          )}
+          {outOfStock && (
+            <span className="absolute inset-0 flex items-center justify-center bg-white/70">
+              <span className="rounded bg-slate-900/85 px-1.5 py-0.5 text-[9px] font-bold text-white uppercase">
+                Agotado
+              </span>
+            </span>
+          )}
         </button>
 
-        {item.description && (
-          <p className="mt-1 line-clamp-2 flex-1 text-sm text-slate-500">{item.description}</p>
-        )}
-
-        <div className="mt-3 flex items-end justify-between gap-3">
-          <div className="min-w-0">
-            {item.pricingMode === 'quoted' ? (
-              <>
-                <p className="font-bold text-slate-900">{formatCurrency(item.price)}</p>
-                <p className="text-[11px] text-amber-600">referencial · se cotiza</p>
-              </>
-            ) : (
-              <p className="text-lg font-bold text-slate-900">{formatCurrency(item.price)}</p>
-            )}
-          </div>
-
-          {phone && (
-            <a
-              href={waLink(phone, item)}
-              target="_blank"
-              rel="noreferrer"
-              onClick={(e) => e.stopPropagation()}
-              className="flex shrink-0 items-center gap-1.5 rounded-lg bg-emerald-600 px-3 py-2 text-xs font-semibold whitespace-nowrap text-white transition-colors hover:bg-emerald-700"
-            >
-              <MessageCircle size={13} />
-              {outOfStock ? 'Consultar' : 'Pedir'}
-            </a>
+        {/* Datos */}
+        <button
+          type="button"
+          onClick={onOpen}
+          className="min-w-0 flex-1 text-left focus:outline-none"
+        >
+          <p className="truncate font-semibold text-slate-900">{item.name}</p>
+          {item.description && (
+            <p className="mt-0.5 line-clamp-2 text-[13px] leading-snug text-slate-500">
+              {item.description}
+            </p>
           )}
-        </div>
+          <p className="mt-1.5 flex items-baseline gap-1.5">
+            <span className="text-base font-bold text-slate-900">
+              {formatCurrency(item.price)}
+            </span>
+            {item.pricingMode === 'quoted' && (
+              <span className="text-[11px] font-medium text-amber-600">referencial</span>
+            )}
+            {isService && (
+              <span className="text-[11px] text-slate-400">· servicio</span>
+            )}
+          </p>
+        </button>
+
+        {/* Acción */}
+        {phone && (
+          <a
+            href={waLink(phone, item)}
+            target="_blank"
+            rel="noreferrer"
+            aria-label={`Pedir ${item.name} por WhatsApp`}
+            className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-emerald-600 text-white shadow-sm transition-all hover:bg-emerald-700 active:scale-90"
+          >
+            <MessageCircle size={17} />
+          </a>
+        )}
       </div>
-    </article>
+    </li>
   )
 }
 
-/* ─────────────────────────── Detalle ─────────────────────────── */
+/* ═══════════════════════════ Detalle ═══════════════════════════ */
 
 function ProductDetail({
   item,
@@ -581,7 +701,7 @@ function ProductDetail({
     return () => window.removeEventListener('keydown', handler)
   }, [item, onClose])
 
-  // Con el modal abierto el fondo no debe hacer scroll.
+  // Con la hoja abierta el fondo no debe hacer scroll.
   useEffect(() => {
     if (!item) return
     const previous = document.body.style.overflow
@@ -599,7 +719,7 @@ function ProductDetail({
 
   return (
     <div
-      className="fixed inset-0 z-40 flex items-end justify-center bg-slate-900/50 backdrop-blur-sm sm:items-center sm:p-6"
+      className="animate-fade fixed inset-0 z-40 flex items-end justify-center bg-slate-900/50 sm:items-center sm:p-6"
       onClick={onClose}
     >
       <div
@@ -607,120 +727,123 @@ function ProductDetail({
         aria-modal="true"
         aria-label={item.name}
         onClick={(e) => e.stopPropagation()}
-        className="max-h-[92dvh] w-full max-w-lg overflow-y-auto rounded-t-2xl bg-white shadow-2xl sm:rounded-2xl"
+        className="animate-sheet flex max-h-[92dvh] w-full max-w-lg flex-col overflow-hidden rounded-t-2xl bg-white shadow-2xl sm:rounded-2xl"
       >
-        <div className="relative">
-          {images[active] ? (
+        <div className="min-h-0 flex-1 overflow-y-auto">
+          <div className="relative">
+            {images[active] ? (
+              <button
+                type="button"
+                onClick={() => onZoom(images, images[active])}
+                className="block aspect-[4/3] w-full overflow-hidden bg-slate-100 focus:outline-none"
+              >
+                <img src={images[active]} alt={item.name} className="size-full object-cover" />
+              </button>
+            ) : (
+              <div className="flex aspect-[4/3] w-full items-center justify-center bg-slate-50 text-slate-300">
+                {isService ? <Wrench size={40} /> : <Package size={40} />}
+              </div>
+            )}
+
             <button
               type="button"
-              onClick={() => onZoom(images, images[active])}
-              className="block aspect-[4/3] w-full overflow-hidden bg-slate-100 focus:outline-none"
+              aria-label="Cerrar"
+              onClick={onClose}
+              className="absolute top-3 right-3 rounded-full bg-white/90 p-2 text-slate-600 shadow-sm backdrop-blur transition-colors hover:bg-white hover:text-slate-900"
             >
-              <img src={images[active]} alt={item.name} className="size-full object-cover" />
+              <X size={18} />
             </button>
-          ) : (
-            <div className="flex aspect-[4/3] w-full items-center justify-center bg-slate-50 text-slate-300">
-              {isService ? <Wrench size={40} /> : <Package size={40} />}
-            </div>
-          )}
 
-          <button
-            type="button"
-            aria-label="Cerrar"
-            onClick={onClose}
-            className="absolute top-3 right-3 rounded-full bg-white/90 p-2 text-slate-600 shadow-sm backdrop-blur-sm transition-colors hover:bg-white hover:text-slate-900"
-          >
-            <X size={18} />
-          </button>
-
-          {outOfStock && (
-            <span className="absolute bottom-3 left-3 rounded-full bg-slate-900/80 px-3 py-1 text-xs font-semibold text-white">
-              Sin stock
-            </span>
-          )}
-        </div>
-
-        {images.length > 1 && (
-          <div className="no-scrollbar flex gap-2 overflow-x-auto border-b border-slate-100 p-3">
-            {images.map((url, i) => (
-              <button
-                key={url}
-                type="button"
-                onClick={() => setActive(i)}
-                className={cn(
-                  'size-14 shrink-0 overflow-hidden rounded-lg transition-all',
-                  i === active ? 'ring-2 ring-brand-500' : 'opacity-60 hover:opacity-100',
-                )}
-              >
-                <img src={url} alt="" className="size-full object-cover" />
-              </button>
-            ))}
-          </div>
-        )}
-
-        <div className="p-5">
-          <div className="mb-2 flex items-center gap-2">
-            <span className="inline-flex items-center gap-1 text-[11px] font-medium tracking-wide text-slate-400 uppercase">
-              {isService ? <Wrench size={11} /> : <Package size={11} />}
-              {isService ? 'Servicio' : 'Producto'}
-            </span>
-            {item.category && (
-              <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[11px] text-slate-500">
-                {item.category}
+            {outOfStock && (
+              <span className="absolute bottom-3 left-3 rounded-full bg-slate-900/85 px-3 py-1 text-xs font-semibold text-white">
+                Agotado
               </span>
             )}
           </div>
 
-          <h2 className="text-xl font-bold text-slate-900">{item.name}</h2>
+          {images.length > 1 && (
+            <div className="no-scrollbar flex gap-2 overflow-x-auto border-b border-slate-100 p-3">
+              {images.map((url, i) => (
+                <button
+                  key={url}
+                  type="button"
+                  onClick={() => setActive(i)}
+                  className={cn(
+                    'size-14 shrink-0 overflow-hidden rounded-lg transition-all',
+                    i === active ? 'ring-2 ring-brand-500' : 'opacity-60 hover:opacity-100',
+                  )}
+                >
+                  <img src={url} alt="" className="size-full object-cover" />
+                </button>
+              ))}
+            </div>
+          )}
 
-          <div className="mt-3">
-            <p className="text-2xl font-bold text-slate-900">{formatCurrency(item.price)}</p>
+          <div className="p-5">
+            <div className="mb-2 flex items-center gap-2">
+              <span className="inline-flex items-center gap-1 text-[11px] font-medium tracking-wide text-slate-400 uppercase">
+                {isService ? <Wrench size={11} /> : <Package size={11} />}
+                {isService ? 'Servicio' : 'Producto'}
+              </span>
+              {item.category && (
+                <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[11px] text-slate-500">
+                  {item.category}
+                </span>
+              )}
+            </div>
+
+            <h2 className="text-xl font-bold text-slate-900">{item.name}</h2>
+
+            <p className="mt-2 text-2xl font-bold text-slate-900">{formatCurrency(item.price)}</p>
             {item.pricingMode === 'quoted' && (
               <p className="mt-0.5 text-xs text-amber-600">
                 Precio referencial — el final se acuerda según el trabajo.
               </p>
             )}
-          </div>
 
-          {item.description && (
-            <p className="mt-4 text-sm leading-relaxed whitespace-pre-line text-slate-600">
-              {item.description}
-            </p>
-          )}
-
-          {item.variants && item.variants.length > 0 && (
-            <div className="mt-4">
-              <p className="mb-1.5 text-xs font-semibold tracking-wide text-slate-400 uppercase">
-                Variantes
+            {item.description && (
+              <p className="mt-4 text-sm leading-relaxed whitespace-pre-line text-slate-600">
+                {item.description}
               </p>
-              <ul className="space-y-1">
-                {item.variants.map((v) => (
-                  <li
-                    key={v.name}
-                    className="flex items-center justify-between rounded-lg bg-slate-50 px-3 py-2 text-sm"
-                  >
-                    <span className="text-slate-700">{v.name}</span>
-                    <span className="font-medium tabular-nums text-slate-900">
-                      {formatCurrency(item.price + v.priceModifier)}
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
+            )}
 
+            {item.variants && item.variants.length > 0 && (
+              <div className="mt-4">
+                <p className="mb-1.5 text-xs font-semibold tracking-wide text-slate-400 uppercase">
+                  Variantes
+                </p>
+                <ul className="space-y-1">
+                  {item.variants.map((v) => (
+                    <li
+                      key={v.name}
+                      className="flex items-center justify-between rounded-lg bg-slate-50 px-3 py-2 text-sm"
+                    >
+                      <span className="text-slate-700">{v.name}</span>
+                      <span className="font-medium tabular-nums text-slate-900">
+                        {formatCurrency(item.price + v.priceModifier)}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Acción fija abajo de la hoja */}
+        <div className="pb-safe shrink-0 border-t border-slate-100 p-4">
           {phone ? (
             <a
               href={waLink(phone, item)}
               target="_blank"
               rel="noreferrer"
-              className="mt-5 flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 py-3 text-sm font-semibold text-white transition-colors hover:bg-emerald-700"
+              className="flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 py-3.5 text-sm font-semibold text-white transition-colors hover:bg-emerald-700 active:scale-[0.99]"
             >
               <MessageCircle size={16} />
               {outOfStock ? 'Consultar disponibilidad' : 'Pedir por WhatsApp'}
             </a>
           ) : (
-            <p className="mt-5 rounded-xl bg-slate-50 px-4 py-3 text-center text-xs text-slate-500">
+            <p className="rounded-xl bg-slate-50 px-4 py-3 text-center text-xs text-slate-500">
               Contacta al negocio para hacer tu pedido.
             </p>
           )}
@@ -730,7 +853,7 @@ function ProductDetail({
   )
 }
 
-/* ─────────────────────────── Auxiliares ─────────────────────────── */
+/* ═══════════════════════════ Auxiliares ═══════════════════════════ */
 
 function Chip({
   active,
@@ -748,7 +871,7 @@ function Chip({
       type="button"
       onClick={onClick}
       className={cn(
-        'shrink-0 rounded-full px-3.5 py-1.5 text-xs font-medium transition-colors',
+        'shrink-0 rounded-full px-3.5 py-1.5 text-[13px] font-medium transition-colors',
         active
           ? tone === 'emerald'
             ? 'bg-emerald-600 text-white'
@@ -771,7 +894,7 @@ function EmptyState({
   action?: ReactNode
 }) {
   return (
-    <div className="flex flex-col items-center gap-2 py-24 text-center">
+    <div className="flex flex-col items-center gap-2 px-6 py-24 text-center">
       <PackageX size={32} className="text-slate-300" />
       <p className="font-medium text-slate-700">{title}</p>
       <p className="max-w-xs text-sm text-slate-400">{hint}</p>

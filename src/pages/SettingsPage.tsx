@@ -7,6 +7,7 @@ import { apiErrorMessage } from '@/api/client'
 import { Alert, Button, Card, Field, IconButton, Input, PageHeader } from '@/components/ui'
 import { ImageUploader } from '@/components/ImageUploader'
 import { useAuthStore } from '@/stores/authStore'
+import { BRAND_PRESETS, DEFAULT_BRAND, buildBrandRamp, isValidHex } from '@/lib/brandColor'
 import type { DaySchedule } from '@/types'
 
 type ScheduleDay = { day: number; enabled: boolean; open: string; close: string }
@@ -43,6 +44,7 @@ export function SettingsPage() {
   const [logoUrls, setLogoUrls] = useState<string[]>(
     activeTenant?.logoUrl ? [activeTenant.logoUrl] : [],
   )
+  const [brandColor, setBrandColor] = useState(activeTenant?.brandColor ?? DEFAULT_BRAND)
   const [scheduleState, setScheduleState] = useState<ScheduleDay[]>(() =>
     initSchedule(activeTenant?.schedule),
   )
@@ -59,6 +61,7 @@ export function SettingsPage() {
         name: name.trim() || undefined,
         logoUrl: logoUrls[0] ?? null,
         phone: phone.replace(/\D/g, '') || null,
+        brandColor: isValidHex(brandColor) ? brandColor.toLowerCase() : null,
         schedule: scheduleToPayload(scheduleState),
       }),
     onSuccess: (tenant) => {
@@ -103,6 +106,7 @@ export function SettingsPage() {
     name.trim() !== (activeTenant?.name ?? '') ||
     (logoUrls[0] ?? null) !== (activeTenant?.logoUrl ?? null) ||
     phone.replace(/\D/g, '') !== (activeTenant?.phone ?? '') ||
+    brandColor.toLowerCase() !== (activeTenant?.brandColor ?? DEFAULT_BRAND) ||
     currentScheduleStr !== savedScheduleStr
 
   return (
@@ -156,6 +160,14 @@ export function SettingsPage() {
               tienda; si lo dejas vacío, el botón no aparece.
             </p>
           </Field>
+
+          <BrandColorPicker
+            value={brandColor}
+            onChange={(hex) => {
+              setBrandColor(hex)
+              setSaved(false)
+            }}
+          />
         </div>
       </Card>
 
@@ -306,6 +318,111 @@ export function SettingsPage() {
           </div>
         </div>
       )}
+    </div>
+  )
+}
+
+/* ─────────────────────── Color de marca ─────────────────────── */
+
+function BrandColorPicker({
+  value,
+  onChange,
+}: {
+  value: string
+  onChange: (hex: string) => void
+}) {
+  const ramp = buildBrandRamp(value)
+  const valid = isValidHex(value)
+
+  return (
+    <div>
+      <span className="mb-1.5 block text-sm font-medium text-slate-700">Color principal</span>
+      <p className="mb-3 text-xs text-slate-500">
+        Tiñe tu tienda pública y tus campañas. Elige uno o pega tu color exacto.
+      </p>
+
+      {/* Paleta */}
+      <div className="flex flex-wrap gap-2">
+        {BRAND_PRESETS.map((p) => {
+          const active = value.toLowerCase() === p.hex
+          return (
+            <button
+              key={p.hex}
+              type="button"
+              title={p.name}
+              aria-label={p.name}
+              onClick={() => onChange(p.hex)}
+              style={{ backgroundColor: p.hex }}
+              className={`size-9 rounded-full transition-all ${
+                active
+                  ? 'ring-2 ring-slate-900 ring-offset-2'
+                  : 'ring-1 ring-black/10 hover:scale-110'
+              }`}
+            >
+              {active && <Check size={15} className="mx-auto text-white drop-shadow" />}
+            </button>
+          )
+        })}
+      </div>
+
+      {/* Color exacto */}
+      <div className="mt-3 flex items-center gap-2">
+        <label className="relative size-9 shrink-0 cursor-pointer overflow-hidden rounded-lg ring-1 ring-slate-300">
+          <span
+            className="block size-full"
+            style={{ backgroundColor: valid ? value : '#ffffff' }}
+          />
+          <input
+            type="color"
+            value={valid ? value : DEFAULT_BRAND}
+            onChange={(e) => onChange(e.target.value)}
+            className="absolute inset-0 cursor-pointer opacity-0"
+          />
+        </label>
+        <Input
+          aria-label="Color en hexadecimal"
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          placeholder="#4f46e5"
+          className="max-w-32 font-mono"
+        />
+        {!valid && <span className="text-xs text-red-600">Formato: #rrggbb</span>}
+      </div>
+
+      {/* Vista previa */}
+      <div className="mt-4 overflow-hidden rounded-xl ring-1 ring-slate-200">
+        <div
+          className="flex items-center gap-3 px-4 py-3"
+          style={{
+            background: `linear-gradient(135deg, ${ramp[700]}, ${ramp[900]})`,
+          }}
+        >
+          <span className="text-sm font-semibold text-white">Así se verá tu tienda</span>
+        </div>
+        <div className="flex items-center gap-3 bg-white px-4 py-3">
+          <span
+            className="rounded-lg px-3.5 py-2 text-xs font-semibold text-white"
+            style={{ backgroundColor: ramp[600] }}
+          >
+            Pedir ahora
+          </span>
+          <span
+            className="rounded-lg px-3 py-2 text-xs font-medium"
+            style={{ backgroundColor: ramp[50], color: ramp[700] }}
+          >
+            Categoría
+          </span>
+          <div className="ml-auto flex gap-1">
+            {[300, 500, 700].map((s) => (
+              <span
+                key={s}
+                className="size-5 rounded-full ring-1 ring-black/5"
+                style={{ backgroundColor: ramp[s] }}
+              />
+            ))}
+          </div>
+        </div>
+      </div>
     </div>
   )
 }

@@ -21,6 +21,7 @@ import { SuperadminDashboardPage } from '@/pages/superadmin/SuperadminDashboardP
 import { SuperadminPlansPage } from '@/pages/superadmin/SuperadminPlansPage'
 import { SuperadminTenantsPage } from '@/pages/superadmin/SuperadminTenantsPage'
 import { SuperadminBillingPage } from '@/pages/superadmin/SuperadminBillingPage'
+import { SuperadminWhatsappPage } from '@/pages/superadmin/SuperadminWhatsappPage'
 import { BillingPage } from '@/pages/BillingPage'
 import { CampaignsPage } from '@/pages/CampaignsPage'
 import { PublicCampaignPage } from '@/pages/PublicCampaignPage'
@@ -48,6 +49,7 @@ export const router = createBrowserRouter([
               { path: '/superadmin/plans', element: <SuperadminPlansPage /> },
               { path: '/superadmin/tenants', element: <SuperadminTenantsPage /> },
               { path: '/superadmin/billing', element: <SuperadminBillingPage /> },
+              { path: '/superadmin/whatsapp', element: <SuperadminWhatsappPage /> },
             ],
           },
         ],

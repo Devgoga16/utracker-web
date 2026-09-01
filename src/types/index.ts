@@ -45,7 +45,6 @@ export interface Campaign {
   token: string
   name: string
   description?: string
-  coverImageUrl?: string
   startDate: string
   endDate: string
   items: CampaignItem[]
@@ -120,6 +119,8 @@ export interface Tenant {
   logoUrl?: string
   /** Solo dígitos con código de país, ej. 51987654321. */
   phone?: string
+  /** Hex "#rrggbb". Tiñe la tienda pública y las campañas. */
+  brandColor?: string
   schedule?: DaySchedule[]
   isActive: boolean
   role?: MembershipRole
