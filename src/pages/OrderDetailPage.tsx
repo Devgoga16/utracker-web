@@ -138,22 +138,42 @@ export function OrderDetailPage() {
 
       {confirmingDelete && (
         <Card className="ring-red-200">
-          <div className="flex flex-wrap items-center gap-3">
-            <p className="min-w-0 flex-1 text-sm text-slate-700">
-              ¿Eliminar este pedido? Esta acción no se puede deshacer.
-            </p>
-            <div className="flex gap-2">
-              <Button
-                variant="danger"
-                disabled={deleteMutation.isPending}
-                onClick={() => deleteMutation.mutate()}
-              >
-                {deleteMutation.isPending ? 'Eliminando...' : 'Sí, eliminar'}
-              </Button>
-              <Button variant="secondary" onClick={() => setConfirmingDelete(false)}>
-                Cancelar
-              </Button>
-            </div>
+          <p className="text-sm font-medium text-slate-800">
+            ¿Eliminar este pedido? Esta acción no se puede deshacer.
+          </p>
+
+          {/* Borrar y cancelar no hacen lo mismo con el stock: conviene decirlo
+              antes, no después. */}
+          <ul className="mt-3 space-y-1.5 rounded-lg bg-amber-50 p-3 text-[13px] text-amber-900 ring-1 ring-amber-200">
+            <li className="flex gap-2">
+              <span aria-hidden>•</span>
+              <span>
+                <strong>No se devolverá el stock</strong> que este pedido haya descontado de tu
+                catálogo. Si quieres que vuelva, cancela el pedido en vez de eliminarlo.
+              </span>
+            </li>
+            {order.campaign && (
+              <li className="flex gap-2">
+                <span aria-hidden>•</span>
+                <span>
+                  Las unidades reservadas de la <strong>campaña</strong> sí volverán a estar
+                  disponibles.
+                </span>
+              </li>
+            )}
+          </ul>
+
+          <div className="mt-4 flex flex-wrap gap-2">
+            <Button
+              variant="danger"
+              disabled={deleteMutation.isPending}
+              onClick={() => deleteMutation.mutate()}
+            >
+              {deleteMutation.isPending ? 'Eliminando...' : 'Sí, eliminar'}
+            </Button>
+            <Button variant="secondary" onClick={() => setConfirmingDelete(false)}>
+              Cancelar
+            </Button>
           </div>
           {deleteMutation.isError && (
             <div className="mt-3">
