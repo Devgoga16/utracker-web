@@ -1,8 +1,22 @@
 import axios, { AxiosError, type InternalAxiosRequestConfig } from 'axios'
 import { useAuthStore } from '@/stores/authStore'
 
+/**
+ * Única fuente de verdad de a dónde vive la API.
+ *
+ * Se define con VITE_API_URL (solo el origen, sin `/api`). Todo lo demás
+ * —cliente autenticado, refresh y endpoints públicos— cuelga de acá, así que
+ * cambiar de entorno es cambiar esta variable y nada más.
+ *
+ * Ojo: Vite la resuelve al compilar, no al ejecutar. Si la cambias en Vercel
+ * hay que volver a desplegar para que tome efecto.
+ */
+export const API_BASE_URL = `${(
+  import.meta.env.VITE_API_URL ?? 'http://localhost:4000'
+).replace(/\/$/, '')}/api`
+
 export const api = axios.create({
-  baseURL: '/api',
+  baseURL: API_BASE_URL,
 })
 
 api.interceptors.request.use((config) => {
@@ -27,7 +41,10 @@ async function refreshAccessToken(): Promise<string> {
   const { refreshToken } = useAuthStore.getState()
   if (!refreshToken) throw new Error('No refresh token')
 
-  const { data } = await axios.post<{ accessToken: string }>('/api/auth/refresh', { refreshToken })
+  // axios pelado a propósito: no debe pasar por los interceptores de `api`.
+  const { data } = await axios.post<{ accessToken: string }>(`${API_BASE_URL}/auth/refresh`, {
+    refreshToken,
+  })
   useAuthStore.getState().setAccessToken(data.accessToken)
   return data.accessToken
 }

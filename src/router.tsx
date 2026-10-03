@@ -10,6 +10,7 @@ import { OrdersPage } from '@/pages/OrdersPage'
 import { OrderDetailPage } from '@/pages/OrderDetailPage'
 import { NewOrderPage } from '@/pages/NewOrderPage'
 import { CatalogPage } from '@/pages/CatalogPage'
+import { CatalogFiltersPage } from '@/pages/CatalogFiltersPage'
 import { WorkflowPage } from '@/pages/WorkflowPage'
 import { SettingsPage } from '@/pages/SettingsPage'
 import { FinancesPage } from '@/pages/FinancesPage'
@@ -64,6 +65,7 @@ export const router = createBrowserRouter([
               { path: '/orders/new', element: <NewOrderPage /> },
               { path: '/orders/:id', element: <OrderDetailPage /> },
               { path: '/catalog', element: <CatalogPage /> },
+              { path: '/catalog/filters', element: <CatalogFiltersPage /> },
               { path: '/products', element: <Navigate to="/catalog" replace /> },
               { path: '/campaigns', element: <CampaignsPage /> },
               { path: '/workflow', element: <WorkflowPage /> },

@@ -1,6 +1,13 @@
-import { useState } from 'react'
+import { Fragment, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { assignSubscription, listSuperadminPlans, listSuperadminTenants } from '@/api/superadmin'
+import { AlertTriangle, Trash2, X } from 'lucide-react'
+import {
+  assignSubscription,
+  deleteTenant,
+  listSuperadminPlans,
+  listSuperadminTenants,
+  type DeletedTenantSummary,
+} from '@/api/superadmin'
 import { toggleTenantSubscription } from '@/api/billing'
 import type { TenantRow } from '@/api/superadmin'
 import { apiErrorMessage } from '@/api/client'
@@ -137,6 +144,119 @@ function ToggleButton({ tenant }: { tenant: TenantRow }) {
   )
 }
 
+/** Lo que se va a borrar, dicho sin eufemismos antes de que no haya vuelta. */
+const WHAT_GETS_DELETED = [
+  'Todos los pedidos y su historial de estados',
+  'El catálogo completo: productos, categorías e inventario',
+  'Los clientes registrados del negocio',
+  'Las campañas y sus links públicos',
+  'Las facturas y la suscripción',
+  'Los accesos de todo el equipo',
+  'Las imágenes subidas (logo, fotos, comprobantes)',
+]
+
+function DeleteTenantDialog({
+  tenant,
+  onClose,
+  onDeleted,
+}: {
+  tenant: TenantRow
+  onClose: () => void
+  onDeleted: (summary: DeletedTenantSummary) => void
+}) {
+  const qc = useQueryClient()
+  const [typed, setTyped] = useState('')
+
+  const mutation = useMutation({
+    mutationFn: () => deleteTenant(tenant._id, typed.trim()),
+    onSuccess: (res) => {
+      qc.invalidateQueries({ queryKey: ['superadmin-tenants'] })
+      qc.invalidateQueries({ queryKey: ['superadmin-stats'] })
+      onDeleted(res.deleted)
+      onClose()
+    },
+  })
+
+  const matches = typed.trim() === tenant.name
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4">
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-label={`Eliminar ${tenant.name}`}
+        className="w-full max-w-md overflow-hidden rounded-2xl bg-white shadow-2xl"
+      >
+        <div className="flex items-start gap-3 border-b border-slate-100 p-5">
+          <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-red-100">
+            <AlertTriangle size={20} className="text-red-600" />
+          </span>
+          <div className="min-w-0 flex-1">
+            <h2 className="font-bold text-slate-900">Eliminar negocio</h2>
+            <p className="mt-0.5 truncate text-sm text-slate-500">{tenant.name}</p>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Cerrar"
+            className="rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-slate-100"
+          >
+            <X size={18} />
+          </button>
+        </div>
+
+        <div className="space-y-4 p-5">
+          {mutation.isError && <Alert>{apiErrorMessage(mutation.error)}</Alert>}
+
+          <div className="rounded-xl bg-red-50 p-4 ring-1 ring-red-200">
+            <p className="text-sm font-semibold text-red-900">
+              Esto borra permanentemente:
+            </p>
+            <ul className="mt-2 space-y-1 text-[13px] text-red-800">
+              {WHAT_GETS_DELETED.map((item) => (
+                <li key={item} className="flex gap-2">
+                  <span aria-hidden>•</span>
+                  <span>{item}</span>
+                </li>
+              ))}
+            </ul>
+            <p className="mt-3 text-[13px] font-semibold text-red-900">
+              No hay forma de deshacerlo.
+            </p>
+          </div>
+
+          <Field
+            label={`Escribe "${tenant.name}" para confirmar`}
+            htmlFor="confirm-tenant-name"
+          >
+            <Input
+              id="confirm-tenant-name"
+              value={typed}
+              autoComplete="off"
+              placeholder={tenant.name}
+              onChange={(e) => setTyped(e.target.value)}
+            />
+          </Field>
+
+          <div className="flex gap-2">
+            <Button
+              variant="danger"
+              className="flex-1"
+              disabled={!matches || mutation.isPending}
+              onClick={() => mutation.mutate()}
+            >
+              {mutation.isPending ? 'Eliminando...' : 'Eliminar definitivamente'}
+            </Button>
+            <Button variant="secondary" onClick={onClose} disabled={mutation.isPending}>
+              Cancelar
+            </Button>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 export function SuperadminTenantsPage() {
   const { data: tenants, isLoading } = useQuery({
     queryKey: ['superadmin-tenants'],
@@ -144,6 +264,11 @@ export function SuperadminTenantsPage() {
   })
 
   const [assigning, setAssigning] = useState<string | null>(null)
+  const [deleting, setDeleting] = useState<TenantRow | null>(null)
+  const [lastDeleted, setLastDeleted] = useState<{
+    name: string
+    summary: DeletedTenantSummary
+  } | null>(null)
   const [search, setSearch] = useState('')
 
   if (isLoading) return <Spinner />
@@ -160,6 +285,28 @@ export function SuperadminTenantsPage() {
         title="Negocios"
         description="Lista de todos los tenants y sus suscripciones."
       />
+
+      {lastDeleted && (
+        <div className="flex items-start gap-3 rounded-xl bg-slate-900 px-4 py-3 text-white">
+          <Trash2 size={16} className="mt-0.5 shrink-0 text-slate-400" />
+          <div className="min-w-0 flex-1 text-sm">
+            <p className="font-semibold">«{lastDeleted.name}» fue eliminado</p>
+            <p className="mt-0.5 text-slate-300">
+              {lastDeleted.summary.orders} pedidos · {lastDeleted.summary.products} productos ·{' '}
+              {lastDeleted.summary.customers} clientes · {lastDeleted.summary.campaigns} campañas ·{' '}
+              {lastDeleted.summary.images} imágenes
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => setLastDeleted(null)}
+            aria-label="Cerrar aviso"
+            className="shrink-0 rounded-lg p-1 text-slate-400 transition-colors hover:bg-white/10 hover:text-white"
+          >
+            <X size={15} />
+          </button>
+        </div>
+      )}
 
       <div className="max-w-xs">
         <Input
@@ -186,8 +333,8 @@ export function SuperadminTenantsPage() {
               const status = sub?.status as SubscriptionStatus | undefined
 
               return (
-                <>
-                  <tr key={tenant._id} className="border-b border-slate-50 hover:bg-slate-50">
+                <Fragment key={tenant._id}>
+                  <tr className="border-b border-slate-50 hover:bg-slate-50">
                     <td className="px-4 py-3">
                       <p className="font-medium text-slate-900">{tenant.name}</p>
                       <p className="text-xs text-slate-400">{tenant.slug}</p>
@@ -232,17 +379,26 @@ export function SuperadminTenantsPage() {
                         >
                           {assigning === tenant._id ? 'Cancelar' : 'Asignar plan'}
                         </Button>
+                        <button
+                          type="button"
+                          onClick={() => setDeleting(tenant)}
+                          aria-label={`Eliminar ${tenant.name}`}
+                          title="Eliminar negocio"
+                          className="rounded-lg p-2 text-slate-400 transition-colors hover:bg-red-50 hover:text-red-600"
+                        >
+                          <Trash2 size={15} />
+                        </button>
                       </div>
                     </td>
                   </tr>
                   {assigning === tenant._id && (
-                    <tr key={`${tenant._id}-form`}>
+                    <tr>
                       <td colSpan={5} className="px-4 pb-4">
                         <AssignForm tenant={tenant} onClose={() => setAssigning(null)} />
                       </td>
                     </tr>
                   )}
-                </>
+                </Fragment>
               )
             })}
           </tbody>
@@ -254,6 +410,14 @@ export function SuperadminTenantsPage() {
           </div>
         )}
       </div>
+
+      {deleting && (
+        <DeleteTenantDialog
+          tenant={deleting}
+          onClose={() => setDeleting(null)}
+          onDeleted={(summary) => setLastDeleted({ name: deleting.name, summary })}
+        />
+      )}
     </div>
   )
 }

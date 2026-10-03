@@ -9,11 +9,12 @@ export interface DaySchedule {
 
 export interface ScheduledFor {
   date: string // "2026-08-20"
-  franja: Franja
+  /** Opcional: se puede agendar el día sin partirlo en franjas. */
+  franja?: Franja
 }
 export type WorkflowKind = 'fulfillment' | 'payment'
 export type OrderType = 'pickup' | 'delivery_third_party' | 'delivery_own'
-export type OrderCreatedVia = 'manual' | 'order_link'
+export type OrderCreatedVia = 'manual' | 'order_link' | 'store'
 export type OrderLinkStatus = 'pending' | 'used' | 'expired' | 'cancelled'
 export type OrderLinkDeliveryType = OrderType | 'customer_choice'
 
@@ -121,9 +122,23 @@ export interface Tenant {
   phone?: string
   /** Hex "#rrggbb". Tiñe la tienda pública y las campañas. */
   brandColor?: string
+  /** Horario de atención. No confundir con las franjas de delivery. */
   schedule?: DaySchedule[]
+  /** Entregas que acepta la tienda. Vacío = no se puede comprar en línea. */
+  deliveryTypes?: CampaignDeliveryType[]
+  /** Franjas en las que reparte, cuando acepta delivery. */
+  deliveryFranjas?: Franja[]
+  /** Dónde pagar el adelanto. Se muestran tal cual en el checkout. */
+  paymentMethods?: PaymentMethod[]
   isActive: boolean
   role?: MembershipRole
+}
+
+/** Un medio de pago del negocio: "Yape al 987654321 — María S." */
+export interface PaymentMethod {
+  name: string
+  details?: string
+  qrImageUrl?: string
 }
 
 export interface ProductVariant {
@@ -135,6 +150,23 @@ export type CatalogKind = 'product' | 'service'
 /** 'quoted': `price` is a reference only; the real one is agreed per order. */
 export type PricingMode = 'fixed' | 'quoted'
 
+/** Filtro configurable del catálogo: "Talla" con valores S, M, L. */
+export interface ProductFilter {
+  _id: string
+  tenant: string
+  name: string
+  values: string[]
+  position: number
+  createdAt: string
+  updatedAt: string
+}
+
+/** Valores que un producto tiene para un filtro. Lista: puede tener varios. */
+export interface ProductAttribute {
+  filter: string
+  values: string[]
+}
+
 export interface Product {
   _id: string
   tenant: string
@@ -145,7 +177,15 @@ export interface Product {
   price: number
   images: string[]
   category?: string
+  attributes: ProductAttribute[]
   variants: ProductVariant[]
+  /** Días que toma tenerlo listo. 0 = recojo inmediato. */
+  preparationDays: number
+  /** Si al pedirlo hay que dejar un adelanto. */
+  requiresAdvance: boolean
+  /** 'percent' = % del subtotal de la línea; 'fixed' = soles por unidad. */
+  advanceType: 'fixed' | 'percent'
+  advanceValue: number
   stock?: number
   trackStock: boolean
   isActive: boolean
@@ -220,6 +260,9 @@ export interface PaymentEntry {
   amount: number
   proofImageUrl?: string
   note?: string
+  /** false mientras el negocio no confirme que el dinero llegó. */
+  validated: boolean
+  validatedAt?: string
   registeredAt: string
   registeredBy?: string
 }

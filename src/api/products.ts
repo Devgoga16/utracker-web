@@ -9,8 +9,14 @@ export interface ProductInput {
   price: number
   category?: string
   images?: string[]
+  /** Valores elegidos por filtro. El servidor descarta lo que no exista. */
+  attributes?: { filter: string; values: string[] }[]
   stock?: number
   trackStock?: boolean
+  preparationDays?: number
+  requiresAdvance?: boolean
+  advanceType?: 'fixed' | 'percent'
+  advanceValue?: number
 }
 
 export async function listProducts() {

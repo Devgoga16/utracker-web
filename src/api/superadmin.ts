@@ -45,3 +45,30 @@ export const assignSubscription = (
   tenantId: string,
   data: { planId: string; status: SubscriptionStatus; expiresAt?: string; notes?: string }
 ) => api.patch<Subscription>(`/superadmin/tenants/${tenantId}/subscription`, data).then((r) => r.data)
+
+/** Qué se borró, para poder decírselo al superadmin después del hecho. */
+export interface DeletedTenantSummary {
+  orders: number
+  products: number
+  customers: number
+  campaigns: number
+  orderLinks: number
+  stockMovements: number
+  categories: number
+  workflowStates: number
+  bills: number
+  subscriptions: number
+  memberships: number
+  images: number
+}
+
+/**
+ * Borra el negocio y todo lo suyo. Irreversible.
+ * `confirmName` debe ser el nombre exacto; el servidor lo verifica.
+ */
+export const deleteTenant = (tenantId: string, confirmName: string) =>
+  api
+    .delete<{ ok: boolean; deleted: DeletedTenantSummary }>(`/superadmin/tenants/${tenantId}`, {
+      data: { confirmName },
+    })
+    .then((r) => r.data)

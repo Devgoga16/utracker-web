@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
-import { ChevronRight, ClipboardList, Plus, Zap } from 'lucide-react'
+import { ChevronRight, ClipboardList, Plus, Search, Zap } from 'lucide-react'
 import { listOrders } from '@/api/orders'
 import { listCampaigns } from '@/api/campaigns'
 import { getWorkflow } from '@/api/tenants'
@@ -25,11 +25,24 @@ const orderTypeLabels: Record<OrderType, string> = {
   delivery_own: 'Delivery propio',
 }
 
+/** Mismo cálculo que el servidor: los últimos 6 del token, en mayúsculas. */
+function orderCode(trackingToken: string) {
+  return (trackingToken ?? '').slice(-6).toUpperCase()
+}
+
+/** "Ramo de girasoles" o "Ramo de girasoles +2" cuando hay varias líneas. */
+function itemsSummary(items: { name: string; quantity: number }[]) {
+  if (!items?.length) return { first: '—', extra: 0, units: 0 }
+  const units = items.reduce((n, i) => n + i.quantity, 0)
+  return { first: items[0].name, extra: items.length - 1, units }
+}
+
 export function OrdersPage() {
   const [searchParams] = useSearchParams()
   const campaignId = searchParams.get('campaign') ?? undefined
 
   const [stateFilter, setStateFilter] = useState<string | null>(null)
+  const [search, setSearch] = useState('')
 
   const { data: orders, isLoading } = useQuery({
     queryKey: ['orders', { campaign: campaignId }],
@@ -44,9 +57,20 @@ export function OrdersPage() {
 
   const activeCampaign = campaignId ? campaigns?.find((c) => c._id === campaignId) : undefined
 
-  const filtered = stateFilter
-    ? orders?.filter((o) => o.fulfillmentState?._id === stateFilter)
+  const q = search.trim().toLowerCase()
+  const searched = q
+    ? orders?.filter(
+        (o) =>
+          orderCode(o.trackingToken).toLowerCase().includes(q) ||
+          o.customer?.name?.toLowerCase().includes(q) ||
+          o.customer?.phone?.includes(q) ||
+          o.items?.some((i) => i.name.toLowerCase().includes(q)),
+      )
     : orders
+
+  const filtered = stateFilter
+    ? searched?.filter((o) => o.fulfillmentState?._id === stateFilter)
+    : searched
 
   const activeStateName = stateFilter
     ? workflow?.fulfillment.find((s) => s._id === stateFilter)?.name
@@ -94,6 +118,20 @@ export function OrdersPage() {
           </Link>
         </div>
       )}
+
+      <div className="relative max-w-sm">
+        <Search
+          size={16}
+          className="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-slate-400"
+        />
+        <input
+          type="search"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Buscar por código, cliente o producto..."
+          className="w-full rounded-lg border-0 bg-white py-2.5 pr-3 pl-9 text-base ring-1 ring-slate-300 transition-shadow outline-none placeholder:text-slate-400 focus:ring-2 focus:ring-brand-500 sm:py-2 sm:text-sm"
+        />
+      </div>
 
       {workflow && (
         <ChipBar>
@@ -162,12 +200,24 @@ export function OrdersPage() {
                       <p className="truncate font-semibold text-slate-900">
                         {order.customer?.name ?? 'Sin cliente'}
                       </p>
-                      <p className="truncate text-xs text-slate-500">{order.customer?.phone}</p>
+                      <p className="truncate text-xs text-slate-500">
+                        <span className="font-mono font-semibold">
+                          {orderCode(order.trackingToken)}
+                        </span>
+                        {order.customer?.phone ? ` · ${order.customer.phone}` : ''}
+                      </p>
                     </div>
                     <p className="shrink-0 font-semibold tabular-nums text-slate-900">
                       {formatCurrency(order.totalAmount)}
                     </p>
                   </div>
+
+                  <p className="mt-1.5 truncate text-sm text-slate-600">
+                    {(() => {
+                      const s = itemsSummary(order.items)
+                      return s.extra > 0 ? `${s.first} +${s.extra}` : s.first
+                    })()}
+                  </p>
 
                   <div className="mt-3 flex flex-wrap items-center gap-1.5">
                     {order.fulfillmentState && (
@@ -199,7 +249,9 @@ export function OrdersPage() {
             <table className="w-full text-sm">
               <thead className="border-b border-slate-200 bg-slate-50/70 text-left text-[11px] font-semibold tracking-wide text-slate-400 uppercase">
                 <tr>
+                  <th className="px-5 py-3">Código</th>
                   <th className="px-5 py-3">Cliente</th>
+                  <th className="px-5 py-3">Productos</th>
                   <th className="px-5 py-3">Entrega</th>
                   <th className="px-5 py-3">Estado</th>
                   <th className="px-5 py-3">Pago</th>
@@ -212,6 +264,11 @@ export function OrdersPage() {
                 {filtered.map((order) => (
                   <tr key={order._id} className="group transition-colors hover:bg-slate-50">
                     <td className="px-5 py-3">
+                      <span className="font-mono text-xs font-semibold tracking-wide text-slate-500">
+                        {orderCode(order.trackingToken)}
+                      </span>
+                    </td>
+                    <td className="px-5 py-3">
                       <Link
                         to={`/orders/${order._id}`}
                         className="font-medium text-slate-900 transition-colors group-hover:text-brand-600"
@@ -219,6 +276,24 @@ export function OrdersPage() {
                         {order.customer?.name ?? 'Sin cliente'}
                       </Link>
                       <p className="text-xs text-slate-500">{order.customer?.phone}</p>
+                    </td>
+                    <td className="px-5 py-3">
+                      {(() => {
+                        const s = itemsSummary(order.items)
+                        return (
+                          <>
+                            <p className="max-w-52 truncate text-slate-700">
+                              {s.first}
+                              {s.extra > 0 && (
+                                <span className="ml-1 text-slate-400">+{s.extra}</span>
+                              )}
+                            </p>
+                            <p className="text-xs text-slate-400">
+                              {s.units} {s.units === 1 ? 'unidad' : 'unidades'}
+                            </p>
+                          </>
+                        )
+                      })()}
                     </td>
                     <td className="px-5 py-3 text-slate-600">{orderTypeLabels[order.type]}</td>
                     <td className="px-5 py-3">

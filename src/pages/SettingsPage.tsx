@@ -1,14 +1,16 @@
 import { useState } from 'react'
+import { Link } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Check, Copy, ExternalLink, Plus, X } from 'lucide-react'
+import { Check, Copy, ExternalLink, ListFilter, Plus, X } from 'lucide-react'
 import { updateTenantSettings } from '@/api/tenants'
 import { createCategory, deleteCategory, listCategories } from '@/api/categories'
 import { apiErrorMessage } from '@/api/client'
 import { Alert, Button, Card, Field, IconButton, Input, PageHeader } from '@/components/ui'
 import { ImageUploader } from '@/components/ImageUploader'
 import { useAuthStore } from '@/stores/authStore'
+import { cn } from '@/lib/cn'
 import { BRAND_PRESETS, DEFAULT_BRAND, buildBrandRamp, isValidHex } from '@/lib/brandColor'
-import type { DaySchedule } from '@/types'
+import type { DaySchedule, PaymentMethod } from '@/types'
 
 type ScheduleDay = { day: number; enabled: boolean; open: string; close: string }
 
@@ -45,6 +47,15 @@ export function SettingsPage() {
     activeTenant?.logoUrl ? [activeTenant.logoUrl] : [],
   )
   const [brandColor, setBrandColor] = useState(activeTenant?.brandColor ?? DEFAULT_BRAND)
+  const [deliveryTypes, setDeliveryTypes] = useState<string[]>(
+    activeTenant?.deliveryTypes ?? [],
+  )
+  const [deliveryFranjas, setDeliveryFranjas] = useState<string[]>(
+    activeTenant?.deliveryFranjas ?? [],
+  )
+  const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>(
+    activeTenant?.paymentMethods ?? [],
+  )
   const [scheduleState, setScheduleState] = useState<ScheduleDay[]>(() =>
     initSchedule(activeTenant?.schedule),
   )
@@ -63,6 +74,9 @@ export function SettingsPage() {
         phone: phone.replace(/\D/g, '') || null,
         brandColor: isValidHex(brandColor) ? brandColor.toLowerCase() : null,
         schedule: scheduleToPayload(scheduleState),
+        deliveryTypes,
+        deliveryFranjas,
+        paymentMethods: paymentMethods.filter((m) => m.name.trim()),
       }),
     onSuccess: (tenant) => {
       setActiveTenant({ ...activeTenant!, ...tenant })
@@ -107,6 +121,11 @@ export function SettingsPage() {
     (logoUrls[0] ?? null) !== (activeTenant?.logoUrl ?? null) ||
     phone.replace(/\D/g, '') !== (activeTenant?.phone ?? '') ||
     brandColor.toLowerCase() !== (activeTenant?.brandColor ?? DEFAULT_BRAND) ||
+    JSON.stringify([...deliveryTypes].sort()) !==
+      JSON.stringify([...(activeTenant?.deliveryTypes ?? [])].sort()) ||
+    JSON.stringify([...deliveryFranjas].sort()) !==
+      JSON.stringify([...(activeTenant?.deliveryFranjas ?? [])].sort()) ||
+    JSON.stringify(paymentMethods) !== JSON.stringify(activeTenant?.paymentMethods ?? []) ||
     currentScheduleStr !== savedScheduleStr
 
   return (
@@ -189,6 +208,178 @@ export function SettingsPage() {
               Ver tienda
             </Button>
           </a>
+        </div>
+      </Card>
+
+      <Card
+        title="Pedidos desde la tienda"
+        description="Define si tus clientes pueden comprar directo desde tu catálogo, sin pasar por WhatsApp."
+      >
+        <div className="space-y-5">
+          <div>
+            <span className="mb-2 block text-sm font-medium text-slate-700">
+              Formas de entrega que aceptas
+            </span>
+            <div className="grid gap-2.5 sm:grid-cols-2">
+              {([
+                { v: 'pickup', label: 'Recojo en tienda', hint: 'El cliente va a buscarlo' },
+                { v: 'delivery_own', label: 'Delivery', hint: 'Tú lo llevas a su dirección' },
+              ] as const).map((opt) => {
+                const on = deliveryTypes.includes(opt.v)
+                return (
+                  <label
+                    key={opt.v}
+                    className={cn(
+                      'flex cursor-pointer items-start gap-2.5 rounded-xl p-3.5 ring-1 transition-colors',
+                      on ? 'bg-brand-50 ring-brand-400' : 'bg-white ring-slate-200 hover:bg-slate-50',
+                    )}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={on}
+                      onChange={(e) => {
+                        setDeliveryTypes((prev) =>
+                          e.target.checked ? [...prev, opt.v] : prev.filter((x) => x !== opt.v),
+                        )
+                        setSaved(false)
+                      }}
+                      className="mt-0.5 size-4 shrink-0 rounded border-slate-300 accent-brand-600"
+                    />
+                    <span className="min-w-0">
+                      <span className="block text-sm font-medium text-slate-800">{opt.label}</span>
+                      <span className="block text-xs text-slate-500">{opt.hint}</span>
+                    </span>
+                  </label>
+                )
+              })}
+            </div>
+          </div>
+
+          {/* Las franjas solo tienen sentido si hay delivery. */}
+          {deliveryTypes.includes('delivery_own') && (
+            <div>
+              <span className="mb-2 block text-sm font-medium text-slate-700">
+                Franjas en las que repartes
+              </span>
+              <div className="flex flex-wrap gap-2">
+                {([
+                  { v: 'morning', label: 'Mañana' },
+                  { v: 'afternoon', label: 'Tarde' },
+                  { v: 'evening', label: 'Noche' },
+                ] as const).map((f) => {
+                  const on = deliveryFranjas.includes(f.v)
+                  return (
+                    <button
+                      key={f.v}
+                      type="button"
+                      aria-pressed={on}
+                      onClick={() => {
+                        setDeliveryFranjas((prev) =>
+                          on ? prev.filter((x) => x !== f.v) : [...prev, f.v],
+                        )
+                        setSaved(false)
+                      }}
+                      className={cn(
+                        'rounded-full px-4 py-2 text-sm font-medium transition-colors',
+                        on
+                          ? 'bg-brand-600 text-white'
+                          : 'bg-slate-100 text-slate-600 hover:bg-slate-200',
+                      )}
+                    >
+                      {f.label}
+                    </button>
+                  )
+                })}
+              </div>
+              {deliveryFranjas.length === 0 && (
+                <p className="mt-2 text-xs text-amber-600">
+                  Sin franjas el cliente no podrá elegir horario de entrega.
+                </p>
+              )}
+            </div>
+          )}
+
+          {/* Los métodos de pago solo sirven si se puede comprar en línea. */}
+          {deliveryTypes.length > 0 && (
+            <div className="border-t border-slate-100 pt-5">
+              <span className="block text-sm font-medium text-slate-700">Métodos de pago</span>
+              <p className="mt-0.5 mb-3 text-xs text-slate-500">
+                Se le muestran al cliente cuando un producto pide adelanto, para que sepa dónde
+                depositar. Sin ninguno no podrás cobrar adelantos.
+              </p>
+
+              {paymentMethods.length > 0 && (
+                <ul className="mb-3 space-y-2">
+                  {paymentMethods.map((m, i) => (
+                    <li
+                      key={i}
+                      className="flex items-start gap-2 rounded-xl bg-white p-3 ring-1 ring-slate-200"
+                    >
+                      <div className="grid min-w-0 flex-1 gap-2 sm:grid-cols-[9rem_1fr]">
+                        <Input
+                          aria-label="Nombre del método"
+                          placeholder="Yape"
+                          value={m.name}
+                          onChange={(e) => {
+                            const next = [...paymentMethods]
+                            next[i] = { ...m, name: e.target.value }
+                            setPaymentMethods(next)
+                            setSaved(false)
+                          }}
+                        />
+                        <Input
+                          aria-label="Datos del método"
+                          placeholder="987654321 — María S."
+                          value={m.details ?? ''}
+                          onChange={(e) => {
+                            const next = [...paymentMethods]
+                            next[i] = { ...m, details: e.target.value }
+                            setPaymentMethods(next)
+                            setSaved(false)
+                          }}
+                        />
+                      </div>
+                      <IconButton
+                        label={`Quitar ${m.name || 'método'}`}
+                        onClick={() => {
+                          setPaymentMethods(paymentMethods.filter((_, j) => j !== i))
+                          setSaved(false)
+                        }}
+                        className="shrink-0 hover:bg-red-50 hover:text-red-600"
+                      >
+                        <X size={15} />
+                      </IconButton>
+                    </li>
+                  ))}
+                </ul>
+              )}
+
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => {
+                  setPaymentMethods([...paymentMethods, { name: '', details: '' }])
+                  setSaved(false)
+                }}
+              >
+                <Plus size={15} />
+                Agregar método
+              </Button>
+            </div>
+          )}
+
+          <p
+            className={cn(
+              'rounded-lg px-3.5 py-3 text-xs',
+              deliveryTypes.length === 0
+                ? 'bg-amber-50 text-amber-800 ring-1 ring-amber-200'
+                : 'bg-emerald-50 text-emerald-800 ring-1 ring-emerald-200',
+            )}
+          >
+            {deliveryTypes.length === 0
+              ? 'Sin ninguna marcada, tu catálogo funciona solo como vitrina: el cliente tendrá que escribirte por WhatsApp para pedir.'
+              : 'Tus clientes pueden armar su pedido en el catálogo y confirmarlo solos. Te llega por WhatsApp y aparece en Pedidos.'}
+          </p>
         </div>
       </Card>
 
@@ -286,6 +477,21 @@ export function SettingsPage() {
         {addCatMutation.isError && (
           <p className="mt-2 text-xs text-red-600">{apiErrorMessage(addCatMutation.error)}</p>
         )}
+
+        {/* Los filtros viven en su propia sección; acá solo el puntero. */}
+        <Link
+          to="/catalog/filters"
+          className="mt-4 flex items-center gap-2 rounded-lg bg-slate-50 px-3.5 py-3 text-sm text-slate-600 ring-1 ring-slate-200 transition-colors hover:bg-white hover:ring-brand-400"
+        >
+          <ListFilter size={15} className="shrink-0 text-slate-400" />
+          <span className="min-w-0 flex-1">
+            ¿Buscas <strong className="font-medium text-slate-800">Talla</strong>,{' '}
+            <strong className="font-medium text-slate-800">Color</strong> o{' '}
+            <strong className="font-medium text-slate-800">Sabor</strong>? Eso se configura en
+            Filtros.
+          </span>
+          <ExternalLink size={14} className="shrink-0 text-slate-400" />
+        </Link>
       </Card>
 
       {mutation.isError && <Alert>{apiErrorMessage(mutation.error)}</Alert>}

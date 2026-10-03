@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
-import { ChevronLeft, ChevronRight, X } from 'lucide-react'
+import { AlertTriangle, ChevronLeft, ChevronRight, MessageCircle, X } from 'lucide-react'
 import { trackOrder, type TrackingStep } from '@/api/tracking'
 import { apiErrorMessage } from '@/api/client'
 import { Alert, Card, Spinner, StateBadge } from '@/components/ui'
@@ -79,6 +79,9 @@ export function TrackOrderPage() {
         )}
         <p className="text-sm text-slate-500">{data.tenant.name}</p>
         <h1 className="mt-1 text-xl font-bold text-slate-900">Tu pedido</h1>
+        <p className="mt-1 inline-block rounded-full bg-slate-100 px-2.5 py-0.5 font-mono text-xs font-semibold tracking-wide text-slate-600">
+          {data.code}
+        </p>
         <p className="mt-1 text-xs text-slate-400">
           {typeLabels[data.type]} · {formatDateTime(data.createdAt)}
         </p>
@@ -181,6 +184,16 @@ export function TrackOrderPage() {
             </>
           )}
 
+          {/* Comprobante enviado que el negocio todavía no confirma. */}
+          {data.payments.pending > 0 && (
+            <div className="flex items-center justify-between rounded-lg bg-slate-100 px-3 py-2">
+              <dt className="font-medium text-slate-600">En revisión</dt>
+              <dd className="font-bold text-slate-600">
+                {formatCurrency(data.payments.pending)}
+              </dd>
+            </div>
+          )}
+
           {data.payments.remaining > 0 && (
             <div className="flex items-center justify-between rounded-lg bg-amber-50 px-3 py-2">
               <dt className="font-medium text-amber-700">Resta pagar</dt>
@@ -194,6 +207,37 @@ export function TrackOrderPage() {
             <div className="flex items-center justify-between rounded-lg bg-emerald-50 px-3 py-2">
               <dt className="font-medium text-emerald-700">Pagado en su totalidad</dt>
               <dd className="text-emerald-600">✓</dd>
+            </div>
+          )}
+
+          {/*
+            Solo cuando el negocio rechazó un comprobante. Un saldo pendiente
+            normal —el resto se paga a la entrega— no es algo que regularizar.
+          */}
+          {data.paymentRejected && (
+            <div className="mt-1 rounded-xl bg-amber-50 p-3.5 ring-1 ring-amber-200">
+              <p className="flex items-center gap-1.5 text-sm font-semibold text-amber-900">
+                <AlertTriangle size={15} />
+                No pudimos confirmar tu pago
+              </p>
+              <p className="mt-1 text-[13px] text-amber-800">
+                Puede ser que la imagen no se vea bien o que el depósito aún no figure. Escríbenos
+                y envíanos el comprobante.
+              </p>
+
+              {data.tenant.phone && (
+                <a
+                  href={`https://wa.me/${data.tenant.phone}?text=${encodeURIComponent(
+                    `Hola! Es sobre mi pedido *${data.code}*. Quiero regularizar mi pago, les envío el comprobante.`,
+                  )}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="mt-3 flex items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 py-3 text-sm font-semibold text-white transition-colors hover:bg-emerald-700 active:scale-[0.99]"
+                >
+                  <MessageCircle size={16} />
+                  Regularizar mi pago
+                </a>
+              )}
             </div>
           )}
 

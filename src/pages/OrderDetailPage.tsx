@@ -18,6 +18,7 @@ import {
   getOrder,
   registerPayment,
   updateOrderState,
+  validatePayment,
 } from '@/api/orders'
 import { getWorkflow } from '@/api/tenants'
 import { apiErrorMessage } from '@/api/client'
@@ -64,6 +65,17 @@ export function OrderDetailPage() {
       queryClient.invalidateQueries({ queryKey: ['orders'] })
       // Un estado puede descontar stock: el inventario ya no es fiable.
       queryClient.invalidateQueries({ queryKey: ['inventory'] })
+    },
+  })
+
+  const validatePaymentMutation = useMutation({
+    mutationFn: (kind: PaymentKind) => validatePayment(id!, kind),
+    onSuccess: () => {
+      // 'orders' (plural) es la clave real de la consulta: en singular la
+      // invalidación no coincide con nada y la pantalla se queda vieja.
+      queryClient.invalidateQueries({ queryKey: ['orders', id] })
+      // Validar puede mover el estado de pago, y eso se ve en la lista.
+      queryClient.invalidateQueries({ queryKey: ['orders'] })
     },
   })
 
@@ -258,7 +270,7 @@ export function OrderDetailPage() {
                   day: 'numeric',
                   month: 'long',
                 })}{' '}
-                {FRANJA_LABEL[order.scheduledFor.franja]}
+                {order.scheduledFor.franja ? FRANJA_LABEL[order.scheduledFor.franja] : ''}
               </span>
             </div>
           )}
@@ -323,24 +335,70 @@ export function OrderDetailPage() {
             {order.payments.length > 0 && (
               <ul className="mt-4 space-y-3">
                 {order.payments.map((p, i) => (
-                  <li key={i} className="flex items-start gap-3 text-sm">
+                  <li
+                    key={i}
+                    className={cn(
+                      'flex items-start gap-3 text-sm',
+                      // Pendiente de revisión: se destaca para que no pase de largo.
+                      p.validated === false && 'rounded-xl bg-amber-50 p-3 ring-1 ring-amber-200',
+                    )}
+                  >
                     <div className="min-w-0 flex-1">
                       <p className="flex flex-wrap items-center gap-1.5 font-medium text-slate-900">
                         {p.kind === 'advance' ? 'Adelanto' : 'Saldo'}
-                        <span className="font-semibold tabular-nums text-emerald-700">
+                        <span
+                          className={cn(
+                            'font-semibold tabular-nums',
+                            p.validated === false ? 'text-amber-700' : 'text-emerald-700',
+                          )}
+                        >
                           {formatCurrency(p.amount)}
                         </span>
+                        {p.validated === false && (
+                          <span className="rounded-full bg-amber-200 px-2 py-0.5 text-[10px] font-bold tracking-wide text-amber-900 uppercase">
+                            Por validar
+                          </span>
+                        )}
                       </p>
                       <p className="text-xs text-slate-400">{formatDateTime(p.registeredAt)}</p>
                       {p.note && <p className="mt-0.5 text-xs text-slate-500">{p.note}</p>}
-                      <button
-                        type="button"
-                        disabled={deletePaymentMutation.isPending}
-                        onClick={() => deletePaymentMutation.mutate(p.kind)}
-                        className="mt-1 text-xs text-slate-400 transition-colors hover:text-red-600 disabled:opacity-50"
-                      >
-                        Eliminar
-                      </button>
+
+                      {p.validated === false ? (
+                        <>
+                          <p className="mt-1.5 text-xs text-amber-800">
+                            El cliente subió este comprobante. Revísalo y confirma que el dinero
+                            llegó: hasta entonces no cuenta como pagado.
+                          </p>
+                          <div className="mt-2 flex flex-wrap gap-2">
+                            <Button
+                              size="sm"
+                              disabled={validatePaymentMutation.isPending}
+                              onClick={() => validatePaymentMutation.mutate(p.kind)}
+                            >
+                              <Check size={14} />
+                              {validatePaymentMutation.isPending ? 'Validando...' : 'Validar pago'}
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="secondary"
+                              disabled={deletePaymentMutation.isPending}
+                              onClick={() => deletePaymentMutation.mutate(p.kind)}
+                              className="text-red-600 hover:bg-red-50"
+                            >
+                              Rechazar
+                            </Button>
+                          </div>
+                        </>
+                      ) : (
+                        <button
+                          type="button"
+                          disabled={deletePaymentMutation.isPending}
+                          onClick={() => deletePaymentMutation.mutate(p.kind)}
+                          className="mt-1 text-xs text-slate-400 transition-colors hover:text-red-600 disabled:opacity-50"
+                        >
+                          Eliminar
+                        </button>
+                      )}
                     </div>
 
                     {p.proofImageUrl && (

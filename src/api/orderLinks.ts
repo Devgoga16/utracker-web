@@ -1,8 +1,9 @@
 import axios from 'axios'
+import { API_BASE_URL } from './client'
 import type { DaySchedule, Franja, OrderLinkDeliveryType } from '@/types'
 
 // Public endpoints: no auth, no tenant header. Uses bare axios on purpose.
-const publicApi = axios.create({ baseURL: '/api/order-links' })
+const publicApi = axios.create({ baseURL: `${API_BASE_URL}/order-links` })
 
 export interface PublicOrderLink {
   tenant: { name?: string; logoUrl?: string; schedule?: DaySchedule[] }

@@ -80,3 +80,11 @@ export async function createOrderLink(payload: {
   )
   return data
 }
+
+/** El negocio confirma que el adelanto del cliente efectivamente llegó. */
+export async function validatePayment(orderId: string, kind: PaymentKind) {
+  const { data } = await api.patch<{ order: Order }>(
+    `/orders/${orderId}/payments/${kind}/validate`,
+  )
+  return data.order
+}

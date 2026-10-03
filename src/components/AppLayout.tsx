@@ -7,6 +7,7 @@ import {
   ChevronsLeft,
   ClipboardList,
   CreditCard,
+  ListFilter,
   LogOut,
   Package,
   PackageSearch,
@@ -26,11 +27,16 @@ interface NavItem {
   icon: LucideIcon
   /** Si está, el ítem solo se muestra cuando el plan incluye esa feature. */
   featureKey?: keyof PlanFeatures
+  /** Exige coincidencia exacta: evita que un padre se marque junto al hijo. */
+  end?: boolean
 }
 
 const ALL_MAIN_NAV: NavItem[] = [
   { to: '/orders', label: 'Pedidos', icon: ClipboardList },
-  { to: '/catalog', label: 'Catálogo', icon: Package },
+  // `end` porque /catalog/filters es su hermano en el menú, no su hijo.
+  { to: '/catalog', label: 'Catálogo', icon: Package, end: true },
+  // Nace del catálogo, así que va pegado a él en el sidebar.
+  { to: '/catalog/filters', label: 'Filtros', icon: ListFilter },
   { to: '/campaigns', label: 'Campañas', icon: Zap },
   { to: '/inventory', label: 'Inventario', icon: PackageSearch, featureKey: 'inventory' },
   { to: '/finances', label: 'Finanzas', icon: BarChart2, featureKey: 'finances' },
@@ -289,6 +295,7 @@ export function AppLayout() {
             <NavLink
               key={item.to}
               to={item.to}
+              end={item.end}
               className={({ isActive }) =>
                 cn(
                   'flex flex-col items-center gap-0.5 py-2 text-[11px] font-medium transition-colors',
@@ -336,6 +343,7 @@ function SidebarGroup({
           <li key={item.to}>
             <NavLink
               to={item.to}
+              end={item.end}
               title={collapsed ? item.label : undefined}
               className={({ isActive }) =>
                 cn(

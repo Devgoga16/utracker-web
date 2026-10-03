@@ -11,12 +11,6 @@ export default defineConfig({
       '@': path.resolve(import.meta.dirname, './src'),
     },
   },
-  server: {
-    proxy: {
-      '/api': {
-        target: 'http://utracker-api.unify-tc.com',
-        changeOrigin: true,
-      },
-    },
-  },
+  // Sin proxy a propósito: el navegador llama a la API directamente usando
+  // VITE_API_URL, el mismo mecanismo en desarrollo y en producción.
 })

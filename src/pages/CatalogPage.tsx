@@ -1,6 +1,7 @@
 import { useState } from 'react'
+import { Link } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Package, Pencil, Plus, Trash2, Wrench, X, ZoomIn } from 'lucide-react'
+import { ListFilter, Package, Pencil, Plus, Trash2, Wrench, X, ZoomIn } from 'lucide-react'
 import {
   createProduct,
   deleteProduct,
@@ -9,6 +10,7 @@ import {
   type ProductInput,
 } from '@/api/products'
 import { createCategory, listCategories } from '@/api/categories'
+import { listProductFilters } from '@/api/productFilters'
 import { apiErrorMessage } from '@/api/client'
 import {
   Alert,
@@ -39,8 +41,13 @@ const emptyForm: ProductInput = {
   price: 0,
   category: '',
   images: [],
+  attributes: [],
   trackStock: false,
   stock: 0,
+  preparationDays: 0,
+  requiresAdvance: false,
+  advanceType: 'percent',
+  advanceValue: 50,
 }
 
 function productToForm(p: Product): ProductInput {
@@ -52,9 +59,88 @@ function productToForm(p: Product): ProductInput {
     price: p.price,
     category: p.category ?? '',
     images: p.images ?? [],
+    attributes: (p.attributes ?? []).map((a) => ({ filter: a.filter, values: a.values })),
     trackStock: p.trackStock,
     stock: p.stock ?? 0,
+    preparationDays: p.preparationDays ?? 0,
+    requiresAdvance: p.requiresAdvance ?? false,
+    advanceType: p.advanceType ?? 'percent',
+    advanceValue: p.advanceValue ?? 50,
   }
+}
+
+/**
+ * Elección de valores por filtro. Multi-valor a propósito: un mismo producto
+ * puede venir en varias tallas y debe salir al filtrar por cualquiera.
+ */
+function AttributePicker({
+  value,
+  onChange,
+}: {
+  value: ProductInput['attributes']
+  onChange: (next: NonNullable<ProductInput['attributes']>) => void
+}) {
+  const { data: filters } = useQuery({
+    queryKey: ['product-filters'],
+    queryFn: listProductFilters,
+  })
+
+  const usable = filters?.filter((f) => f.values.length > 0) ?? []
+  if (usable.length === 0) return null
+
+  const selected = new Map((value ?? []).map((a) => [a.filter, a.values]))
+
+  function toggle(filterId: string, val: string) {
+    const current = selected.get(filterId) ?? []
+    const next = current.includes(val)
+      ? current.filter((v) => v !== val)
+      : [...current, val]
+
+    const others = (value ?? []).filter((a) => a.filter !== filterId)
+    onChange(next.length ? [...others, { filter: filterId, values: next }] : others)
+  }
+
+  return (
+    <div className="space-y-3">
+      <div>
+        <span className="block text-sm font-medium text-slate-700">Filtros</span>
+        <p className="text-xs text-slate-500">
+          Con esto tus clientes acotan la búsqueda en la tienda.
+        </p>
+      </div>
+
+      {usable.map((f) => {
+        const chosen = selected.get(f._id) ?? []
+        return (
+          <div key={f._id}>
+            <p className="mb-1.5 text-xs font-semibold tracking-wide text-slate-500 uppercase">
+              {f.name}
+            </p>
+            <div className="flex flex-wrap gap-1.5">
+              {f.values.map((v) => {
+                const active = chosen.includes(v)
+                return (
+                  <button
+                    key={v}
+                    type="button"
+                    aria-pressed={active}
+                    onClick={() => toggle(f._id, v)}
+                    className={
+                      active
+                        ? 'rounded-full bg-brand-600 px-3 py-1.5 text-xs font-medium text-white'
+                        : 'rounded-full bg-slate-100 px-3 py-1.5 text-xs font-medium text-slate-600 transition-colors hover:bg-slate-200'
+                    }
+                  >
+                    {v}
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+        )
+      })}
+    </div>
+  )
 }
 
 type Filter = 'all' | CatalogKind
@@ -147,10 +233,18 @@ export function CatalogPage() {
         description="Los productos y servicios que ofreces."
         actions={
           !showForm && (
-            <Button onClick={openCreate}>
-              <Plus size={16} />
-              Agregar
-            </Button>
+            <div className="flex items-center gap-2">
+              <Link to="/catalog/filters">
+                <Button variant="secondary">
+                  <ListFilter size={15} />
+                  <span className="hidden sm:inline">Filtros</span>
+                </Button>
+              </Link>
+              <Button onClick={openCreate}>
+                <Plus size={16} />
+                Agregar
+              </Button>
+            </div>
           )
         }
       />
@@ -332,6 +426,135 @@ export function CatalogPage() {
                   )}
                 </div>
               )}
+
+              {/* Disponibilidad: fija la fecha más temprana que puede elegir el cliente. */}
+              <div className="sm:col-span-2">
+                <span className="mb-1.5 block text-sm font-medium text-slate-700">
+                  Disponibilidad
+                </span>
+                <div className="flex flex-wrap items-end gap-3">
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setForm({ ...form, preparationDays: 0 })}
+                      className={
+                        (form.preparationDays ?? 0) === 0
+                          ? 'rounded-xl bg-brand-600 px-4 py-2.5 text-sm font-medium text-white'
+                          : 'rounded-xl bg-slate-100 px-4 py-2.5 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-200'
+                      }
+                    >
+                      Entrega inmediata
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setForm({
+                          ...form,
+                          preparationDays: (form.preparationDays ?? 0) === 0 ? 1 : form.preparationDays,
+                        })
+                      }
+                      className={
+                        (form.preparationDays ?? 0) > 0
+                          ? 'rounded-xl bg-brand-600 px-4 py-2.5 text-sm font-medium text-white'
+                          : 'rounded-xl bg-slate-100 px-4 py-2.5 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-200'
+                      }
+                    >
+                      Necesita preparación
+                    </button>
+                  </div>
+
+                  {(form.preparationDays ?? 0) > 0 && (
+                    <div className="w-24">
+                      <Field label="Días" htmlFor="p-prep">
+                        <Input
+                          id="p-prep"
+                          type="number"
+                          inputMode="numeric"
+                          min={1}
+                          value={form.preparationDays ?? 1}
+                          onChange={(e) =>
+                            setForm({
+                              ...form,
+                              preparationDays: Math.max(1, Number(e.target.value) || 1),
+                            })
+                          }
+                        />
+                      </Field>
+                    </div>
+                  )}
+                </div>
+                <p className="mt-1.5 text-xs text-slate-500">
+                  {(form.preparationDays ?? 0) === 0
+                    ? 'El cliente puede recogerlo o recibirlo hoy mismo.'
+                    : `El cliente solo podrá elegir fechas desde ${form.preparationDays} día(s) después de pedir.`}
+                </p>
+              </div>
+
+              {/* Adelanto: el cliente lo paga y sube el comprobante al pedir. */}
+              <div className="space-y-3 rounded-xl bg-slate-50 p-3.5 sm:col-span-2">
+                <CheckboxField
+                  label="Pedir adelanto"
+                  hint="el cliente deberá pagar y subir su comprobante al hacer el pedido"
+                  checked={form.requiresAdvance ?? false}
+                  onChange={(checked) => setForm({ ...form, requiresAdvance: checked })}
+                />
+
+                {form.requiresAdvance && (
+                  <div className="flex flex-wrap items-end gap-2">
+                    <div className="w-40">
+                      <Field label="Cómo se calcula" htmlFor="p-adv-type">
+                        <Select
+                          id="p-adv-type"
+                          value={form.advanceType ?? 'percent'}
+                          onChange={(e) =>
+                            setForm({
+                              ...form,
+                              advanceType: e.target.value as 'fixed' | 'percent',
+                            })
+                          }
+                        >
+                          <option value="percent">Porcentaje</option>
+                          <option value="fixed">Monto fijo</option>
+                        </Select>
+                      </Field>
+                    </div>
+                    <div className="w-28">
+                      <Field
+                        label={form.advanceType === 'fixed' ? 'Soles' : 'Porcentaje'}
+                        htmlFor="p-adv-value"
+                      >
+                        <Input
+                          id="p-adv-value"
+                          type="number"
+                          inputMode="decimal"
+                          min={0}
+                          max={form.advanceType === 'percent' ? 100 : undefined}
+                          step={form.advanceType === 'percent' ? 5 : 0.5}
+                          value={form.advanceValue ?? 0}
+                          onChange={(e) =>
+                            setForm({ ...form, advanceValue: Number(e.target.value) })
+                          }
+                        />
+                      </Field>
+                    </div>
+
+                    <p className="pb-2.5 text-xs text-slate-500">
+                      {form.advanceType === 'fixed'
+                        ? `${formatCurrency(form.advanceValue ?? 0)} por unidad`
+                        : `${form.advanceValue ?? 0}% del total · hoy serían ${formatCurrency(
+                            ((form.price || 0) * (form.advanceValue ?? 0)) / 100,
+                          )}`}
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              <div className="sm:col-span-2">
+                <AttributePicker
+                  value={form.attributes}
+                  onChange={(attributes) => setForm({ ...form, attributes })}
+                />
+              </div>
 
               <div className="sm:col-span-2">
                 <span className="mb-1.5 block text-sm font-medium text-slate-700">Imágenes</span>

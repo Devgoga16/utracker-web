@@ -17,6 +17,9 @@ export async function updateTenantSettings(payload: {
   phone?: string | null
   brandColor?: string | null
   schedule?: DaySchedule[]
+  deliveryTypes?: string[]
+  deliveryFranjas?: string[]
+  paymentMethods?: { name: string; details?: string; qrImageUrl?: string }[]
 }) {
   const { data } = await api.patch<{ tenant: Tenant }>('/tenants/settings', payload)
   return data.tenant
