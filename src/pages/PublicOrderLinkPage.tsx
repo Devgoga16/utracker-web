@@ -60,8 +60,8 @@ export function PublicOrderLinkPage() {
         deliveryType,
         delivery: deliveryType === 'pickup' ? undefined : { address: customer.address },
         scheduledFor:
-          deliveryType !== 'pickup' && scheduledDate && scheduledFranja
-            ? { date: scheduledDate, franja: scheduledFranja }
+          scheduledDate
+            ? { date: scheduledDate, franja: scheduledFranja ?? undefined }
             : undefined,
       }),
   })
@@ -203,7 +203,13 @@ export function PublicOrderLinkPage() {
                 />
               </Field>
 
-              <Field label="¿Cuándo te enviamos el pedido? (opcional)" htmlFor="pc-sched-date">
+            </>
+          )}
+
+              <Field
+                label={deliveryType === 'pickup' ? '¿Cuándo lo recoges?' : '¿Cuándo te enviamos el pedido?'}
+                htmlFor="pc-sched-date"
+              >
                 <div className="flex flex-wrap items-center gap-2">
                   <Input
                     id="pc-sched-date"
@@ -231,15 +237,6 @@ export function PublicOrderLinkPage() {
                       {FRANJA_LABELS[f]}
                     </button>
                   ))}
-                  {scheduledDate && (
-                    <button
-                      type="button"
-                      onClick={() => { setScheduledDate(''); setScheduledFranja(null) }}
-                      className="text-xs text-slate-400 hover:text-red-500"
-                    >
-                      Limpiar
-                    </button>
-                  )}
                 </div>
                 {isClosedDay && (
                   <p className="mt-1.5 text-xs text-amber-600">
@@ -247,10 +244,12 @@ export function PublicOrderLinkPage() {
                   </p>
                 )}
               </Field>
-            </>
-          )}
 
-          <Button type="submit" className="w-full" disabled={confirmMutation.isPending}>
+          <Button
+            type="submit"
+            className="w-full"
+            disabled={!scheduledDate || confirmMutation.isPending}
+          >
             {confirmMutation.isPending ? 'Confirmando...' : 'Confirmar pedido →'}
           </Button>
         </form>

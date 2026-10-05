@@ -124,6 +124,18 @@ export function OrderDetailPage() {
   const hasAdvance = order.payments.some((p) => p.kind === 'advance')
   const hasBalance = order.payments.some((p) => p.kind === 'balance')
 
+  /**
+   * Los estados que no aplican a este tipo de entrega no se ofrecen: en un
+   * pedido de recojo, "En camino" solo invita a equivocarse. El estado actual
+   * se deja siempre, para no esconder dónde está el pedido.
+   */
+  const availableStates = (workflow?.fulfillment ?? []).filter(
+    (s) =>
+      !s.appliesTo?.length ||
+      s.appliesTo.includes(order.type) ||
+      s._id === order.fulfillmentState?._id,
+  )
+
   return (
     <div className="space-y-6">
       <PageHeader
@@ -203,7 +215,7 @@ export function OrderDetailPage() {
         <div className="order-first space-y-6 lg:order-last">
           <StatePicker
             title="Estado del pedido"
-            states={workflow?.fulfillment ?? []}
+            states={availableStates}
             currentId={order.fulfillmentState?._id}
             currentLink={order.fulfillmentLink}
             isPending={stateMutation.isPending}

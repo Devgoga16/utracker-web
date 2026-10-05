@@ -5,7 +5,15 @@ import { Check, Copy, ExternalLink, ListFilter, Plus, X } from 'lucide-react'
 import { updateTenantSettings } from '@/api/tenants'
 import { createCategory, deleteCategory, listCategories } from '@/api/categories'
 import { apiErrorMessage } from '@/api/client'
-import { Alert, Button, Card, Field, IconButton, Input, PageHeader } from '@/components/ui'
+import {
+  Alert,
+  Button,
+  IconButton,
+  Input,
+  PageHeader,
+  SettingGroup,
+  SettingRow,
+} from '@/components/ui'
 import { ImageUploader } from '@/components/ImageUploader'
 import { useAuthStore } from '@/stores/authStore'
 import { cn } from '@/lib/cn'
@@ -32,9 +40,7 @@ function initSchedule(saved?: DaySchedule[]): ScheduleDay[] {
 }
 
 function scheduleToPayload(days: ScheduleDay[]): DaySchedule[] {
-  return days
-    .filter((d) => d.enabled)
-    .map(({ day, open, close }) => ({ day, open, close }))
+  return days.filter((d) => d.enabled).map(({ day, open, close }) => ({ day, open, close }))
 }
 
 export function SettingsPage() {
@@ -47,15 +53,14 @@ export function SettingsPage() {
     activeTenant?.logoUrl ? [activeTenant.logoUrl] : [],
   )
   const [brandColor, setBrandColor] = useState(activeTenant?.brandColor ?? DEFAULT_BRAND)
-  const [deliveryTypes, setDeliveryTypes] = useState<string[]>(
-    activeTenant?.deliveryTypes ?? [],
-  )
+  const [deliveryTypes, setDeliveryTypes] = useState<string[]>(activeTenant?.deliveryTypes ?? [])
   const [deliveryFranjas, setDeliveryFranjas] = useState<string[]>(
     activeTenant?.deliveryFranjas ?? [],
   )
   const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>(
     activeTenant?.paymentMethods ?? [],
   )
+  const [lowStockThreshold, setLowStockThreshold] = useState(activeTenant?.lowStockThreshold ?? 5)
   const [scheduleState, setScheduleState] = useState<ScheduleDay[]>(() =>
     initSchedule(activeTenant?.schedule),
   )
@@ -77,6 +82,7 @@ export function SettingsPage() {
         deliveryTypes,
         deliveryFranjas,
         paymentMethods: paymentMethods.filter((m) => m.name.trim()),
+        lowStockThreshold,
       }),
     onSuccess: (tenant) => {
       setActiveTenant({ ...activeTenant!, ...tenant })
@@ -126,60 +132,60 @@ export function SettingsPage() {
     JSON.stringify([...deliveryFranjas].sort()) !==
       JSON.stringify([...(activeTenant?.deliveryFranjas ?? [])].sort()) ||
     JSON.stringify(paymentMethods) !== JSON.stringify(activeTenant?.paymentMethods ?? []) ||
+    lowStockThreshold !== (activeTenant?.lowStockThreshold ?? 5) ||
     currentScheduleStr !== savedScheduleStr
 
   return (
-    <div className="max-w-2xl space-y-6">
-      <PageHeader title="Ajustes" description="La identidad de tu negocio y su tienda pública." />
+    <div className="max-w-3xl space-y-5">
+      <PageHeader title="Ajustes" description="La configuración de tu negocio y su tienda." />
 
-      <Card
-        title="Identidad"
-        description="Así te ven tus clientes en la tienda y en el seguimiento de sus pedidos."
-      >
-        <div className="space-y-5">
-          <div>
-            <span className="mb-1.5 block text-sm font-medium text-slate-700">Logo</span>
+      {/* ── Identidad ──────────────────────────────────────────────── */}
+      <SettingGroup title="Identidad" description="Así te ven tus clientes.">
+        <SettingRow label="Logo" hint="Cuadrado, mínimo 200×200">
+          <div className="flex items-center gap-3">
             <ImageUploader max={1} folder="logos" value={logoUrls} onChange={setLogoUrls} />
             {logoUrls[0] && (
               <button
                 type="button"
                 onClick={() => setLogoUrls([])}
-                className="mt-2 text-xs text-slate-400 transition-colors hover:text-red-600"
+                className="text-xs text-slate-400 transition-colors hover:text-red-600"
               >
-                Quitar logo
+                Quitar
               </button>
             )}
           </div>
+        </SettingRow>
 
-          <Field label="Nombre del negocio" htmlFor="s-name">
-            <Input
-              id="s-name"
-              value={name}
-              onChange={(e) => {
-                setName(e.target.value)
-                setSaved(false)
-              }}
-            />
-          </Field>
+        <SettingRow label="Nombre del negocio" htmlFor="s-name">
+          <Input
+            id="s-name"
+            value={name}
+            onChange={(e) => {
+              setName(e.target.value)
+              setSaved(false)
+            }}
+          />
+        </SettingRow>
 
-          <Field label="WhatsApp del negocio" htmlFor="s-phone">
-            <Input
-              id="s-phone"
-              type="tel"
-              inputMode="tel"
-              placeholder="51987654321"
-              value={phone}
-              onChange={(e) => {
-                setPhone(e.target.value)
-                setSaved(false)
-              }}
-            />
-            <p className="mt-1.5 text-xs text-slate-500">
-              Con código de país y sin espacios. Tus clientes lo usan para consultarte desde la
-              tienda; si lo dejas vacío, el botón no aparece.
-            </p>
-          </Field>
+        <SettingRow
+          label="WhatsApp"
+          htmlFor="s-phone"
+          hint="Con código de país, sin espacios. Vacío oculta el botón en tu tienda."
+        >
+          <Input
+            id="s-phone"
+            type="tel"
+            inputMode="tel"
+            placeholder="51987654321"
+            value={phone}
+            onChange={(e) => {
+              setPhone(e.target.value)
+              setSaved(false)
+            }}
+          />
+        </SettingRow>
 
+        <SettingRow label="Color principal" hint="Tiñe tu tienda y tus campañas." wide>
           <BrandColorPicker
             value={brandColor}
             onChange={(hex) => {
@@ -187,317 +193,322 @@ export function SettingsPage() {
               setSaved(false)
             }}
           />
-        </div>
-      </Card>
+        </SettingRow>
+      </SettingGroup>
 
-      <Card
-        title="Tienda pública"
-        description="Comparte este link para que tus clientes vean tu catálogo."
-      >
-        <div className="rounded-lg bg-slate-50 px-3 py-2.5 ring-1 ring-slate-200">
-          <p className="font-mono text-xs break-all text-slate-600">{storeUrl}</p>
-        </div>
-        <div className="mt-3 flex flex-wrap gap-2">
-          <Button variant="secondary" onClick={copyStoreUrl}>
-            {copied ? <Check size={15} /> : <Copy size={15} />}
-            {copied ? 'Copiado' : 'Copiar link'}
-          </Button>
-          <a href={storeUrl} target="_blank" rel="noreferrer">
-            <Button variant="ghost">
-              <ExternalLink size={15} />
-              Ver tienda
-            </Button>
-          </a>
-        </div>
-      </Card>
-
-      <Card
-        title="Pedidos desde la tienda"
-        description="Define si tus clientes pueden comprar directo desde tu catálogo, sin pasar por WhatsApp."
-      >
-        <div className="space-y-5">
-          <div>
-            <span className="mb-2 block text-sm font-medium text-slate-700">
-              Formas de entrega que aceptas
+      {/* ── Tienda pública ─────────────────────────────────────────── */}
+      <SettingGroup title="Tienda pública" description="El catálogo que compartes con tus clientes.">
+        <SettingRow label="Link de tu tienda" wide>
+          <div className="flex items-center gap-2 rounded-lg bg-slate-50 px-3 py-2 ring-1 ring-slate-200">
+            <span className="min-w-0 flex-1 truncate font-mono text-xs text-slate-600">
+              {storeUrl}
             </span>
-            <div className="grid gap-2.5 sm:grid-cols-2">
-              {([
-                { v: 'pickup', label: 'Recojo en tienda', hint: 'El cliente va a buscarlo' },
-                { v: 'delivery_own', label: 'Delivery', hint: 'Tú lo llevas a su dirección' },
-              ] as const).map((opt) => {
-                const on = deliveryTypes.includes(opt.v)
-                return (
-                  <label
-                    key={opt.v}
-                    className={cn(
-                      'flex cursor-pointer items-start gap-2.5 rounded-xl p-3.5 ring-1 transition-colors',
-                      on ? 'bg-brand-50 ring-brand-400' : 'bg-white ring-slate-200 hover:bg-slate-50',
-                    )}
-                  >
-                    <input
-                      type="checkbox"
-                      checked={on}
-                      onChange={(e) => {
-                        setDeliveryTypes((prev) =>
-                          e.target.checked ? [...prev, opt.v] : prev.filter((x) => x !== opt.v),
-                        )
-                        setSaved(false)
-                      }}
-                      className="mt-0.5 size-4 shrink-0 rounded border-slate-300 accent-brand-600"
-                    />
-                    <span className="min-w-0">
-                      <span className="block text-sm font-medium text-slate-800">{opt.label}</span>
-                      <span className="block text-xs text-slate-500">{opt.hint}</span>
-                    </span>
-                  </label>
-                )
-              })}
-            </div>
+            <IconButton label="Copiar link" onClick={copyStoreUrl} className="shrink-0">
+              {copied ? <Check size={15} className="text-emerald-600" /> : <Copy size={15} />}
+            </IconButton>
+            <a href={storeUrl} target="_blank" rel="noreferrer" className="shrink-0">
+              <IconButton label="Abrir tienda">
+                <ExternalLink size={15} />
+              </IconButton>
+            </a>
           </div>
+        </SettingRow>
 
-          {/* Las franjas solo tienen sentido si hay delivery. */}
-          {deliveryTypes.includes('delivery_own') && (
-            <div>
-              <span className="mb-2 block text-sm font-medium text-slate-700">
-                Franjas en las que repartes
-              </span>
-              <div className="flex flex-wrap gap-2">
-                {([
+        <SettingRow
+          label="Pedidos en línea"
+          hint="Sin ninguna marcada, tu catálogo es solo vitrina: el cliente tendrá que escribirte."
+        >
+          <div className="space-y-2">
+            {(
+              [
+                { v: 'pickup', label: 'Recojo en tienda' },
+                { v: 'delivery_own', label: 'Delivery' },
+              ] as const
+            ).map((opt) => (
+              <label key={opt.v} className="flex cursor-pointer items-center gap-2.5">
+                <input
+                  type="checkbox"
+                  checked={deliveryTypes.includes(opt.v)}
+                  onChange={(e) => {
+                    setDeliveryTypes((prev) =>
+                      e.target.checked ? [...prev, opt.v] : prev.filter((x) => x !== opt.v),
+                    )
+                    setSaved(false)
+                  }}
+                  className="size-4 shrink-0 rounded border-slate-300 accent-brand-600"
+                />
+                <span className="text-sm text-slate-700">{opt.label}</span>
+              </label>
+            ))}
+          </div>
+        </SettingRow>
+
+        {deliveryTypes.includes('delivery_own') && (
+          <SettingRow label="Franjas de entrega" hint="En qué momentos repartes.">
+            <div className="flex flex-wrap gap-1.5">
+              {(
+                [
                   { v: 'morning', label: 'Mañana' },
                   { v: 'afternoon', label: 'Tarde' },
                   { v: 'evening', label: 'Noche' },
-                ] as const).map((f) => {
-                  const on = deliveryFranjas.includes(f.v)
-                  return (
-                    <button
-                      key={f.v}
-                      type="button"
-                      aria-pressed={on}
-                      onClick={() => {
-                        setDeliveryFranjas((prev) =>
-                          on ? prev.filter((x) => x !== f.v) : [...prev, f.v],
-                        )
-                        setSaved(false)
-                      }}
-                      className={cn(
-                        'rounded-full px-4 py-2 text-sm font-medium transition-colors',
-                        on
-                          ? 'bg-brand-600 text-white'
-                          : 'bg-slate-100 text-slate-600 hover:bg-slate-200',
-                      )}
-                    >
-                      {f.label}
-                    </button>
-                  )
-                })}
-              </div>
-              {deliveryFranjas.length === 0 && (
-                <p className="mt-2 text-xs text-amber-600">
-                  Sin franjas el cliente no podrá elegir horario de entrega.
-                </p>
-              )}
+                ] as const
+              ).map((f) => {
+                const on = deliveryFranjas.includes(f.v)
+                return (
+                  <button
+                    key={f.v}
+                    type="button"
+                    aria-pressed={on}
+                    onClick={() => {
+                      setDeliveryFranjas((prev) =>
+                        on ? prev.filter((x) => x !== f.v) : [...prev, f.v],
+                      )
+                      setSaved(false)
+                    }}
+                    className={cn(
+                      'rounded-lg px-3 py-1.5 text-sm font-medium transition-colors',
+                      on
+                        ? 'bg-brand-600 text-white'
+                        : 'bg-slate-100 text-slate-600 hover:bg-slate-200',
+                    )}
+                  >
+                    {f.label}
+                  </button>
+                )
+              })}
             </div>
-          )}
-
-          {/* Los métodos de pago solo sirven si se puede comprar en línea. */}
-          {deliveryTypes.length > 0 && (
-            <div className="border-t border-slate-100 pt-5">
-              <span className="block text-sm font-medium text-slate-700">Métodos de pago</span>
-              <p className="mt-0.5 mb-3 text-xs text-slate-500">
-                Se le muestran al cliente cuando un producto pide adelanto, para que sepa dónde
-                depositar. Sin ninguno no podrás cobrar adelantos.
-              </p>
-
-              {paymentMethods.length > 0 && (
-                <ul className="mb-3 space-y-2">
-                  {paymentMethods.map((m, i) => (
-                    <li
-                      key={i}
-                      className="flex items-start gap-2 rounded-xl bg-white p-3 ring-1 ring-slate-200"
-                    >
-                      <div className="grid min-w-0 flex-1 gap-2 sm:grid-cols-[9rem_1fr]">
-                        <Input
-                          aria-label="Nombre del método"
-                          placeholder="Yape"
-                          value={m.name}
-                          onChange={(e) => {
-                            const next = [...paymentMethods]
-                            next[i] = { ...m, name: e.target.value }
-                            setPaymentMethods(next)
-                            setSaved(false)
-                          }}
-                        />
-                        <Input
-                          aria-label="Datos del método"
-                          placeholder="987654321 — María S."
-                          value={m.details ?? ''}
-                          onChange={(e) => {
-                            const next = [...paymentMethods]
-                            next[i] = { ...m, details: e.target.value }
-                            setPaymentMethods(next)
-                            setSaved(false)
-                          }}
-                        />
-                      </div>
-                      <IconButton
-                        label={`Quitar ${m.name || 'método'}`}
-                        onClick={() => {
-                          setPaymentMethods(paymentMethods.filter((_, j) => j !== i))
-                          setSaved(false)
-                        }}
-                        className="shrink-0 hover:bg-red-50 hover:text-red-600"
-                      >
-                        <X size={15} />
-                      </IconButton>
-                    </li>
-                  ))}
-                </ul>
-              )}
-
-              <Button
-                variant="secondary"
-                size="sm"
-                onClick={() => {
-                  setPaymentMethods([...paymentMethods, { name: '', details: '' }])
-                  setSaved(false)
-                }}
-              >
-                <Plus size={15} />
-                Agregar método
-              </Button>
-            </div>
-          )}
-
-          <p
-            className={cn(
-              'rounded-lg px-3.5 py-3 text-xs',
-              deliveryTypes.length === 0
-                ? 'bg-amber-50 text-amber-800 ring-1 ring-amber-200'
-                : 'bg-emerald-50 text-emerald-800 ring-1 ring-emerald-200',
-            )}
-          >
-            {deliveryTypes.length === 0
-              ? 'Sin ninguna marcada, tu catálogo funciona solo como vitrina: el cliente tendrá que escribirte por WhatsApp para pedir.'
-              : 'Tus clientes pueden armar su pedido en el catálogo y confirmarlo solos. Te llega por WhatsApp y aparece en Pedidos.'}
-          </p>
-        </div>
-      </Card>
-
-      <Card
-        title="Horarios de atención"
-        description="Indica cuándo puedes atender pedidos. La franja de entrega se muestra al crear un pedido."
-      >
-        <ul className="divide-y divide-slate-100">
-          {scheduleState.map((d) => {
-            const meta = DAYS.find((x) => x.day === d.day)!
-            return (
-              <li key={d.day} className="flex flex-wrap items-center gap-x-3 gap-y-2 py-3">
-                <label className="flex cursor-pointer items-center gap-2.5">
-                  <input
-                    type="checkbox"
-                    checked={d.enabled}
-                    onChange={(e) => updateDay(d.day, { enabled: e.target.checked })}
-                    className="h-4 w-4 rounded border-slate-300 text-brand-600 accent-brand-600"
-                  />
-                  <span className="w-24 text-sm font-medium text-slate-700">{meta.label}</span>
-                </label>
-
-                {d.enabled ? (
-                  <div className="flex items-center gap-2">
-                    <input
-                      type="time"
-                      value={d.open}
-                      onChange={(e) => updateDay(d.day, { open: e.target.value })}
-                      className="rounded-lg border border-slate-300 px-2 py-1 text-sm text-slate-800 focus:border-brand-500 focus:outline-none"
-                    />
-                    <span className="text-slate-400">—</span>
-                    <input
-                      type="time"
-                      value={d.close}
-                      min={d.open}
-                      onChange={(e) => updateDay(d.day, { close: e.target.value })}
-                      className="rounded-lg border border-slate-300 px-2 py-1 text-sm text-slate-800 focus:border-brand-500 focus:outline-none"
-                    />
-                  </div>
-                ) : (
-                  <span className="text-sm text-slate-400">Cerrado</span>
-                )}
-              </li>
-            )
-          })}
-        </ul>
-      </Card>
-
-      <Card
-        title="Categorías del catálogo"
-        description="Defínelas una vez y reutilízalas al crear o editar productos."
-      >
-        {categories && categories.length > 0 && (
-          <div className="mb-4 flex flex-wrap gap-2">
-            {categories.map((cat) => (
-              <span
-                key={cat._id}
-                className="inline-flex items-center gap-1 rounded-full bg-slate-100 py-1 pr-1.5 pl-3 text-xs font-medium text-slate-700"
-              >
-                {cat.name}
-                <button
-                  type="button"
-                  aria-label={`Eliminar ${cat.name}`}
-                  onClick={() => deleteCatMutation.mutate(cat._id)}
-                  className="rounded-full p-1 transition-colors hover:bg-slate-200 hover:text-red-600"
-                >
-                  <X size={11} />
-                </button>
-              </span>
-            ))}
-          </div>
+          </SettingRow>
         )}
 
-        <form
-          className="flex gap-2"
-          onSubmit={(e) => {
-            e.preventDefault()
-            if (newCatName.trim()) addCatMutation.mutate()
-          }}
+        {deliveryTypes.length > 0 && (
+          <SettingRow
+            label="Métodos de pago"
+            hint="Se le muestran al cliente cuando un producto pide adelanto."
+            wide
+          >
+            <div className="overflow-hidden rounded-lg ring-1 ring-slate-200">
+              <table className="w-full text-sm">
+                <thead className="bg-slate-50 text-left text-[11px] font-semibold tracking-wide text-slate-400 uppercase">
+                  <tr>
+                    <th className="px-3 py-2">Medio</th>
+                    <th className="px-3 py-2">Datos</th>
+                    <th className="w-10" />
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {paymentMethods.length === 0 ? (
+                    <tr>
+                      <td colSpan={3} className="px-3 py-4 text-center text-xs text-slate-400">
+                        Sin métodos. No podrás cobrar adelantos.
+                      </td>
+                    </tr>
+                  ) : (
+                    paymentMethods.map((m, i) => (
+                      <tr key={i}>
+                        <td className="px-2 py-1.5">
+                          <Input
+                            aria-label="Medio de pago"
+                            placeholder="Yape"
+                            value={m.name}
+                            onChange={(e) => {
+                              const next = [...paymentMethods]
+                              next[i] = { ...m, name: e.target.value }
+                              setPaymentMethods(next)
+                              setSaved(false)
+                            }}
+                          />
+                        </td>
+                        <td className="px-2 py-1.5">
+                          <Input
+                            aria-label="Datos del medio"
+                            placeholder="987654321 — María S."
+                            value={m.details ?? ''}
+                            onChange={(e) => {
+                              const next = [...paymentMethods]
+                              next[i] = { ...m, details: e.target.value }
+                              setPaymentMethods(next)
+                              setSaved(false)
+                            }}
+                          />
+                        </td>
+                        <td className="pr-2">
+                          <IconButton
+                            label={`Quitar ${m.name || 'método'}`}
+                            onClick={() => {
+                              setPaymentMethods(paymentMethods.filter((_, j) => j !== i))
+                              setSaved(false)
+                            }}
+                            className="hover:bg-red-50 hover:text-red-600"
+                          >
+                            <X size={15} />
+                          </IconButton>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+
+            <Button
+              variant="secondary"
+              size="sm"
+              className="mt-2"
+              onClick={() => {
+                setPaymentMethods([...paymentMethods, { name: '', details: '' }])
+                setSaved(false)
+              }}
+            >
+              <Plus size={15} />
+              Agregar método
+            </Button>
+          </SettingRow>
+        )}
+      </SettingGroup>
+
+      {/* ── Horarios ───────────────────────────────────────────────── */}
+      <SettingGroup title="Horarios de atención" description="Cuándo puedes atender pedidos.">
+        <div className="px-4 py-1 sm:px-5">
+          <table className="w-full text-sm">
+            <tbody className="divide-y divide-slate-100">
+              {scheduleState.map((d) => {
+                const meta = DAYS.find((x) => x.day === d.day)!
+                return (
+                  <tr key={d.day}>
+                    <td className="py-2.5">
+                      <label className="flex cursor-pointer items-center gap-2.5">
+                        <input
+                          type="checkbox"
+                          checked={d.enabled}
+                          onChange={(e) => updateDay(d.day, { enabled: e.target.checked })}
+                          className="size-4 shrink-0 rounded border-slate-300 accent-brand-600"
+                        />
+                        <span
+                          className={cn(
+                            'text-sm font-medium',
+                            d.enabled ? 'text-slate-800' : 'text-slate-400',
+                          )}
+                        >
+                          {meta.label}
+                        </span>
+                      </label>
+                    </td>
+                    <td className="py-2.5 text-right">
+                      {d.enabled ? (
+                        <div className="flex items-center justify-end gap-1.5">
+                          <input
+                            type="time"
+                            aria-label={`Apertura ${meta.label}`}
+                            value={d.open}
+                            onChange={(e) => updateDay(d.day, { open: e.target.value })}
+                            className="rounded-lg bg-white px-2 py-1.5 text-sm ring-1 ring-slate-300 outline-none focus:ring-2 focus:ring-brand-500"
+                          />
+                          <span className="text-slate-400">–</span>
+                          <input
+                            type="time"
+                            aria-label={`Cierre ${meta.label}`}
+                            value={d.close}
+                            onChange={(e) => updateDay(d.day, { close: e.target.value })}
+                            className="rounded-lg bg-white px-2 py-1.5 text-sm ring-1 ring-slate-300 outline-none focus:ring-2 focus:ring-brand-500"
+                          />
+                        </div>
+                      ) : (
+                        <span className="text-sm text-slate-400">Cerrado</span>
+                      )}
+                    </td>
+                  </tr>
+                )
+              })}
+            </tbody>
+          </table>
+        </div>
+      </SettingGroup>
+
+      {/* ── Catálogo ───────────────────────────────────────────────── */}
+      <SettingGroup title="Catálogo" description="Cómo se organiza lo que vendes.">
+        <SettingRow
+          label="Categorías"
+          hint="Agrupan tu catálogo en secciones. Se reutilizan al crear productos."
+          wide
+        >
+          {categories && categories.length > 0 && (
+            <div className="mb-2 flex flex-wrap gap-1.5">
+              {categories.map((cat) => (
+                <span
+                  key={cat._id}
+                  className="inline-flex items-center gap-1 rounded-lg bg-slate-100 py-1 pr-1.5 pl-3 text-xs font-medium text-slate-700"
+                >
+                  {cat.name}
+                  <button
+                    type="button"
+                    aria-label={`Eliminar ${cat.name}`}
+                    onClick={() => deleteCatMutation.mutate(cat._id)}
+                    className="rounded p-0.5 transition-colors hover:bg-slate-200 hover:text-red-600"
+                  >
+                    <X size={11} />
+                  </button>
+                </span>
+              ))}
+            </div>
+          )}
+
+          <form
+            className="flex gap-2"
+            onSubmit={(e) => {
+              e.preventDefault()
+              if (newCatName.trim()) addCatMutation.mutate()
+            }}
+          >
+            <Input
+              placeholder="Nueva categoría..."
+              value={newCatName}
+              onChange={(e) => setNewCatName(e.target.value)}
+            />
+            <Button type="submit" variant="secondary" disabled={!newCatName.trim()}>
+              <Plus size={15} />
+            </Button>
+          </form>
+
+          {addCatMutation.isError && (
+            <p className="mt-1.5 text-xs text-red-600">{apiErrorMessage(addCatMutation.error)}</p>
+          )}
+        </SettingRow>
+
+        <SettingRow label="Filtros" hint="Talla, Color, Sabor… Se configuran en su propia sección.">
+          <Link to="/catalog/filters">
+            <Button variant="secondary" size="sm">
+              <ListFilter size={15} />
+              Ir a Filtros
+            </Button>
+          </Link>
+        </SettingRow>
+
+        <SettingRow
+          label="Avisarme de stock bajo desde"
+          htmlFor="s-lowstock"
+          hint={
+            activeTenant?.phone
+              ? 'Unidades. Cada producto puede tener su propio umbral desde el catálogo.'
+              : 'Sin WhatsApp configurado arriba, la alerta solo se verá en Inventario.'
+          }
         >
           <Input
-            placeholder="Nueva categoría..."
-            value={newCatName}
-            onChange={(e) => setNewCatName(e.target.value)}
+            id="s-lowstock"
+            type="number"
+            inputMode="numeric"
+            min={0}
+            value={lowStockThreshold}
+            onChange={(e) => {
+              setLowStockThreshold(Math.max(0, Number(e.target.value) || 0))
+              setSaved(false)
+            }}
           />
-          <IconButton
-            label="Agregar categoría"
-            onClick={() => newCatName.trim() && addCatMutation.mutate()}
-            className="ring-1 ring-slate-300 hover:bg-slate-50 hover:text-brand-600"
-          >
-            <Plus size={16} />
-          </IconButton>
-        </form>
-
-        {addCatMutation.isError && (
-          <p className="mt-2 text-xs text-red-600">{apiErrorMessage(addCatMutation.error)}</p>
-        )}
-
-        {/* Los filtros viven en su propia sección; acá solo el puntero. */}
-        <Link
-          to="/catalog/filters"
-          className="mt-4 flex items-center gap-2 rounded-lg bg-slate-50 px-3.5 py-3 text-sm text-slate-600 ring-1 ring-slate-200 transition-colors hover:bg-white hover:ring-brand-400"
-        >
-          <ListFilter size={15} className="shrink-0 text-slate-400" />
-          <span className="min-w-0 flex-1">
-            ¿Buscas <strong className="font-medium text-slate-800">Talla</strong>,{' '}
-            <strong className="font-medium text-slate-800">Color</strong> o{' '}
-            <strong className="font-medium text-slate-800">Sabor</strong>? Eso se configura en
-            Filtros.
-          </span>
-          <ExternalLink size={14} className="shrink-0 text-slate-400" />
-        </Link>
-      </Card>
+        </SettingRow>
+      </SettingGroup>
 
       {mutation.isError && <Alert>{apiErrorMessage(mutation.error)}</Alert>}
 
-      {/* Sticky en vez de fixed: así respeta el ancho del contenedor y no
-          hay que replicar el ancho del sidebar, que puede estar contraído. */}
+      {/* Sticky en vez de fixed: respeta el ancho del contenedor. */}
       {(dirty || saved) && (
         <div className="sticky bottom-4 z-20">
           <div className="flex items-center gap-3 rounded-xl bg-slate-900 px-4 py-3 shadow-lg shadow-slate-900/20">
@@ -542,13 +553,8 @@ function BrandColorPicker({
 
   return (
     <div>
-      <span className="mb-1.5 block text-sm font-medium text-slate-700">Color principal</span>
-      <p className="mb-3 text-xs text-slate-500">
-        Tiñe tu tienda pública y tus campañas. Elige uno o pega tu color exacto.
-      </p>
-
-      {/* Paleta */}
-      <div className="flex flex-wrap gap-2">
+      {/* La paleta y el campo exacto, en una sola fila cuando entra. */}
+      <div className="flex flex-wrap items-center gap-2">
         {BRAND_PRESETS.map((p) => {
           const active = value.toLowerCase() === p.hex
           return (
@@ -559,25 +565,21 @@ function BrandColorPicker({
               aria-label={p.name}
               onClick={() => onChange(p.hex)}
               style={{ backgroundColor: p.hex }}
-              className={`size-9 rounded-full transition-all ${
+              className={`size-7 rounded-full transition-all ${
                 active
                   ? 'ring-2 ring-slate-900 ring-offset-2'
                   : 'ring-1 ring-black/10 hover:scale-110'
               }`}
             >
-              {active && <Check size={15} className="mx-auto text-white drop-shadow" />}
+              {active && <Check size={13} className="mx-auto text-white drop-shadow" />}
             </button>
           )
         })}
-      </div>
 
-      {/* Color exacto */}
-      <div className="mt-3 flex items-center gap-2">
-        <label className="relative size-9 shrink-0 cursor-pointer overflow-hidden rounded-lg ring-1 ring-slate-300">
-          <span
-            className="block size-full"
-            style={{ backgroundColor: valid ? value : '#ffffff' }}
-          />
+        <span aria-hidden className="mx-1 h-6 w-px bg-slate-200" />
+
+        <label className="relative size-7 shrink-0 cursor-pointer overflow-hidden rounded-full ring-1 ring-slate-300">
+          <span className="block size-full" style={{ backgroundColor: valid ? value : '#fff' }} />
           <input
             type="color"
             value={valid ? value : DEFAULT_BRAND}
@@ -590,44 +592,31 @@ function BrandColorPicker({
           value={value}
           onChange={(e) => onChange(e.target.value)}
           placeholder="#4f46e5"
-          className="max-w-32 font-mono"
+          className="max-w-28 font-mono text-xs"
         />
         {!valid && <span className="text-xs text-red-600">Formato: #rrggbb</span>}
       </div>
 
-      {/* Vista previa */}
-      <div className="mt-4 overflow-hidden rounded-xl ring-1 ring-slate-200">
+      {/* Vista previa compacta */}
+      <div className="mt-3 flex items-center gap-2 overflow-hidden rounded-lg ring-1 ring-slate-200">
         <div
-          className="flex items-center gap-3 px-4 py-3"
-          style={{
-            background: `linear-gradient(135deg, ${ramp[700]}, ${ramp[900]})`,
-          }}
+          className="flex h-10 w-28 shrink-0 items-center justify-center text-[11px] font-semibold text-white"
+          style={{ background: `linear-gradient(135deg, ${ramp[600]}, ${ramp[800]})` }}
         >
-          <span className="text-sm font-semibold text-white">Así se verá tu tienda</span>
+          Tu tienda
         </div>
-        <div className="flex items-center gap-3 bg-white px-4 py-3">
-          <span
-            className="rounded-lg px-3.5 py-2 text-xs font-semibold text-white"
-            style={{ backgroundColor: ramp[600] }}
-          >
-            Pedir ahora
-          </span>
-          <span
-            className="rounded-lg px-3 py-2 text-xs font-medium"
-            style={{ backgroundColor: ramp[50], color: ramp[700] }}
-          >
-            Categoría
-          </span>
-          <div className="ml-auto flex gap-1">
-            {[300, 500, 700].map((s) => (
-              <span
-                key={s}
-                className="size-5 rounded-full ring-1 ring-black/5"
-                style={{ backgroundColor: ramp[s] }}
-              />
-            ))}
-          </div>
-        </div>
+        <span
+          className="rounded-md px-2.5 py-1 text-[11px] font-semibold text-white"
+          style={{ backgroundColor: ramp[600] }}
+        >
+          Pedir
+        </span>
+        <span
+          className="rounded-md px-2 py-1 text-[11px] font-medium"
+          style={{ backgroundColor: ramp[50], color: ramp[700] }}
+        >
+          Categoría
+        </span>
       </div>
     </div>
   )

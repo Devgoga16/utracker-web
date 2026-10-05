@@ -130,6 +130,8 @@ export interface Tenant {
   deliveryFranjas?: Franja[]
   /** Dónde pagar el adelanto. Se muestran tal cual en el checkout. */
   paymentMethods?: PaymentMethod[]
+  /** Umbral por defecto de stock bajo, para productos sin uno propio. */
+  lowStockThreshold?: number
   isActive: boolean
   role?: MembershipRole
 }
@@ -188,6 +190,10 @@ export interface Product {
   advanceValue: number
   stock?: number
   trackStock: boolean
+  /** Desde cuántas unidades avisar. Sin valor, se usa el del negocio. */
+  lowStockThreshold?: number
+  /** Filtro al que corresponden las variantes de este producto. */
+  variantFilter?: string
   isActive: boolean
   createdAt: string
   updatedAt: string
@@ -223,6 +229,8 @@ export interface WorkflowState {
   vibrant: boolean
   requiresLink: boolean
   deductsStock: boolean
+  /** Tipos de entrega a los que aplica. Vacío = a todos. */
+  appliesTo: OrderType[]
   allowedRoles: MembershipRole[]
 }
 

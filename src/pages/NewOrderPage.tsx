@@ -242,7 +242,10 @@ export function NewOrderPage() {
   const [hasAdvance, setHasAdvance] = useState(false)
   const [advance, setAdvance] = useState({ amount: 0, proofImageUrl: '' })
   const [copied, setCopied] = useState(false)
-  const [scheduledDate, setScheduledDate] = useState('')
+  // Por defecto hoy: es lo mas comun y ahorra un campo que llenar.
+  const [scheduledDate, setScheduledDate] = useState(() =>
+    new Date().toISOString().slice(0, 10),
+  )
   const [scheduledFranja, setScheduledFranja] = useState<Franja | null>(null)
 
   const tenantSchedule = activeTenant?.schedule ?? []
@@ -278,8 +281,8 @@ export function NewOrderPage() {
             ? { amount: advance.amount, proofImageUrl: advance.proofImageUrl || undefined }
             : undefined,
         scheduledFor:
-          scheduledDate && scheduledFranja
-            ? { date: scheduledDate, franja: scheduledFranja }
+          scheduledDate
+            ? { date: scheduledDate, franja: scheduledFranja ?? undefined }
             : undefined,
       }),
     onSuccess: (order) => navigate(`/orders/${order._id}`),
@@ -343,7 +346,8 @@ export function NewOrderPage() {
   }
 
   const missingAdHocName = lines.some((l) => !l.productId && !l.name.trim())
-  const canCreate = lines.length > 0 && !!customer.name && !!customer.phone && !missingAdHocName
+  const canCreate =
+    lines.length > 0 && !!customer.name && !!customer.phone && !missingAdHocName && !!scheduledDate
 
   if (isLoading) return <Spinner />
 
@@ -529,7 +533,7 @@ export function NewOrderPage() {
                 </div>
               )}
               <div className="sm:col-span-2">
-                <Field label="Fecha y franja de entrega (opcional)" htmlFor="sched-date">
+                <Field label="Fecha de entrega o recojo" htmlFor="sched-date">
                   <div className="flex flex-wrap items-center gap-2">
                     <Input
                       id="sched-date"

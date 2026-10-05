@@ -23,7 +23,7 @@ import { apiErrorMessage } from '@/api/client'
 import { Alert, Button, Field, Input, Spinner } from '@/components/ui'
 import { formatCurrency, cn } from '@/lib/cn'
 import { applyBrandColor } from '@/lib/brandColor'
-import type { Campaign, CampaignItem, Tenant } from '@/types'
+import type { Campaign, CampaignItem, Franja, Tenant } from '@/types'
 
 type PublicTenant = Pick<Tenant, '_id' | 'name' | 'slug' | 'logoUrl' | 'phone' | 'brandColor'>
 
@@ -682,21 +682,23 @@ function CheckoutSheet({
         type: deliveryType,
         address: deliveryType !== 'pickup' ? address : undefined,
         scheduledFor:
-          deliveryType === 'delivery_own' && schedDate && schedFranja
-            ? { date: schedDate, franja: schedFranja }
+          schedDate
+            ? { date: schedDate, franja: (schedFranja as Franja) || undefined }
             : undefined,
       }),
     onSuccess: (data) => onSuccess(data.trackingUrl),
     onError: (e) => setOrderError(apiErrorMessage(e)),
   })
 
-  const needsSchedule = deliveryType === 'delivery_own'
+  // La fecha es obligatoria siempre; la franja solo si la campaña define alguna.
+  const needsFranja = (campaign.schedule?.franjas?.length ?? 0) > 0
   const canOrder =
     selected.length > 0 &&
     !!customer.name &&
     !!customer.phone &&
     (deliveryType === 'pickup' || !!address) &&
-    (!needsSchedule || (!!schedDate && !!schedFranja))
+    !!schedDate &&
+    (!needsFranja || !!schedFranja)
 
   // Si vacía el carrito desde la hoja, no tiene sentido dejarla abierta.
   useEffect(() => {
@@ -865,17 +867,24 @@ function CheckoutSheet({
             )}
 
             {deliveryType === 'delivery_own' && (
-              <>
-                <Field label="Dirección de entrega" htmlFor="ck-addr">
-                  <Input
-                    id="ck-addr"
-                    placeholder="Calle, número, referencia"
-                    value={address}
-                    onChange={(e) => setAddress(e.target.value)}
-                  />
-                </Field>
+              <Field label="Dirección de entrega" htmlFor="ck-addr">
+                <Input
+                  id="ck-addr"
+                  placeholder="Calle, número, referencia"
+                  value={address}
+                  onChange={(e) => setAddress(e.target.value)}
+                />
+              </Field>
+            )}
 
-                <Field label="¿Qué día te lo llevamos?" htmlFor="ck-date">
+            {/* La fecha se pide siempre: para recojo o para envío. */}
+            <>
+                <Field
+                  label={
+                    deliveryType === 'pickup' ? '¿Qué día lo recoges?' : '¿Qué día te lo llevamos?'
+                  }
+                  htmlFor="ck-date"
+                >
                   <Input
                     id="ck-date"
                     type="date"
@@ -886,10 +895,13 @@ function CheckoutSheet({
                   />
                 </Field>
 
+                {needsFranja && (
                 <div>
-                  <p className="mb-1.5 text-sm font-medium text-slate-700">Horario</p>
+                  <p className="mb-1.5 text-sm font-medium text-slate-700">
+                    {deliveryType === 'pickup' ? '¿A qué hora pasas?' : 'Horario de entrega'}
+                  </p>
                   <div className="grid grid-cols-3 gap-2">
-                    {(campaign.schedule?.franjas ?? ['morning', 'afternoon', 'evening']).map((f) => (
+                    {(campaign.schedule?.franjas ?? []).map((f) => (
                       <button
                         key={f}
                         type="button"
@@ -906,8 +918,8 @@ function CheckoutSheet({
                     ))}
                   </div>
                 </div>
+                )}
               </>
-            )}
 
             {deliveryType === 'pickup' && tenant?.phone && (
               <p className="rounded-xl bg-slate-50 px-3.5 py-3 text-[13px] text-slate-600">

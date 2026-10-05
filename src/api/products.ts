@@ -13,6 +13,10 @@ export interface ProductInput {
   attributes?: { filter: string; values: string[] }[]
   stock?: number
   trackStock?: boolean
+  lowStockThreshold?: number | null
+  variants?: { name: string; priceModifier: number }[]
+  /** Si está, las variantes pueblan y se asignan a ese filtro solas. */
+  variantFilter?: string | null
   preparationDays?: number
   requiresAdvance?: boolean
   advanceType?: 'fixed' | 'percent'

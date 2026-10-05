@@ -1,5 +1,5 @@
 import { api } from './client'
-import type { MembershipRole, WorkflowKind, WorkflowState } from '@/types'
+import type { MembershipRole, OrderType, WorkflowKind, WorkflowState } from '@/types'
 
 export interface CreateStateInput {
   kind: WorkflowKind
@@ -7,6 +7,8 @@ export interface CreateStateInput {
   color?: string
   icon?: string
   notifyCustomer?: boolean
+  /** Tipos de entrega a los que aplica. Vacío o todos = sin restricción. */
+  appliesTo?: OrderType[]
   allowedRoles?: MembershipRole[]
 }
 
@@ -20,6 +22,7 @@ export interface UpdateStateInput {
   vibrant?: boolean
   requiresLink?: boolean
   deductsStock?: boolean
+  appliesTo?: OrderType[]
   allowedRoles?: MembershipRole[]
 }
 

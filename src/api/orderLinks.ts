@@ -23,7 +23,7 @@ export async function confirmPublicOrderLink(
     customer: { name: string; phone: string; email?: string; address?: string }
     deliveryType?: 'pickup' | 'delivery_third_party' | 'delivery_own'
     delivery?: { address?: string; reference?: string }
-    scheduledFor?: { date: string; franja: Franja }
+    scheduledFor?: { date: string; franja?: Franja }
   },
 ) {
   const { data } = await publicApi.post<{ order: { _id: string; trackingToken: string } }>(

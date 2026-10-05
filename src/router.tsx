@@ -7,6 +7,7 @@ import { LoginPage } from '@/pages/LoginPage'
 import { RegisterPage } from '@/pages/RegisterPage'
 import { TenantsPage } from '@/pages/TenantsPage'
 import { OrdersPage } from '@/pages/OrdersPage'
+import { CalendarPage } from '@/pages/CalendarPage'
 import { OrderDetailPage } from '@/pages/OrderDetailPage'
 import { NewOrderPage } from '@/pages/NewOrderPage'
 import { CatalogPage } from '@/pages/CatalogPage'
@@ -26,6 +27,8 @@ import { SuperadminWhatsappPage } from '@/pages/superadmin/SuperadminWhatsappPag
 import { BillingPage } from '@/pages/BillingPage'
 import { CampaignsPage } from '@/pages/CampaignsPage'
 import { PublicCampaignPage } from '@/pages/PublicCampaignPage'
+import { HostedCheckoutPage } from '@/pages/HostedCheckoutPage'
+import { IntegrationPage } from '@/pages/IntegrationPage'
 
 export const router = createBrowserRouter([
   { path: '/', element: <LandingPage /> },
@@ -35,6 +38,8 @@ export const router = createBrowserRouter([
   { path: '/track/:token', element: <TrackOrderPage /> },
   { path: '/store/:slug', element: <StorePage /> },
   { path: '/c/:token', element: <PublicCampaignPage /> },
+  // Checkout hospedado: lo abre la web de un tercero, sin sesión.
+  { path: '/checkout/:token', element: <HostedCheckoutPage /> },
 
   {
     element: <RequireAuth />,
@@ -62,6 +67,7 @@ export const router = createBrowserRouter([
             element: <AppLayout />,
             children: [
               { path: '/orders', element: <OrdersPage /> },
+              { path: '/calendar', element: <CalendarPage /> },
               { path: '/orders/new', element: <NewOrderPage /> },
               { path: '/orders/:id', element: <OrderDetailPage /> },
               { path: '/catalog', element: <CatalogPage /> },
@@ -72,6 +78,7 @@ export const router = createBrowserRouter([
               { path: '/finances', element: <FinancesPage /> },
               { path: '/inventory', element: <InventoryPage /> },
               { path: '/settings', element: <SettingsPage /> },
+              { path: '/integration', element: <IntegrationPage /> },
               { path: '/billing', element: <BillingPage /> },
             ],
           },

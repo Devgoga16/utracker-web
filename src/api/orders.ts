@@ -18,7 +18,7 @@ export interface CreateOrderInput {
   delivery?: { address?: string; reference?: string; courierName?: string; driver?: string }
   notes?: string
   advance?: { amount: number; proofImageUrl?: string }
-  scheduledFor?: { date: string; franja: Franja }
+  scheduledFor?: { date: string; franja?: Franja }
 }
 
 export interface RegisterPaymentInput {
@@ -87,4 +87,13 @@ export async function validatePayment(orderId: string, kind: PaymentKind) {
     `/orders/${orderId}/payments/${kind}/validate`,
   )
   return data.order
+}
+
+/** Pedidos de una semana, por su fecha programada de entrega o recojo. */
+export async function calendarOrders(from: string, to: string) {
+  const { data } = await api.get<{ scheduled: Order[]; unscheduled: Order[] }>(
+    '/orders/calendar',
+    { params: { from, to } },
+  )
+  return data
 }

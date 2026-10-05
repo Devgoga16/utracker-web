@@ -3,17 +3,12 @@ import { Link } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   ArrowDown,
-  ArrowRight,
   ArrowUp,
-  Check,
-  ChevronDown,
   ChevronLeft,
-  Eye,
   ListFilter,
   Package,
   Plus,
   Search,
-  Tag,
   Trash2,
   Users,
   X,
@@ -30,10 +25,7 @@ import { Alert, Button, Card, IconButton, Input, PageHeader, Spinner } from '@/c
 import { cn } from '@/lib/cn'
 import type { Product, ProductFilter } from '@/types'
 
-/**
- * Atajos para arrancar: el dueño rara vez sabe qué filtros necesita hasta que
- * ve un ejemplo de su propio rubro.
- */
+/** Juegos listos por rubro: solo se ofrecen cuando no hay ningún filtro. */
 const TEMPLATES: { label: string; icon: string; filters: { name: string; values: string[] }[] }[] = [
   {
     label: 'Ropa',
@@ -88,91 +80,11 @@ function useFilterUsage(products: Product[] | undefined) {
   }, [products])
 }
 
-/* ═══════════════ Vista previa de la tienda ═══════════════ */
+/* ═════════ Asignación masiva ═════════ */
 
 /**
- * Réplica estática de la barra de filtros pública. El concepto es abstracto
- * hasta que el dueño ve el resultado; esto lo vuelve concreto sin que tenga
- * que abrir su tienda en otra pestaña.
- */
-function StorePreview({ filters }: { filters: ProductFilter[] }) {
-  const usable = filters.filter((f) => f.values.length > 0)
-
-  return (
-    <Card>
-      <div className="mb-3 flex items-center gap-2">
-        <Eye size={16} className="text-slate-400" />
-        <h2 className="text-sm font-semibold text-slate-800">Así lo verán tus clientes</h2>
-      </div>
-
-      <div className="rounded-xl bg-slate-50 p-4 ring-1 ring-slate-200">
-        {usable.length === 0 ? (
-          <p className="py-3 text-center text-sm text-slate-400">
-            Agrega valores a tus filtros y aparecerán acá.
-          </p>
-        ) : (
-          <>
-            {/* Barra tal como sale en la tienda */}
-            <div className="flex flex-wrap gap-2">
-              {usable.map((f, i) => (
-                <span
-                  key={f._id}
-                  className={cn(
-                    'inline-flex items-center gap-1.5 rounded-full px-4 py-1.5 text-[13px] font-medium',
-                    i === 0 ? 'bg-brand-600 text-white' : 'bg-slate-200 text-slate-600',
-                  )}
-                >
-                  {f.name}
-                  {i === 0 && (
-                    <span className="rounded-full bg-white/25 px-1.5 text-[11px] font-bold">1</span>
-                  )}
-                  <ChevronDown size={13} />
-                </span>
-              ))}
-            </div>
-
-            {/* Despliegue del primero, para mostrar los valores */}
-            {usable[0] && (
-              <div className="mt-2.5 w-fit min-w-44 rounded-2xl bg-white p-1.5 shadow-lg ring-1 ring-slate-200">
-                {usable[0].values.slice(0, 5).map((v, i) => (
-                  <div
-                    key={v}
-                    className="flex items-center gap-2.5 rounded-xl px-3 py-2 text-sm"
-                  >
-                    <span
-                      className={cn(
-                        'flex size-4 shrink-0 items-center justify-center rounded border',
-                        i === 0 ? 'border-brand-600 bg-brand-600' : 'border-slate-300',
-                      )}
-                    >
-                      {i === 0 && <Check size={11} className="text-white" />}
-                    </span>
-                    <span className={i === 0 ? 'font-medium text-slate-900' : 'text-slate-700'}>
-                      {v}
-                    </span>
-                  </div>
-                ))}
-                {usable[0].values.length > 5 && (
-                  <p className="px-3 py-1 text-xs text-slate-400">
-                    +{usable[0].values.length - 5} más
-                  </p>
-                )}
-              </div>
-            )}
-          </>
-        )}
-      </div>
-    </Card>
-  )
-}
-
-/* ═══════════════ Asignación masiva ═══════════════ */
-
-/**
- * Asigna un filtro a todos los productos desde una sola pantalla.
- *
- * Es la diferencia entre que esto sea útil o no: sin esto hay que entrar a
- * editar cada producto uno por uno para ponerle su talla.
+ * Asigna un filtro a todos los productos desde una sola pantalla: sin esto
+ * habría que entrar a editar cada producto uno por uno.
  */
 function AssignDialog({
   filter,
@@ -206,7 +118,7 @@ function AssignDialog({
       )
     : products
 
-  const assignedCount = products.filter((p) =>
+  const assigned = products.filter((p) =>
     p.attributes?.some((a) => a.filter === filter._id && a.values.length),
   ).length
 
@@ -223,7 +135,7 @@ function AssignDialog({
             <div className="min-w-0 flex-1">
               <h2 className="font-bold text-slate-900">Asignar «{filter.name}»</h2>
               <p className="mt-0.5 text-sm text-slate-500">
-                Marca los valores que le corresponden a cada producto. Se guarda solo.
+                {assigned} de {products.length} productos · se guarda solo
               </p>
             </div>
             <IconButton label="Cerrar" onClick={onClose} className="shrink-0">
@@ -243,10 +155,6 @@ function AssignDialog({
               className="w-full rounded-lg bg-slate-100 py-2 pr-3 pl-9 text-sm outline-none placeholder:text-slate-400 focus:bg-white focus:ring-2 focus:ring-brand-500"
             />
           </div>
-
-          <p className="mt-2.5 text-xs text-slate-500">
-            {assignedCount} de {products.length} productos ya tienen {filter.name.toLowerCase()}
-          </p>
         </div>
 
         <div className="min-h-0 flex-1 overflow-y-auto">
@@ -255,8 +163,7 @@ function AssignDialog({
           ) : (
             <ul className="divide-y divide-slate-100">
               {visible.map((p) => {
-                const current =
-                  p.attributes?.find((a) => a.filter === filter._id)?.values ?? []
+                const current = p.attributes?.find((a) => a.filter === filter._id)?.values ?? []
                 const busy = savingId === p._id
 
                 return (
@@ -275,11 +182,7 @@ function AssignDialog({
 
                     <div className="min-w-0 flex-1">
                       <p className="truncate text-sm font-medium text-slate-900">{p.name}</p>
-                      {p.category && (
-                        <p className="truncate text-xs text-slate-400">{p.category}</p>
-                      )}
-
-                      <div className="mt-2 flex flex-wrap gap-1.5">
+                      <div className="mt-1.5 flex flex-wrap gap-1.5">
                         {filter.values.map((v) => {
                           const on = current.includes(v)
                           return (
@@ -291,9 +194,7 @@ function AssignDialog({
                               onClick={() =>
                                 save.mutate({
                                   product: p,
-                                  values: on
-                                    ? current.filter((x) => x !== v)
-                                    : [...current, v],
+                                  values: on ? current.filter((x) => x !== v) : [...current, v],
                                 })
                               }
                               className={cn(
@@ -331,14 +232,14 @@ function AssignDialog({
   )
 }
 
-/* ═══════════════ Tarjeta de un filtro ═══════════════ */
+/* ═════════ Tarjeta de filtro ═════════ */
 
 function FilterCard({
   filter,
   index,
   total,
   usage,
-  productCount,
+  hasProducts,
   onMove,
   onAssign,
 }: {
@@ -346,7 +247,7 @@ function FilterCard({
   index: number
   total: number
   usage: { byFilter: Map<string, number>; byValue: Map<string, number> }
-  productCount: number
+  hasProducts: boolean
   onMove: (dir: -1 | 1) => void
   onAssign: () => void
 }) {
@@ -374,73 +275,47 @@ function FilterCard({
   function addValue() {
     const value = newValue.trim()
     if (!value) return
-    if (filter.values.some((v) => v.toLowerCase() === value.toLowerCase())) {
-      setNewValue('')
-      return
+    if (!filter.values.some((v) => v.toLowerCase() === value.toLowerCase())) {
+      save.mutate({ values: [...filter.values, value] })
     }
-    save.mutate({ values: [...filter.values, value] })
     setNewValue('')
   }
 
   const used = usage.byFilter.get(filter._id) ?? 0
-  const ready = filter.values.length > 0 && used > 0
 
   return (
     <Card>
-      <div className="flex items-start gap-3">
-        <span
-          className={cn(
-            'mt-1 flex size-10 shrink-0 items-center justify-center rounded-xl',
-            ready ? 'bg-emerald-50 text-emerald-600' : 'bg-amber-50 text-amber-600',
-          )}
-        >
-          {ready ? <Check size={18} /> : <ListFilter size={17} />}
-        </span>
+      <div className="flex items-center gap-2">
+        <Input
+          aria-label="Nombre del filtro"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          onBlur={() => {
+            const next = name.trim()
+            if (next && next !== filter.name) save.mutate({ name: next })
+            else setName(filter.name)
+          }}
+          className="font-semibold"
+        />
 
-        <div className="min-w-0 flex-1">
-          <Input
-            aria-label="Nombre del filtro"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            onBlur={() => {
-              const next = name.trim()
-              if (next && next !== filter.name) save.mutate({ name: next })
-              else setName(filter.name)
-            }}
-            className="text-base font-semibold"
-          />
-          <p className="mt-1.5 text-xs text-slate-500">
-            {filter.values.length} {filter.values.length === 1 ? 'valor' : 'valores'}
-            {' · '}
-            {used === 0 ? (
-              <span className="font-medium text-amber-600">en ningún producto</span>
-            ) : (
-              <span className="font-medium text-emerald-600">
-                en {used} {used === 1 ? 'producto' : 'productos'}
-              </span>
-            )}
-          </p>
-        </div>
-
-        {/* Orden en que los ve el cliente */}
         <div className="flex shrink-0 flex-col">
           <button
             type="button"
             aria-label="Subir"
             disabled={index === 0}
             onClick={() => onMove(-1)}
-            className="rounded-md p-1 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-700 disabled:opacity-25 disabled:hover:bg-transparent"
+            className="rounded p-0.5 text-slate-400 hover:bg-slate-100 hover:text-slate-700 disabled:opacity-25 disabled:hover:bg-transparent"
           >
-            <ArrowUp size={14} />
+            <ArrowUp size={13} />
           </button>
           <button
             type="button"
             aria-label="Bajar"
             disabled={index === total - 1}
             onClick={() => onMove(1)}
-            className="rounded-md p-1 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-700 disabled:opacity-25 disabled:hover:bg-transparent"
+            className="rounded p-0.5 text-slate-400 hover:bg-slate-100 hover:text-slate-700 disabled:opacity-25 disabled:hover:bg-transparent"
           >
-            <ArrowDown size={14} />
+            <ArrowDown size={13} />
           </button>
         </div>
 
@@ -455,7 +330,7 @@ function FilterCard({
         ) : (
           <div className="flex shrink-0 items-center gap-1.5 rounded-lg bg-red-50 px-2.5 py-1.5 ring-1 ring-red-200">
             <span className="text-xs text-red-700">
-              {used > 0 ? `Se quita de ${used} prod.` : '¿Seguro?'}
+              {used > 0 ? `Quita de ${used}` : '¿Seguro?'}
             </span>
             <button
               type="button"
@@ -463,7 +338,7 @@ function FilterCard({
               disabled={remove.isPending}
               className="text-xs font-semibold text-red-600 hover:underline disabled:opacity-50"
             >
-              {remove.isPending ? '...' : 'Sí'}
+              Sí
             </button>
             <button
               type="button"
@@ -477,91 +352,72 @@ function FilterCard({
       </div>
 
       {/* Valores */}
-      <div className="mt-4 border-t border-slate-100 pt-4">
-        <p className="mb-2 text-xs font-semibold tracking-wide text-slate-400 uppercase">
-          Valores que acepta
-        </p>
-
-        <div className="flex flex-wrap items-center gap-1.5">
-          {filter.values.map((v) => {
-            const count = usage.byValue.get(`${filter._id}::${v}`) ?? 0
-            return (
-              <span
-                key={v}
-                title={
-                  count === 0
-                    ? 'Ningún producto usa este valor'
-                    : `${count} producto${count === 1 ? '' : 's'}`
-                }
-                className={cn(
-                  'inline-flex items-center gap-1.5 rounded-full py-1 pr-1.5 pl-3 text-xs font-medium ring-1',
-                  count > 0
-                    ? 'bg-white text-slate-700 ring-slate-200'
-                    : 'bg-slate-50 text-slate-400 ring-slate-200',
-                )}
+      <div className="mt-3 flex flex-wrap items-center gap-1.5">
+        {filter.values.map((v) => {
+          const count = usage.byValue.get(`${filter._id}::${v}`) ?? 0
+          return (
+            <span
+              key={v}
+              className={cn(
+                'inline-flex items-center gap-1.5 rounded-full py-1 pr-1.5 pl-3 text-xs font-medium ring-1',
+                count > 0
+                  ? 'bg-white text-slate-700 ring-slate-200'
+                  : 'bg-slate-50 text-slate-400 ring-slate-200',
+              )}
+            >
+              {v}
+              {count > 0 && <span className="text-[10px] text-slate-400">{count}</span>}
+              <button
+                type="button"
+                aria-label={`Quitar ${v}`}
+                onClick={() => save.mutate({ values: filter.values.filter((x) => x !== v) })}
+                className="rounded-full p-0.5 transition-colors hover:bg-slate-200 hover:text-red-600"
               >
-                {v}
-                {count > 0 && (
-                  <span className="rounded-full bg-slate-100 px-1.5 text-[10px] font-bold text-slate-500">
-                    {count}
-                  </span>
-                )}
-                <button
-                  type="button"
-                  aria-label={`Quitar ${v}`}
-                  onClick={() => save.mutate({ values: filter.values.filter((x) => x !== v) })}
-                  className="rounded-full p-0.5 transition-colors hover:bg-slate-200 hover:text-red-600"
-                >
-                  <X size={11} />
-                </button>
-              </span>
-            )
-          })}
+                <X size={11} />
+              </button>
+            </span>
+          )
+        })}
 
-          <input
-            value={newValue}
-            onChange={(e) => setNewValue(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') {
-                e.preventDefault()
-                addValue()
-              }
-            }}
-            onBlur={addValue}
-            placeholder="+ agregar valor"
-            aria-label={`Nuevo valor para ${filter.name}`}
-            className="w-32 rounded-full bg-slate-50 px-3 py-1.5 text-xs ring-1 ring-slate-200 outline-none placeholder:text-slate-400 focus:w-40 focus:bg-white focus:ring-2 focus:ring-brand-500"
-          />
-        </div>
-
-        {filter.values.length === 0 ? (
-          <p className="mt-3 text-xs text-amber-600">
-            Sin valores no aparece en tu tienda. Agrega al menos uno.
-          </p>
-        ) : (
-          <div className="mt-3.5 flex items-center gap-3">
-            <Button size="sm" variant="secondary" onClick={onAssign} disabled={productCount === 0}>
-              <Users size={14} />
-              Asignar a productos
-            </Button>
-            {used === 0 && productCount > 0 && (
-              <span className="text-xs text-amber-600">
-                Falta este paso para que aparezca en la tienda
-              </span>
-            )}
-          </div>
-        )}
-
-        {save.isError && <p className="mt-2 text-xs text-red-600">{apiErrorMessage(save.error)}</p>}
-        {remove.isError && (
-          <p className="mt-2 text-xs text-red-600">{apiErrorMessage(remove.error)}</p>
-        )}
+        <input
+          value={newValue}
+          onChange={(e) => setNewValue(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') {
+              e.preventDefault()
+              addValue()
+            }
+          }}
+          onBlur={addValue}
+          placeholder="+ valor"
+          aria-label={`Nuevo valor para ${filter.name}`}
+          className="w-24 rounded-full bg-slate-50 px-3 py-1.5 text-xs ring-1 ring-slate-200 outline-none placeholder:text-slate-400 focus:w-32 focus:bg-white focus:ring-2 focus:ring-brand-500"
+        />
       </div>
+
+      {/* Una sola línea de estado, y solo cuando algo falta. */}
+      <div className="mt-3 flex items-center gap-3">
+        {filter.values.length > 0 && hasProducts && (
+          <Button size="sm" variant="secondary" onClick={onAssign}>
+            <Users size={14} />
+            Asignar a productos
+          </Button>
+        )}
+        <span className="text-xs text-slate-400">
+          {filter.values.length === 0
+            ? 'Agrega valores para que aparezca en tu tienda'
+            : used === 0
+              ? 'Sin asignar a ningún producto'
+              : `En ${used} ${used === 1 ? 'producto' : 'productos'}`}
+        </span>
+      </div>
+
+      {save.isError && <p className="mt-2 text-xs text-red-600">{apiErrorMessage(save.error)}</p>}
     </Card>
   )
 }
 
-/* ═══════════════ Página ═══════════════ */
+/* ═════════ Página ═════════ */
 
 export function CatalogFiltersPage() {
   const qc = useQueryClient()
@@ -585,16 +441,11 @@ export function CatalogFiltersPage() {
 
   const applyTemplate = useMutation({
     mutationFn: async (tpl: (typeof TEMPLATES)[number]) => {
-      const existing = new Set((filters ?? []).map((f) => f.name.toLowerCase()))
-      for (const f of tpl.filters) {
-        if (existing.has(f.name.toLowerCase())) continue
-        await createProductFilter(f)
-      }
+      for (const f of tpl.filters) await createProductFilter(f)
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ['product-filters'] }),
   })
 
-  // El orden se guarda como posición; mover es reescribir las de toda la lista.
   const reorder = useMutation({
     mutationFn: async ({ from, to }: { from: number; to: number }) => {
       const list = [...(filters ?? [])]
@@ -606,12 +457,9 @@ export function CatalogFiltersPage() {
   })
 
   const list = filters ?? []
-  const withValues = list.filter((f) => f.values.length > 0)
-  const assigned = list.filter((f) => (usage.byFilter.get(f._id) ?? 0) > 0)
-  const productCount = products?.length ?? 0
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
       <div>
         <Link
           to="/catalog"
@@ -621,28 +469,66 @@ export function CatalogFiltersPage() {
           Catálogo
         </Link>
         <PageHeader
-          title="Filtros del catálogo"
-          description="Los atributos con los que tus clientes acotan la búsqueda en tu tienda: Talla, Sabor, Color… Tú defines cuáles existen y qué valores aceptan."
+          title="Filtros"
+          description="Con lo que tus clientes acotan la búsqueda en tu tienda: Talla, Sabor, Color…"
         />
       </div>
 
       {isLoading ? (
         <Spinner />
+      ) : list.length === 0 ? (
+        /* El único lugar donde explicar: cuando todavía no hay nada. */
+        <Card>
+          <div className="flex flex-col items-center gap-4 py-8 text-center">
+            <span className="flex size-12 items-center justify-center rounded-full bg-slate-100">
+              <ListFilter size={22} className="text-slate-400" />
+            </span>
+
+            <div className="max-w-sm">
+              <p className="font-medium text-slate-700">Todavía no tienes filtros</p>
+              <p className="mt-1 text-sm text-slate-500">
+                Un filtro es un atributo que cruza tu catálogo. La categoría dice{' '}
+                <em>dónde</em> está un producto; el filtro dice <em>cómo</em> es: un polo en
+                «Ropa» con Talla M y Color azul.
+              </p>
+            </div>
+
+            <div className="flex w-full max-w-sm gap-2">
+              <Input
+                placeholder="Talla, Sabor, Color..."
+                value={newName}
+                onChange={(e) => setNewName(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && newName.trim() && add.mutate(newName.trim())}
+              />
+              <Button disabled={!newName.trim() || add.isPending} onClick={() => add.mutate(newName.trim())}>
+                <Plus size={15} />
+                Crear
+              </Button>
+            </div>
+
+            <div className="flex flex-wrap justify-center gap-2">
+              <span className="w-full text-xs text-slate-400">o empieza con uno listo:</span>
+              {TEMPLATES.map((tpl) => (
+                <button
+                  key={tpl.label}
+                  type="button"
+                  disabled={applyTemplate.isPending}
+                  onClick={() => applyTemplate.mutate(tpl)}
+                  className="flex items-center gap-1.5 rounded-lg bg-slate-50 px-3 py-2 text-sm font-medium text-slate-700 ring-1 ring-slate-200 transition-colors hover:bg-white hover:ring-brand-400 disabled:opacity-50"
+                >
+                  <span aria-hidden>{tpl.icon}</span>
+                  {tpl.label}
+                </button>
+              ))}
+            </div>
+
+            {(add.isError || applyTemplate.isError) && (
+              <Alert>{apiErrorMessage(add.error ?? applyTemplate.error)}</Alert>
+            )}
+          </div>
+        </Card>
       ) : (
         <>
-          {/* Los tres pasos, con el estado real de cada uno. */}
-          {list.length > 0 && (
-            <Steps
-              created={list.length}
-              withValues={withValues.length}
-              assigned={assigned.length}
-            />
-          )}
-
-          {/* Qué es esto, en una línea con ejemplo visual. */}
-          <ConceptCard />
-
-          {/* Crear */}
           <Card>
             <form
               className="flex gap-2"
@@ -652,13 +538,13 @@ export function CatalogFiltersPage() {
               }}
             >
               <Input
-                placeholder="Nombre del filtro: Talla, Sabor, Color..."
+                placeholder="Nuevo filtro: Talla, Sabor, Color..."
                 value={newName}
                 onChange={(e) => setNewName(e.target.value)}
               />
               <Button type="submit" disabled={!newName.trim() || add.isPending}>
                 <Plus size={15} />
-                {add.isPending ? 'Creando...' : 'Crear filtro'}
+                Crear
               </Button>
             </form>
             {add.isError && (
@@ -666,190 +552,26 @@ export function CatalogFiltersPage() {
             )}
           </Card>
 
-          {/* Lista o vacío */}
-          {list.length === 0 ? (
-            <Card>
-              <div className="flex flex-col items-center gap-3 py-8 text-center">
-                <span className="flex size-12 items-center justify-center rounded-full bg-slate-100">
-                  <ListFilter size={22} className="text-slate-400" />
-                </span>
-                <div>
-                  <p className="font-medium text-slate-700">Todavía no tienes filtros</p>
-                  <p className="mx-auto mt-1 max-w-sm text-sm text-slate-500">
-                    Créalos arriba, o empieza con un juego listo según tu rubro y edítalo a tu
-                    gusto.
-                  </p>
-                </div>
-
-                <div className="mt-2 flex flex-wrap justify-center gap-2">
-                  {TEMPLATES.map((tpl) => (
-                    <button
-                      key={tpl.label}
-                      type="button"
-                      disabled={applyTemplate.isPending}
-                      onClick={() => applyTemplate.mutate(tpl)}
-                      className="flex items-center gap-2 rounded-xl bg-slate-50 px-3.5 py-2.5 text-sm font-medium text-slate-700 ring-1 ring-slate-200 transition-colors hover:bg-white hover:ring-brand-400 disabled:opacity-50"
-                    >
-                      <span aria-hidden>{tpl.icon}</span>
-                      {tpl.label}
-                      <span className="text-xs font-normal text-slate-400">
-                        {tpl.filters.map((f) => f.name).join(' · ')}
-                      </span>
-                    </button>
-                  ))}
-                </div>
-
-                {applyTemplate.isError && <Alert>{apiErrorMessage(applyTemplate.error)}</Alert>}
-              </div>
-            </Card>
-          ) : (
-            <div className="space-y-3">
-              {list.map((f, i) => (
-                <FilterCard
-                  key={f._id}
-                  filter={f}
-                  index={i}
-                  total={list.length}
-                  usage={usage}
-                  productCount={productCount}
-                  onMove={(dir) => reorder.mutate({ from: i, to: i + dir })}
-                  onAssign={() => setAssigning(f)}
-                />
-              ))}
-            </div>
-          )}
-
-          {/* Vista previa */}
-          {list.length > 0 && <StorePreview filters={list} />}
+          <div className="space-y-3">
+            {list.map((f, i) => (
+              <FilterCard
+                key={f._id}
+                filter={f}
+                index={i}
+                total={list.length}
+                usage={usage}
+                hasProducts={(products?.length ?? 0) > 0}
+                onMove={(dir) => reorder.mutate({ from: i, to: i + dir })}
+                onAssign={() => setAssigning(f)}
+              />
+            ))}
+          </div>
         </>
       )}
 
       {assigning && products && (
-        <AssignDialog
-          filter={assigning}
-          products={products}
-          onClose={() => setAssigning(null)}
-        />
+        <AssignDialog filter={assigning} products={products} onClose={() => setAssigning(null)} />
       )}
     </div>
-  )
-}
-
-/* ═══════════════ Piezas de apoyo ═══════════════ */
-
-/** Los tres pasos del flujo, cada uno con su estado real. */
-function Steps({
-  created,
-  withValues,
-  assigned,
-}: {
-  created: number
-  withValues: number
-  assigned: number
-}) {
-  const steps = [
-    { n: 1, label: 'Crea los filtros', done: created > 0, detail: `${created} creados` },
-    {
-      n: 2,
-      label: 'Dales valores',
-      done: withValues === created && created > 0,
-      detail: `${withValues} de ${created}`,
-    },
-    {
-      n: 3,
-      label: 'Asígnalos a productos',
-      done: assigned === created && created > 0,
-      detail: `${assigned} de ${created}`,
-    },
-  ]
-
-  return (
-    <div className="grid gap-3 sm:grid-cols-3">
-      {steps.map((s) => (
-        <div
-          key={s.n}
-          className={cn(
-            'flex items-center gap-3 rounded-xl p-4 ring-1',
-            s.done ? 'bg-emerald-50 ring-emerald-200' : 'bg-white ring-slate-200',
-          )}
-        >
-          <span
-            className={cn(
-              'flex size-7 shrink-0 items-center justify-center rounded-full text-xs font-bold',
-              s.done ? 'bg-emerald-600 text-white' : 'bg-slate-200 text-slate-600',
-            )}
-          >
-            {s.done ? <Check size={14} /> : s.n}
-          </span>
-          <div className="min-w-0">
-            <p
-              className={cn(
-                'text-sm font-semibold',
-                s.done ? 'text-emerald-900' : 'text-slate-800',
-              )}
-            >
-              {s.label}
-            </p>
-            <p className={cn('text-xs', s.done ? 'text-emerald-700' : 'text-slate-500')}>
-              {s.detail}
-            </p>
-          </div>
-        </div>
-      ))}
-    </div>
-  )
-}
-
-/** Categoría vs filtro, mostrado en vez de explicado. */
-function ConceptCard() {
-  return (
-    <Card>
-      <div className="grid gap-5 sm:grid-cols-2">
-        <div>
-          <div className="mb-2 flex items-center gap-2">
-            <Tag size={15} className="text-slate-400" />
-            <h3 className="text-sm font-semibold text-slate-800">Categoría</h3>
-            <span className="text-xs text-slate-400">parte el catálogo</span>
-          </div>
-          <div className="space-y-1.5 rounded-xl bg-slate-50 p-3 text-xs ring-1 ring-slate-200">
-            <p className="font-semibold text-slate-700">Ropa</p>
-            <p className="pl-3 text-slate-500">· Polo básico</p>
-            <p className="pl-3 text-slate-500">· Casaca jean</p>
-            <p className="pt-1 font-semibold text-slate-700">Zapatos</p>
-            <p className="pl-3 text-slate-500">· Zapatilla urbana</p>
-          </div>
-          <p className="mt-2 text-xs text-slate-500">
-            Un producto está en <strong>una</strong> categoría. Arma las secciones de tu tienda.
-          </p>
-        </div>
-
-        <div>
-          <div className="mb-2 flex items-center gap-2">
-            <ListFilter size={15} className="text-brand-500" />
-            <h3 className="text-sm font-semibold text-slate-800">Filtro</h3>
-            <span className="text-xs text-slate-400">lo cruza</span>
-          </div>
-          <div className="space-y-2 rounded-xl bg-brand-50/60 p-3 text-xs ring-1 ring-brand-200">
-            <p className="font-semibold text-slate-700">Polo básico</p>
-            <div className="flex flex-wrap gap-1">
-              <span className="rounded-full bg-white px-2 py-0.5 text-slate-600 ring-1 ring-slate-200">
-                Talla: M
-              </span>
-              <span className="rounded-full bg-white px-2 py-0.5 text-slate-600 ring-1 ring-slate-200">
-                Color: Azul
-              </span>
-            </div>
-            <p className="pt-1 text-slate-500">
-              El cliente pide «Talla M» y ve todo lo que haya en M, sin importar la sección.
-            </p>
-          </div>
-          <p className="mt-2 flex items-center gap-1 text-xs text-slate-500">
-            Un producto puede tener <strong>varios</strong> filtros
-            <ArrowRight size={11} />
-            <span>y varios valores en cada uno.</span>
-          </p>
-        </div>
-      </div>
-    </Card>
   )
 }

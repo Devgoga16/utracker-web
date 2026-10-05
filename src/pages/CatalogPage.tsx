@@ -62,11 +62,126 @@ function productToForm(p: Product): ProductInput {
     attributes: (p.attributes ?? []).map((a) => ({ filter: a.filter, values: a.values })),
     trackStock: p.trackStock,
     stock: p.stock ?? 0,
+    variants: (p.variants ?? []).map((v) => ({ name: v.name, priceModifier: v.priceModifier })),
+    variantFilter: p.variantFilter ?? null,
+    lowStockThreshold: p.lowStockThreshold ?? null,
     preparationDays: p.preparationDays ?? 0,
     requiresAdvance: p.requiresAdvance ?? false,
     advanceType: p.advanceType ?? 'percent',
     advanceValue: p.advanceValue ?? 50,
   }
+}
+
+/**
+ * Variantes del producto y, opcionalmente, a qué filtro corresponden.
+ *
+ * Al elegir el filtro, el servidor agrega esos nombres a sus valores y se los
+ * asigna al producto: la lista se escribe una sola vez en vez de repetirla en
+ * variantes y en filtros.
+ */
+function VariantEditor({
+  variants,
+  variantFilter,
+  basePrice,
+  onChange,
+  onFilterChange,
+}: {
+  variants: NonNullable<ProductInput['variants']>
+  variantFilter: string | null | undefined
+  basePrice: number
+  onChange: (next: NonNullable<ProductInput['variants']>) => void
+  onFilterChange: (filterId: string | null) => void
+}) {
+  const { data: filters } = useQuery({
+    queryKey: ['product-filters'],
+    queryFn: listProductFilters,
+  })
+
+  function update(i: number, patch: Partial<{ name: string; priceModifier: number }>) {
+    onChange(variants.map((v, j) => (j === i ? { ...v, ...patch } : v)))
+  }
+
+  return (
+    <div className="space-y-3 rounded-xl bg-slate-50 p-3.5">
+      <div>
+        <span className="block text-sm font-medium text-slate-700">Opciones del producto</span>
+        <p className="text-xs text-slate-500">
+          Tallas, sabores, tamaños… El cliente elige una al pedir y el precio se ajusta.
+        </p>
+      </div>
+
+      {variants.length > 0 && (
+        <ul className="space-y-2">
+          {variants.map((v, i) => (
+            <li key={i} className="flex items-center gap-2">
+              <Input
+                aria-label="Nombre de la opción"
+                placeholder="Mediano"
+                value={v.name}
+                onChange={(e) => update(i, { name: e.target.value })}
+              />
+              <div className="relative w-32 shrink-0">
+                <Input
+                  aria-label="Diferencia de precio"
+                  type="number"
+                  inputMode="decimal"
+                  step="0.5"
+                  placeholder="0"
+                  value={v.priceModifier}
+                  onChange={(e) => update(i, { priceModifier: Number(e.target.value) || 0 })}
+                />
+              </div>
+              <span className="w-20 shrink-0 text-right text-xs tabular-nums text-slate-500">
+                {formatCurrency(basePrice + (v.priceModifier || 0))}
+              </span>
+              <IconButton
+                label={`Quitar ${v.name || 'opción'}`}
+                onClick={() => onChange(variants.filter((_, j) => j !== i))}
+                className="shrink-0 hover:bg-red-50 hover:text-red-600"
+              >
+                <X size={15} />
+              </IconButton>
+            </li>
+          ))}
+        </ul>
+      )}
+
+      <Button
+        type="button"
+        variant="secondary"
+        size="sm"
+        onClick={() => onChange([...variants, { name: '', priceModifier: 0 }])}
+      >
+        <Plus size={15} />
+        Agregar opción
+      </Button>
+
+      {/* El puente con los filtros: se escribe una vez, sirve en los dos lados. */}
+      {variants.length > 0 && (filters?.length ?? 0) > 0 && (
+        <div className="border-t border-slate-200 pt-3">
+          <Field label="Estas opciones son de" htmlFor="p-variant-filter">
+            <Select
+              id="p-variant-filter"
+              value={variantFilter ?? ''}
+              onChange={(e) => onFilterChange(e.target.value || null)}
+            >
+              <option value="">No usarlas como filtro</option>
+              {filters?.map((f) => (
+                <option key={f._id} value={f._id}>
+                  {f.name}
+                </option>
+              ))}
+            </Select>
+            <p className="mt-1.5 text-xs text-slate-500">
+              {variantFilter
+                ? 'Al guardar, estas opciones se agregan al filtro y quedan asignadas a este producto.'
+                : 'Elige un filtro para que tus clientes puedan filtrar por estas opciones en la tienda.'}
+            </p>
+          </Field>
+        </div>
+      )}
+    </div>
+  )
 }
 
 /**
@@ -411,17 +526,38 @@ export function CatalogPage() {
                   />
 
                   {form.trackStock && (
-                    <div className="max-w-[12rem]">
-                      <Field label="Stock inicial" htmlFor="p-stock">
-                        <Input
-                          id="p-stock"
-                          type="number"
-                          inputMode="numeric"
-                          min={0}
-                          value={form.stock ?? 0}
-                          onChange={(e) => setForm({ ...form, stock: Number(e.target.value) })}
-                        />
-                      </Field>
+                    <div className="flex flex-wrap gap-3">
+                      <div className="w-36">
+                        <Field label="Stock inicial" htmlFor="p-stock">
+                          <Input
+                            id="p-stock"
+                            type="number"
+                            inputMode="numeric"
+                            min={0}
+                            value={form.stock ?? 0}
+                            onChange={(e) => setForm({ ...form, stock: Number(e.target.value) })}
+                          />
+                        </Field>
+                      </div>
+                      <div className="w-44">
+                        <Field label="Avisarme desde" htmlFor="p-low">
+                          <Input
+                            id="p-low"
+                            type="number"
+                            inputMode="numeric"
+                            min={0}
+                            placeholder="usa el del negocio"
+                            value={form.lowStockThreshold ?? ''}
+                            onChange={(e) =>
+                              setForm({
+                                ...form,
+                                lowStockThreshold:
+                                  e.target.value === '' ? null : Number(e.target.value),
+                              })
+                            }
+                          />
+                        </Field>
+                      </div>
                     </div>
                   )}
                 </div>
@@ -547,6 +683,16 @@ export function CatalogPage() {
                     </p>
                   </div>
                 )}
+              </div>
+
+              <div className="sm:col-span-2">
+                <VariantEditor
+                  variants={form.variants ?? []}
+                  variantFilter={form.variantFilter}
+                  basePrice={form.price || 0}
+                  onChange={(variants) => setForm({ ...form, variants })}
+                  onFilterChange={(variantFilter) => setForm({ ...form, variantFilter })}
+                />
               </div>
 
               <div className="sm:col-span-2">

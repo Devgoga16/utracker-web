@@ -5,13 +5,17 @@ import {
   BarChart2,
   ChevronDown,
   ChevronsLeft,
+  CalendarDays,
   ClipboardList,
   CreditCard,
+  ExternalLink,
   ListFilter,
   LogOut,
+  Plug,
   Package,
   PackageSearch,
   Settings,
+  Store as Storefront,
   Workflow,
   Zap,
 } from 'lucide-react'
@@ -31,22 +35,55 @@ interface NavItem {
   end?: boolean
 }
 
-const ALL_MAIN_NAV: NavItem[] = [
-  { to: '/orders', label: 'Pedidos', icon: ClipboardList },
-  // `end` porque /catalog/filters es su hermano en el menú, no su hijo.
-  { to: '/catalog', label: 'Catálogo', icon: Package, end: true },
-  // Nace del catálogo, así que va pegado a él en el sidebar.
-  { to: '/catalog/filters', label: 'Filtros', icon: ListFilter },
-  { to: '/campaigns', label: 'Campañas', icon: Zap },
-  { to: '/inventory', label: 'Inventario', icon: PackageSearch, featureKey: 'inventory' },
-  { to: '/finances', label: 'Finanzas', icon: BarChart2, featureKey: 'finances' },
+interface NavGroup {
+  label: string
+  items: NavItem[]
+}
+
+/**
+ * El menú sigue el orden en que se usa el sistema, no el orden en que se
+ * fueron construyendo las pantallas:
+ *
+ *   Operación     — lo que se mira todos los días
+ *   Catálogo      — lo que el negocio vende
+ *   Configuración — lo que se toca una vez y se olvida
+ */
+const NAV_GROUPS: NavGroup[] = [
+  {
+    label: 'Operación',
+    items: [
+      { to: '/orders', label: 'Pedidos', icon: ClipboardList },
+      { to: '/calendar', label: 'Calendario', icon: CalendarDays },
+      { to: '/campaigns', label: 'Campañas', icon: Zap },
+      { to: '/finances', label: 'Finanzas', icon: BarChart2, featureKey: 'finances' },
+    ],
+  },
+  {
+    label: 'Catálogo',
+    items: [
+      // `end` porque /catalog/filters es su hermano en el menú, no su hijo.
+      { to: '/catalog', label: 'Productos', icon: Package, end: true },
+      { to: '/catalog/filters', label: 'Filtros', icon: ListFilter },
+      { to: '/inventory', label: 'Inventario', icon: PackageSearch, featureKey: 'inventory' },
+    ],
+  },
+  {
+    label: 'Configuración',
+    items: [
+      { to: '/workflow', label: 'Workflow', icon: Workflow },
+      { to: '/settings', label: 'Ajustes', icon: Settings },
+      { to: '/integration', label: 'Integración', icon: Plug },
+      { to: '/billing', label: 'Suscripción', icon: CreditCard },
+    ],
+  },
 ]
 
-const configNav: NavItem[] = [
-  { to: '/workflow', label: 'Workflow', icon: Workflow },
-  { to: '/settings', label: 'Ajustes', icon: Settings },
-  { to: '/billing', label: 'Suscripción', icon: CreditCard },
-]
+/**
+ * Qué va en la barra inferior del celular, por prioridad. Se toman los cinco
+ * primeros que el plan permita: así, si un plan no trae Inventario, entra el
+ * siguiente en vez de quedar un hueco.
+ */
+const MOBILE_PRIORITY = ['/orders', '/calendar', '/catalog', '/campaigns', '/inventory', '/settings']
 
 const COLLAPSE_KEY = 'utracker:sidebar-collapsed'
 
@@ -60,8 +97,16 @@ export function AppLayout() {
     () => localStorage.getItem(COLLAPSE_KEY) === '1',
   )
 
-  const mainNav = ALL_MAIN_NAV.filter((item) => !item.featureKey || can(item.featureKey))
-  const mobileNav = [...mainNav, configNav[0]].slice(0, 5)
+  // Un grupo que se queda sin ítems por el plan no debe dejar su título solo.
+  const groups = NAV_GROUPS.map((g) => ({
+    ...g,
+    items: g.items.filter((item) => !item.featureKey || can(item.featureKey)),
+  })).filter((g) => g.items.length > 0)
+
+  const allItems = groups.flatMap((g) => g.items)
+  const mobileNav = MOBILE_PRIORITY.map((to) => allItems.find((i) => i.to === to))
+    .filter((i): i is NavItem => Boolean(i))
+    .slice(0, 5)
 
   // Un menú abierto sobreviviendo a la navegación tapa la pantalla nueva.
   useEffect(() => setMenuOpen(false), [location.pathname])
@@ -146,14 +191,40 @@ export function AppLayout() {
 
         {/* Navegación */}
         <nav className="min-h-0 flex-1 overflow-y-auto px-3 pb-3">
-          <SidebarGroup items={mainNav} collapsed={collapsed} />
-          <SidebarGroup
-            items={configNav}
-            collapsed={collapsed}
-            label="Configuración"
-            className="mt-6"
-          />
+          {groups.map((group, i) => (
+            <SidebarGroup
+              key={group.label}
+              items={group.items}
+              collapsed={collapsed}
+              label={group.label}
+              className={i > 0 ? 'mt-5' : undefined}
+            />
+          ))}
         </nav>
+
+        {/* Atajo a lo que ven los clientes: antes solo vivía dentro de Ajustes. */}
+        {activeTenant?.slug && (
+          <div className={cn('shrink-0', collapsed ? 'px-2 pb-2' : 'px-3 pb-2')}>
+            <a
+              href={`/store/${activeTenant.slug}`}
+              target="_blank"
+              rel="noreferrer"
+              title={collapsed ? 'Ver mi tienda' : undefined}
+              className={cn(
+                'flex items-center rounded-lg text-sm font-medium text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-900',
+                collapsed ? 'justify-center p-2.5' : 'gap-3 px-3 py-2',
+              )}
+            >
+              <Storefront size={18} className="shrink-0" />
+              {!collapsed && (
+                <>
+                  <span className="min-w-0 flex-1 truncate">Ver mi tienda</span>
+                  <ExternalLink size={13} className="shrink-0 text-slate-400" />
+                </>
+              )}
+            </a>
+          </div>
+        )}
 
         {/* Cuenta */}
         <div

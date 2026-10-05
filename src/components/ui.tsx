@@ -164,6 +164,67 @@ export function Card({ className, children, title, description, actions, flush }
   )
 }
 
+/* ─────────────────────────── Configuración ─────────────────────────── */
+
+interface SettingRowProps {
+  label: string
+  hint?: string
+  htmlFor?: string
+  /** El control ocupa todo el ancho en vez de alinearse a la derecha. */
+  wide?: boolean
+  children: ReactNode
+}
+
+/**
+ * Una fila de configuración: etiqueta a la izquierda, control a la derecha.
+ *
+ * Es el patrón de toda pantalla de ajustes seria. Cuando cada sección inventa
+ * su propio layout —chips acá, cajas allá— la página se vuelve ilegible aunque
+ * cada pieza por separado se vea bien.
+ *
+ * En móvil se apila, porque a 375px no entran dos columnas útiles.
+ */
+export function SettingRow({ label, hint, htmlFor, wide, children }: SettingRowProps) {
+  return (
+    <div
+      className={cn(
+        'flex flex-col gap-2 px-4 py-3.5 sm:px-5',
+        !wide && 'sm:flex-row sm:items-center sm:justify-between sm:gap-6',
+      )}
+    >
+      <div className={cn('min-w-0', !wide && 'sm:max-w-xs')}>
+        <label htmlFor={htmlFor} className="block text-sm font-medium text-slate-800">
+          {label}
+        </label>
+        {hint && <p className="mt-0.5 text-xs leading-relaxed text-slate-500">{hint}</p>}
+      </div>
+
+      <div className={cn('min-w-0', wide ? 'w-full' : 'sm:w-64 sm:shrink-0')}>{children}</div>
+    </div>
+  )
+}
+
+/** Agrupa filas de configuración con divisores, como una tabla. */
+export function SettingGroup({
+  title,
+  description,
+  children,
+}: {
+  title: string
+  description?: string
+  children: ReactNode
+}) {
+  return (
+    <section className="overflow-hidden rounded-xl bg-white shadow-sm shadow-slate-900/[0.03] ring-1 ring-slate-200">
+      <header className="border-b border-slate-200 bg-slate-50/70 px-4 py-3 sm:px-5">
+        <h2 className="text-sm font-semibold text-slate-900">{title}</h2>
+        {description && <p className="mt-0.5 text-xs text-slate-500">{description}</p>}
+      </header>
+      <div className="divide-y divide-slate-100">{children}</div>
+    </section>
+  )
+}
+
 /* ─────────────────────────── Formularios ─────────────────────────── */
 
 interface FieldProps {

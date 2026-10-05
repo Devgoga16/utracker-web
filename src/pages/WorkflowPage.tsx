@@ -36,7 +36,7 @@ import {
 } from '@/components/ui'
 import { ICON_GROUPS, StateIcon } from '@/lib/icons'
 import { cn } from '@/lib/cn'
-import type { MembershipRole, WorkflowKind, WorkflowState } from '@/types'
+import type { OrderType, MembershipRole, WorkflowKind, WorkflowState } from '@/types'
 
 const PALETTE = ['#0ea5e9', '#6366f1', '#a855f7', '#10b981', '#f59e0b', '#ef4444', '#64748b']
 
@@ -46,6 +46,20 @@ const ROLES: { value: MembershipRole; label: string }[] = [
   { value: 'staff', label: 'Equipo' },
   { value: 'driver', label: 'Repartidor' },
 ]
+
+/** Nombre completo para el selector. */
+const DELIVERY_LABELS: Record<OrderType, string> = {
+  pickup: 'Recojo en tienda',
+  delivery_own: 'Delivery propio',
+  delivery_third_party: 'Courier',
+}
+
+/** Version corta, para el resumen de cada estado. */
+const DELIVERY_SHORT: Record<OrderType, string> = {
+  pickup: 'recojo',
+  delivery_own: 'delivery',
+  delivery_third_party: 'courier',
+}
 
 export function WorkflowPage() {
   const { data: workflow, isLoading } = useQuery({ queryKey: ['workflow'], queryFn: getWorkflow })
@@ -269,6 +283,7 @@ function StateRow({
     vibrant: state.vibrant,
     requiresLink: state.requiresLink,
     deductsStock: state.deductsStock,
+    appliesTo: state.appliesTo ?? [],
     allowedRoles: state.allowedRoles,
   })
 
@@ -319,6 +334,7 @@ function StateRow({
     state.vibrant && 'vibrante',
     state.requiresLink && 'link',
     state.deductsStock && 'descuenta stock',
+    state.appliesTo?.length && `solo ${state.appliesTo.map((t) => DELIVERY_SHORT[t]).join(' / ')}`,
   ].filter(Boolean) as string[]
 
   return (
@@ -495,6 +511,44 @@ function StateRow({
                 checked={draft.deductsStock}
                 onChange={(deductsStock) => setDraft({ ...draft, deductsStock })}
               />
+            )}
+
+            {/* Permite que "En camino" no aparezca en pedidos de recojo. */}
+            {state.kind === 'fulfillment' && (
+              <div>
+                <span className="block text-sm font-medium text-slate-700">¿A qué pedidos aplica?</span>
+                <p className="mb-2 text-xs text-slate-500">
+                  Sin marcar nada, aplica a todos. Los que no apliquen no se verán en el pedido ni
+                  en el seguimiento del cliente.
+                </p>
+                <div className="flex flex-wrap gap-1.5">
+                  {(Object.keys(DELIVERY_SHORT) as OrderType[]).map((t) => {
+                    const on = draft.appliesTo.includes(t)
+                    return (
+                      <button
+                        key={t}
+                        type="button"
+                        aria-pressed={on}
+                        onClick={() =>
+                          setDraft({
+                            ...draft,
+                            appliesTo: on
+                              ? draft.appliesTo.filter((x) => x !== t)
+                              : [...draft.appliesTo, t],
+                          })
+                        }
+                        className={
+                          on
+                            ? 'rounded-lg bg-brand-600 px-3 py-1.5 text-xs font-medium text-white'
+                            : 'rounded-lg bg-white/70 px-3 py-1.5 text-xs font-medium text-slate-600 ring-1 ring-slate-200 transition-colors hover:bg-white'
+                        }
+                      >
+                        {DELIVERY_LABELS[t]}
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
             )}
           </div>
 

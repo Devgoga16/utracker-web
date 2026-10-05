@@ -1,6 +1,6 @@
 import { Fragment, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { AlertTriangle, Trash2, X } from 'lucide-react'
+import { AlertTriangle, MessageCircle, Trash2, X } from 'lucide-react'
 import {
   assignSubscription,
   deleteTenant,
@@ -11,6 +11,7 @@ import {
 import { toggleTenantSubscription } from '@/api/billing'
 import type { TenantRow } from '@/api/superadmin'
 import { apiErrorMessage } from '@/api/client'
+import { TenantWhatsappDialog } from '@/components/TenantWhatsappDialog'
 import { Alert, Button, Field, Input, PageHeader, Select, Spinner } from '@/components/ui'
 import type { SubscriptionStatus } from '@/types'
 
@@ -265,6 +266,7 @@ export function SuperadminTenantsPage() {
 
   const [assigning, setAssigning] = useState<string | null>(null)
   const [deleting, setDeleting] = useState<TenantRow | null>(null)
+  const [whatsapping, setWhatsapping] = useState<TenantRow | null>(null)
   const [lastDeleted, setLastDeleted] = useState<{
     name: string
     summary: DeletedTenantSummary
@@ -381,6 +383,15 @@ export function SuperadminTenantsPage() {
                         </Button>
                         <button
                           type="button"
+                          onClick={() => setWhatsapping(tenant)}
+                          aria-label={`WhatsApp de ${tenant.name}`}
+                          title="Sesión de WhatsApp"
+                          className="rounded-lg p-2 text-slate-400 transition-colors hover:bg-emerald-50 hover:text-emerald-600"
+                        >
+                          <MessageCircle size={15} />
+                        </button>
+                        <button
+                          type="button"
                           onClick={() => setDeleting(tenant)}
                           aria-label={`Eliminar ${tenant.name}`}
                           title="Eliminar negocio"
@@ -410,6 +421,10 @@ export function SuperadminTenantsPage() {
           </div>
         )}
       </div>
+
+      {whatsapping && (
+        <TenantWhatsappDialog tenant={whatsapping} onClose={() => setWhatsapping(null)} />
+      )}
 
       {deleting && (
         <DeleteTenantDialog

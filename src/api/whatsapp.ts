@@ -1,33 +1,28 @@
 import { api } from './client'
 
-export type WaStatus = 'connected' | 'open' | 'connecting' | 'reconnecting' | 'close' | 'qr'
-
-export interface WaStatusResponse {
-  status: WaStatus
-  connected: boolean
-  /** data:image/png;base64,… mientras el bot espera que escaneen el QR. */
-  qr?: string | null
-  phone?: { number: string; name: string }
-  /** false cuando al servidor le faltan las variables del bot. */
+export interface SharedBotConfig {
+  /** Si el servidor tiene URL y llave del bot compartido. */
   configured: boolean
+  /** Lleva la sesión incluida; no es secreta. */
+  sendUrl: string | null
+  hasKey: boolean
 }
 
 /**
- * El estado se pide a nuestra propia API, no al bot.
- *
- * La API key vive solo en el servidor: si el navegador llamara al bot
- * directamente, la key quedaría dentro del bundle y a la vista de cualquiera.
+ * No consulta al bot: su API no expone estado ni QR porque la sesión se
+ * administra por fuera de uTracker. Solo dice si tenemos credenciales.
  */
-export async function getWaStatus(): Promise<WaStatusResponse> {
-  const { data } = await api.get<{ data: WaStatusResponse }>('/superadmin/whatsapp/status')
-  return data.data
+export async function getSharedBotConfig() {
+  const { data } = await api.get<SharedBotConfig>('/superadmin/whatsapp/config')
+  return data
 }
 
-/** Envía un mensaje real, para comprobar la cadena completa de punta a punta. */
-export async function sendWaTest(to: string, message?: string) {
+/** Prueba de envío real. Sin `tenantId` usa el bot compartido. */
+export async function sendWaTest(to: string, message?: string, tenantId?: string) {
   const { data } = await api.post<{ ok: boolean; to: string }>('/superadmin/whatsapp/test', {
     to,
     message,
+    tenantId,
   })
   return data
 }

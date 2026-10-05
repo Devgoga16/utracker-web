@@ -1,8 +1,18 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { AlertTriangle, History, Minus, Package, PackageSearch, Plus, XCircle } from 'lucide-react'
+import {
+  AlertTriangle,
+  History,
+  Minus,
+  Package,
+  PackageSearch,
+  Plus,
+  TrendingDown,
+  XCircle,
+} from 'lucide-react'
 import { listInventory, adjustStock, listMovements } from '@/api/inventory'
+import type { InventoryRow } from '@/api/inventory'
 import { apiErrorMessage } from '@/api/client'
 import {
   Alert,
@@ -18,13 +28,10 @@ import {
   StatCard,
 } from '@/components/ui'
 import { cn, formatCurrency } from '@/lib/cn'
-import type { Product, StockMovement } from '@/types'
-
-/** Debajo de este número el producto se marca como stock bajo. */
-const LOW_STOCK_THRESHOLD = 5
+import type { StockMovement } from '@/types'
 
 export function InventoryPage() {
-  const { data: products, isLoading, error } = useQuery({
+  const { data, isLoading, error } = useQuery({
     queryKey: ['inventory'],
     queryFn: listInventory,
   })
@@ -33,14 +40,16 @@ export function InventoryPage() {
 
   if (isLoading) return <Spinner />
 
+  // El umbral ya no es un número fijo: cada producto trae el suyo.
+  const products = data?.products
   const outOfStock = products?.filter((p) => (p.stock ?? 0) <= 0).length ?? 0
   const lowStock =
-    products?.filter((p) => (p.stock ?? 0) > 0 && (p.stock ?? 0) <= LOW_STOCK_THRESHOLD).length ?? 0
+    products?.filter((p) => (p.stock ?? 0) > 0 && (p.stock ?? 0) <= p.threshold).length ?? 0
   const stockValue =
     products?.reduce((sum, p) => sum + (p.stock ?? 0) * p.price, 0) ?? 0
 
   const visible = onlyAlerts
-    ? products?.filter((p) => (p.stock ?? 0) <= LOW_STOCK_THRESHOLD)
+    ? products?.filter((p) => (p.stock ?? 0) <= p.threshold)
     : products
 
   return (
@@ -83,7 +92,7 @@ export function InventoryPage() {
               icon={AlertTriangle}
               label="Stock bajo"
               value={String(lowStock)}
-              hint={`${LOW_STOCK_THRESHOLD} unidades o menos`}
+              hint="según el umbral de cada producto"
               tone={lowStock > 0 ? 'amber' : 'slate'}
             />
             <StatCard
@@ -122,12 +131,19 @@ export function InventoryPage() {
   )
 }
 
-function ProductRow({ product }: { product: Product }) {
+function ProductRow({ product }: { product: InventoryRow }) {
   const [panel, setPanel] = useState<'none' | 'adjust' | 'history'>('none')
   const queryClient = useQueryClient()
 
   const stock = product.stock ?? 0
-  const tone = stock <= 0 ? 'red' : stock <= LOW_STOCK_THRESHOLD ? 'amber' : 'green'
+  const tone = stock <= 0 ? 'red' : stock <= product.threshold ? 'amber' : 'green'
+
+  /**
+   * Proyección al ritmo real de venta. Se avisa a partir de dos semanas:
+   * más allá de eso el dato no cambia ninguna decisión.
+   */
+  const daysLeft = product.daysLeft
+  const showProjection = daysLeft !== null && daysLeft <= 14 && stock > 0
 
   function toggle(next: 'adjust' | 'history') {
     setPanel((p) => (p === next ? 'none' : next))
@@ -154,6 +170,24 @@ function ProductRow({ product }: { product: Product }) {
             {formatCurrency(product.price)}
             {product.category && ` · ${product.category}`}
           </p>
+
+          {/* Proyección: calculada del ritmo real, sin configurar nada. */}
+          {showProjection && (
+            <p
+              className={cn(
+                'mt-1 flex items-center gap-1 text-xs font-medium',
+                daysLeft! <= 3 ? 'text-red-600' : 'text-amber-600',
+              )}
+            >
+              <TrendingDown size={11} />
+              {daysLeft === 0
+                ? 'Se agota hoy a este ritmo'
+                : `~${daysLeft} día${daysLeft === 1 ? '' : 's'} a este ritmo`}
+              <span className="font-normal text-slate-400">
+                ({product.soldLastDays} vendidos en 30 días)
+              </span>
+            </p>
+          )}
         </div>
 
         <div className="shrink-0 text-right">
@@ -217,7 +251,7 @@ function ProductRow({ product }: { product: Product }) {
   )
 }
 
-function AdjustForm({ product, onDone }: { product: Product; onDone: () => void }) {
+function AdjustForm({ product, onDone }: { product: InventoryRow; onDone: () => void }) {
   const [delta, setDelta] = useState(1)
   const [note, setNote] = useState('')
 

@@ -1,9 +1,19 @@
 import { api } from './client'
 import type { Product, StockMovement } from '@/types'
 
+/** Producto de inventario con su proyección de agotamiento. */
+export interface InventoryRow extends Product {
+  /** Umbral efectivo: el del producto, o el del negocio si no tiene propio. */
+  threshold: number
+  soldLastDays: number
+  perDay: number
+  /** Días hasta agotarse al ritmo actual. null si no hubo ventas que medir. */
+  daysLeft: number | null
+}
+
 export async function listInventory() {
-  const { data } = await api.get<{ products: Product[] }>('/inventory')
-  return data.products
+  const { data } = await api.get<{ products: InventoryRow[]; velocityDays: number }>('/inventory')
+  return data
 }
 
 export async function adjustStock(productId: string, delta: number, note?: string) {

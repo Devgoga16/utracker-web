@@ -72,3 +72,25 @@ export const deleteTenant = (tenantId: string, confirmName: string) =>
       data: { confirmName },
     })
     .then((r) => r.data)
+
+/* ─────────── Sesión de WhatsApp por negocio ─────────── */
+
+export interface TenantWhatsapp {
+  /** 'shared' = usa el bot de uTracker; 'own' = sesión propia del negocio. */
+  mode: 'shared' | 'own'
+  sendUrl: string | null
+  /** Últimos 6 de la API key. La completa nunca vuelve del servidor. */
+  keyHint: string | null
+}
+
+export const getTenantWhatsapp = (tenantId: string) =>
+  api.get<TenantWhatsapp>(`/superadmin/tenants/${tenantId}/whatsapp`).then((r) => r.data)
+
+export const setTenantWhatsapp = (
+  tenantId: string,
+  data: { sendUrl: string | null; apiKey: string | null },
+) => api.patch<TenantWhatsapp>(`/superadmin/tenants/${tenantId}/whatsapp`, data).then((r) => r.data)
+
+/** Prueba de envío. Con tenantId usa la sesión de ese negocio. */
+export const sendWhatsappTest = (data: { to: string; message?: string; tenantId?: string }) =>
+  api.post<{ ok: boolean; to: string }>('/superadmin/whatsapp/test', data).then((r) => r.data)
