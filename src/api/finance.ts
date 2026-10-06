@@ -8,6 +8,8 @@ export interface FinanceFilters {
   paymentStateId?: string
   type?: string
   productId?: string
+  /** Eje de la fecha: 'created' (cuánto vendí) o 'scheduled' (cuánto entregué). */
+  dateBasis?: 'created' | 'scheduled'
 }
 
 export async function getFinanceSummary(filters: FinanceFilters = {}) {

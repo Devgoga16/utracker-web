@@ -74,6 +74,12 @@ function presetToDates(preset: string): { from?: string; to?: string } {
 
 export function FinancesPage() {
   const [preset, setPreset] = useState('month')
+  /**
+   * Por qué fecha se cuenta un pedido. Por defecto la de creación, que es como
+   * funcionaba antes; "entregado" encuentra los que se concretaron en el
+   * periodo aunque hayan entrado antes.
+   */
+  const [dateBasis, setDateBasis] = useState<'created' | 'scheduled'>('created')
   const [type, setType] = useState('')
   const [fulfillmentStateId, setFulfillmentStateId] = useState('')
   const [paymentStateId, setPaymentStateId] = useState('')
@@ -84,6 +90,7 @@ export function FinancesPage() {
   const dates = presetToDates(preset)
   const filters: FinanceFilters = {
     ...dates,
+    dateBasis,
     ...(type && { type }),
     ...(fulfillmentStateId && { fulfillmentStateId }),
     ...(paymentStateId && { paymentStateId }),
@@ -162,7 +169,35 @@ export function FinancesPage() {
             {p.label}
           </Chip>
         ))}
+
+        <span aria-hidden className="mx-1 h-5 w-px shrink-0 self-center bg-slate-200" />
+
+        {/* Qué fecha cuenta: la del pedido o la de entrega. */}
+        {(
+          [
+            { v: 'created' as const, label: 'Por fecha de pedido' },
+            { v: 'scheduled' as const, label: 'Por fecha de entrega' },
+          ]
+        ).map((o) => (
+          <Chip
+            key={o.v}
+            active={dateBasis === o.v}
+            onClick={() => {
+              setDateBasis(o.v)
+              resetPage()
+            }}
+          >
+            {o.label}
+          </Chip>
+        ))}
       </ChipBar>
+
+      {dateBasis === 'scheduled' && (
+        <p className="text-xs text-slate-500">
+          Contando por la fecha de entrega o recojo. Los pedidos sin fecha programada no aparecen
+          en este modo.
+        </p>
+      )}
 
       {showFilters && (
         <Card

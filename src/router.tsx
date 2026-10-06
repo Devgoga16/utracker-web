@@ -9,6 +9,7 @@ import { TenantsPage } from '@/pages/TenantsPage'
 import { OrdersPage } from '@/pages/OrdersPage'
 import { CalendarPage } from '@/pages/CalendarPage'
 import { OrderDetailPage } from '@/pages/OrderDetailPage'
+import { ReceiptPage } from '@/pages/ReceiptPage'
 import { NewOrderPage } from '@/pages/NewOrderPage'
 import { CatalogPage } from '@/pages/CatalogPage'
 import { CatalogFiltersPage } from '@/pages/CatalogFiltersPage'
@@ -70,6 +71,7 @@ export const router = createBrowserRouter([
               { path: '/calendar', element: <CalendarPage /> },
               { path: '/orders/new', element: <NewOrderPage /> },
               { path: '/orders/:id', element: <OrderDetailPage /> },
+              { path: '/orders/:id/receipt', element: <ReceiptPage /> },
               { path: '/catalog', element: <CatalogPage /> },
               { path: '/catalog/filters', element: <CatalogFiltersPage /> },
               { path: '/products', element: <Navigate to="/catalog" replace /> },

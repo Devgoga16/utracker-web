@@ -1,10 +1,11 @@
 import { useState } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { Link, useNavigate, useParams } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   Calendar,
   Check,
   CircleCheck,
+  Receipt,
   CircleX,
   Copy,
   ExternalLink,
@@ -118,7 +119,10 @@ export function OrderDetailPage() {
   if (isLoading) return <Spinner />
   if (!order) return <Alert>Pedido no encontrado</Alert>
 
-  const totalPaid = order.payments.reduce((s, p) => s + p.amount, 0)
+  // Solo lo validado: un comprobante sin revisar no es dinero recibido.
+  const totalPaid = order.payments
+    .filter((p) => p.validated !== false)
+    .reduce((s, p) => s + p.amount, 0)
   const remaining = order.totalAmount - totalPaid
   const paidRatio = order.totalAmount > 0 ? totalPaid / order.totalAmount : 0
   const hasAdvance = order.payments.some((p) => p.kind === 'advance')
@@ -149,14 +153,25 @@ export function OrderDetailPage() {
           </>
         }
         actions={
-          <Button
-            variant="secondary"
-            onClick={() => setConfirmingDelete(true)}
-            className="text-red-600 ring-red-200 hover:bg-red-50"
-          >
-            <Trash2 size={15} />
-            <span className="hidden sm:inline">Eliminar</span>
-          </Button>
+          <div className="flex items-center gap-2">
+            {/* El comprobante recien tiene sentido con el pago completo. */}
+            {remaining <= 0 && totalPaid > 0 && (
+              <Link to={`/orders/${order._id}/receipt`}>
+                <Button variant="secondary">
+                  <Receipt size={15} />
+                  <span className="hidden sm:inline">Comprobante</span>
+                </Button>
+              </Link>
+            )}
+            <Button
+              variant="secondary"
+              onClick={() => setConfirmingDelete(true)}
+              className="text-red-600 ring-red-200 hover:bg-red-50"
+            >
+              <Trash2 size={15} />
+              <span className="hidden sm:inline">Eliminar</span>
+            </Button>
+          </div>
         }
       />
 
