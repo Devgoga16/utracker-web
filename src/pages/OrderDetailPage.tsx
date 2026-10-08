@@ -22,7 +22,6 @@ import {
   validatePayment,
 } from '@/api/orders'
 import { getWorkflow } from '@/api/tenants'
-import { apiErrorMessage } from '@/api/client'
 import {
   Alert,
   Badge,
@@ -216,13 +215,13 @@ export function OrderDetailPage() {
           </div>
           {deleteMutation.isError && (
             <div className="mt-3">
-              <Alert>{apiErrorMessage(deleteMutation.error)}</Alert>
+              <Alert error={deleteMutation.error} />
             </div>
           )}
         </Card>
       )}
 
-      {stateMutation.isError && <Alert>{apiErrorMessage(stateMutation.error)}</Alert>}
+      {stateMutation.isError && <Alert error={stateMutation.error} />}
 
       <div className="grid gap-6 lg:grid-cols-3">
         {/* En mobile lo primero tiene que ser cambiar el estado, no leer el
@@ -455,7 +454,7 @@ export function OrderDetailPage() {
 
             {paymentForm && (
               <div className="mt-4 space-y-3 border-t border-slate-100 pt-4">
-                {paymentMutation.isError && <Alert>{apiErrorMessage(paymentMutation.error)}</Alert>}
+                {paymentMutation.isError && <Alert error={paymentMutation.error} />}
 
                 <div className="flex gap-2">
                   {(['advance', 'balance'] as PaymentKind[]).map((k) => {

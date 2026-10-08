@@ -262,7 +262,7 @@ function CheckoutSheet({
         <div className="min-h-0 flex-1 overflow-y-auto">
           {mutation.isError && (
             <div className="px-4 pt-4">
-              <Alert>{apiErrorMessage(mutation.error)}</Alert>
+              <Alert error={mutation.error} />
             </div>
           )}
 

@@ -90,7 +90,7 @@ export function TenantWhatsappDialog({
             <Spinner />
           ) : (
             <>
-              {save.isError && <Alert>{apiErrorMessage(save.error)}</Alert>}
+              {save.isError && <Alert error={save.error} />}
 
               {/* Elección de sesión */}
               <div className="grid gap-2.5 sm:grid-cols-2">

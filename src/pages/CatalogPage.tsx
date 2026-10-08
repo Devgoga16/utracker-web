@@ -11,7 +11,6 @@ import {
 } from '@/api/products'
 import { createCategory, listCategories } from '@/api/categories'
 import { listProductFilters } from '@/api/productFilters'
-import { apiErrorMessage } from '@/api/client'
 import {
   Alert,
   Badge,
@@ -378,7 +377,7 @@ export function CatalogPage() {
               activeMutation.mutate()
             }}
           >
-            {activeMutation.isError && <Alert>{apiErrorMessage(activeMutation.error)}</Alert>}
+            {activeMutation.isError && <Alert error={activeMutation.error} />}
 
             <div className="grid gap-2 sm:grid-cols-2">
               <KindOption

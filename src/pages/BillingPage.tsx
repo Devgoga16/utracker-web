@@ -121,7 +121,7 @@ function BillCard({ bill, onViewProof }: { bill: Bill; onViewProof: (url: string
   return (
     <div className="rounded-xl border border-slate-200 bg-white p-4">
       <div className="flex items-start justify-between gap-3">
-        <div>
+        <div className="min-w-0">
           <p className="font-semibold text-slate-900">{formatPeriod(bill.period)}</p>
           <p className="text-sm text-slate-500">
             {bill.planName} · {formatCurrency(bill.amount)}
@@ -174,10 +174,10 @@ export function BillingPage() {
       {/* Current plan card */}
       <div className="rounded-xl border border-slate-200 bg-white p-5">
         <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-100">
+          <div className="flex size-10 shrink-0 items-center justify-center rounded-full bg-slate-100">
             <CreditCard size={20} className="text-slate-600" />
           </div>
-          <div>
+          <div className="min-w-0">
             <p className="text-xs font-medium uppercase tracking-wide text-slate-500">
               Plan actual
             </p>

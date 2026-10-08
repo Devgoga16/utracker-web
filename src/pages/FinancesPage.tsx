@@ -12,7 +12,6 @@ import {
 import { getFinanceSummary, getFinanceOrders, type FinanceFilters } from '@/api/finance'
 import { getWorkflow } from '@/api/tenants'
 import { listProducts } from '@/api/products'
-import { apiErrorMessage } from '@/api/client'
 import {
   Alert,
   Badge,
@@ -286,7 +285,7 @@ export function FinancesPage() {
         </Card>
       )}
 
-      {summaryError && <Alert>{apiErrorMessage(summaryError)}</Alert>}
+      {summaryError && <Alert error={summaryError} />}
 
       {summaryLoading ? (
         <Spinner />

@@ -1,5 +1,6 @@
 import axios, { AxiosError, type InternalAxiosRequestConfig } from 'axios'
 import { useAuthStore } from '@/stores/authStore'
+import { recordFailure } from '@/lib/problemReport'
 
 /**
  * Única fuente de verdad de a dónde vive la API.
@@ -49,9 +50,37 @@ async function refreshAccessToken(): Promise<string> {
   return data.accessToken
 }
 
+/**
+ * Anota la falla para poder adjuntarla a un ticket después.
+ *
+ * Se registra todo lo que falló, no solo los 5xx: un 400 inesperado es
+ * exactamente lo que el usuario describe como "no me deja guardar", y sin
+ * registro queda su palabra contra la nuestra.
+ */
+function noteApiFailure(error: AxiosError) {
+  const config = error.config
+  // El propio reporte de errores no se reporta: sería un bucle.
+  if (config?.url?.includes('/logs/client')) return
+
+  const status = error.response?.status
+  if (status === 401) return // Token vencido: lo resuelve el refresh, no es una falla.
+
+  const method = config?.method?.toUpperCase() ?? 'GET'
+  const path = config?.url ?? '?'
+  const data = error.response?.data as { message?: string; ref?: string } | undefined
+
+  recordFailure({
+    label: status ? `${method} ${path} → ${status}` : `${method} ${path} → sin respuesta`,
+    ref: data?.ref,
+    detail: data?.message ?? (status ? undefined : 'Puede ser conexión o la API caída'),
+  })
+}
+
 api.interceptors.response.use(
   (response) => response,
   async (error: AxiosError) => {
+    noteApiFailure(error)
+
     const config = error.config as RetriableConfig | undefined
     const isAuthRoute = config?.url?.includes('/auth/')
 
@@ -79,4 +108,30 @@ export function apiErrorMessage(error: unknown): string {
     return (error.response?.data as { message?: string })?.message ?? error.message
   }
   return error instanceof Error ? error.message : 'Error inesperado'
+}
+
+/**
+ * Si este error vale la pena reportar a soporte.
+ *
+ * Un 4xx es el sistema funcionando: una validación, un permiso, algo que el
+ * usuario corrige solo. Ofrecer "reportar" ahí sería invitar a abrir tickets
+ * por mensajes que ya dicen qué hacer. Los 5xx y las caídas de red, en cambio,
+ * no son culpa de nadie del otro lado de la pantalla.
+ */
+export function isReportableError(error: unknown): boolean {
+  if (error instanceof AxiosError) {
+    const status = error.response?.status
+    if (status === undefined) return true // Sin respuesta: red caída o API muerta.
+    return status >= 500
+  }
+  // Lo que no es de axios es un error de la aplicación: siempre interesa.
+  return error instanceof Error
+}
+
+/** El código con el que soporte encuentra este error exacto en los logs. */
+export function apiErrorRef(error: unknown): string | undefined {
+  if (error instanceof AxiosError) {
+    return (error.response?.data as { ref?: string })?.ref
+  }
+  return undefined
 }

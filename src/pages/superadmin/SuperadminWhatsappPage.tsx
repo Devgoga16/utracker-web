@@ -3,7 +3,6 @@ import { Link } from 'react-router-dom'
 import { useMutation, useQuery } from '@tanstack/react-query'
 import { Building2, Check, Send, ServerCog, ShieldCheck } from 'lucide-react'
 import { getSharedBotConfig, sendWaTest } from '@/api/whatsapp'
-import { apiErrorMessage } from '@/api/client'
 import {
   Alert,
   Button,
@@ -48,7 +47,7 @@ export function SuperadminWhatsappPage() {
       {isLoading ? (
         <Spinner />
       ) : error ? (
-        <Alert>{apiErrorMessage(error)}</Alert>
+        <Alert error={error} />
       ) : (
         <>
           <SettingGroup
@@ -128,7 +127,7 @@ export function SuperadminWhatsappPage() {
 
               {test.isError && (
                 <div className="mt-2.5">
-                  <Alert>{apiErrorMessage(test.error)}</Alert>
+                  <Alert error={test.error} />
                 </div>
               )}
               {test.isSuccess && (

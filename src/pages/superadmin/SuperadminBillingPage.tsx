@@ -136,7 +136,7 @@ function GenerateBillsPanel() {
           {result.created !== 1 ? 's' : ''} para {formatPeriod(result.period)}.
         </div>
       )}
-      <div className="flex items-end gap-2">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
         <div className="flex-1">
           <label className="mb-1 block text-xs font-medium text-slate-600">
             Período (YYYY-MM, vacío = mes actual)
@@ -149,7 +149,7 @@ function GenerateBillsPanel() {
               setResult(null)
               setError('')
             }}
-            className="max-w-xs"
+            className="sm:max-w-xs"
           />
         </div>
         <Button onClick={() => mutation.mutate()} disabled={mutation.isPending}>
@@ -194,7 +194,7 @@ export function SuperadminBillingPage() {
 
       {/* Stats row */}
       {statsByStatus && (
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 sm:gap-3">
           {ALL_STATUSES.map((s) => {
             const cfg = STATUS_CONFIG[s]
             return (
@@ -210,10 +210,10 @@ export function SuperadminBillingPage() {
       <GenerateBillsPanel />
 
       {/* Filter chips */}
-      <div className="flex flex-wrap gap-2">
+      <div className="no-scrollbar -mx-4 flex gap-2 overflow-x-auto px-4 sm:mx-0 sm:flex-wrap sm:overflow-visible sm:px-0">
         <button
           onClick={() => setStatusFilter('all')}
-          className={`rounded-full border px-3 py-1 text-sm font-medium transition ${
+          className={`shrink-0 rounded-full border px-3 py-1.5 text-sm font-medium whitespace-nowrap transition ${
             statusFilter === 'all'
               ? 'border-slate-800 bg-slate-800 text-white'
               : 'border-slate-200 bg-white text-slate-600 hover:border-slate-400'
@@ -227,7 +227,7 @@ export function SuperadminBillingPage() {
             <button
               key={s}
               onClick={() => setStatusFilter(s)}
-              className={`rounded-full border px-3 py-1 text-sm font-medium transition ${
+              className={`shrink-0 rounded-full border px-3 py-1.5 text-sm font-medium whitespace-nowrap transition ${
                 statusFilter === s
                   ? 'border-slate-800 bg-slate-800 text-white'
                   : 'border-slate-200 bg-white text-slate-600 hover:border-slate-400'
@@ -243,7 +243,8 @@ export function SuperadminBillingPage() {
       {isLoading ? (
         <Spinner />
       ) : (
-        <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white">
+        <>
+        <div className="hidden overflow-x-auto rounded-xl border border-slate-200 bg-white lg:block">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-slate-100 bg-slate-50">
@@ -297,6 +298,51 @@ export function SuperadminBillingPage() {
             </div>
           )}
         </div>
+
+        <div className="divide-y divide-slate-100 overflow-hidden rounded-xl border border-slate-200 bg-white lg:hidden">
+          {bills.length === 0 && (
+            <div className="flex flex-col items-center gap-2 py-12 text-slate-400">
+              <FileText size={32} />
+              <p className="text-sm">No hay facturas.</p>
+            </div>
+          )}
+
+          {bills.map((bill) => (
+            <div key={bill._id} className="p-4">
+              <div className="flex items-start justify-between gap-2">
+                <p className="min-w-0 truncate font-semibold text-slate-900">{tenantName(bill)}</p>
+                <StatusBadge status={bill.status} />
+              </div>
+
+              <p className="mt-1 text-sm text-slate-500">
+                {formatPeriod(bill.period)} · {bill.planName}
+              </p>
+
+              <div className="mt-2 flex items-center justify-between gap-3">
+                <span className="text-lg font-bold text-slate-900 tabular-nums">
+                  {formatCurrency(bill.amount)}
+                </span>
+                <span className="text-xs text-slate-400">
+                  Vence {new Date(bill.dueDate).toLocaleDateString('es-PE')}
+                </span>
+              </div>
+
+              <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-slate-100 pt-3">
+                {bill.proofImageUrl && (
+                  <button
+                    onClick={() => setLightboxUrl(bill.proofImageUrl!)}
+                    className="flex min-h-9 items-center gap-1.5 rounded-lg px-2.5 text-sm font-medium text-slate-600 active:bg-slate-100"
+                  >
+                    <Eye size={15} />
+                    Comprobante
+                  </button>
+                )}
+                <BillActions bill={bill} />
+              </div>
+            </div>
+          ))}
+        </div>
+        </>
       )}
     </div>
   )

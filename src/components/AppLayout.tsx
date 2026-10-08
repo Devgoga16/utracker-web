@@ -9,12 +9,14 @@ import {
   ClipboardList,
   CreditCard,
   ExternalLink,
+  LifeBuoy,
   ListFilter,
   LogOut,
   Plug,
   Package,
   PackageSearch,
   Settings,
+  ShieldAlert,
   Store as Storefront,
   Workflow,
   Zap,
@@ -22,7 +24,10 @@ import {
 import type { LucideIcon } from 'lucide-react'
 import { useAuthStore } from '@/stores/authStore'
 import { useSubscription } from '@/hooks/useSubscription'
-import { cn } from '@/lib/cn'
+import { ErrorBoundary, useGlobalErrorReporting } from '@/components/ErrorBoundary'
+import { ReportProblemDialog } from '@/components/ReportProblemDialog'
+import { useSupportStore } from '@/stores/supportStore'
+import { cn, formatDateTime } from '@/lib/cn'
 import type { PlanFeatures } from '@/types'
 
 interface NavItem {
@@ -74,6 +79,7 @@ const NAV_GROUPS: NavGroup[] = [
       { to: '/settings', label: 'Ajustes', icon: Settings },
       { to: '/integration', label: 'Integración', icon: Plug },
       { to: '/billing', label: 'Suscripción', icon: CreditCard },
+      { to: '/support', label: 'Soporte', icon: LifeBuoy },
     ],
   },
 ]
@@ -92,6 +98,11 @@ export function AppLayout() {
   const location = useLocation()
   const { user, activeTenant, setActiveTenant, logout } = useAuthStore()
   const { can, isSuspended } = useSubscription()
+  const openReporter = useSupportStore((s) => s.openReporter)
+
+  // Lo que se rompe fuera de React —una promesa sin atrapar, un script suelto—
+  // también tiene que llegar a los logs del sistema.
+  useGlobalErrorReporting()
   const [menuOpen, setMenuOpen] = useState(false)
   const [collapsed, setCollapsed] = useState(
     () => localStorage.getItem(COLLAPSE_KEY) === '1',
@@ -336,6 +347,16 @@ export function AppLayout() {
                   </NavLink>
                   <button
                     type="button"
+                    onClick={() => {
+                      setMenuOpen(false)
+                      openReporter({ category: 'error' })
+                    }}
+                    className="w-full rounded-lg px-3 py-2.5 text-left text-sm text-slate-700 active:bg-slate-100"
+                  >
+                    Reportar un problema
+                  </button>
+                  <button
+                    type="button"
                     onClick={handleLogout}
                     className="w-full rounded-lg px-3 py-2.5 text-left text-sm text-red-600 active:bg-red-50"
                   >
@@ -348,6 +369,25 @@ export function AppLayout() {
         </header>
 
         <main className="mx-auto max-w-6xl px-4 py-6 sm:px-6 sm:py-8">
+          {/* Soporte mirando un negocio ajeno: que no se olvide ni por un momento. */}
+          {activeTenant?.support && (
+            <div className="mb-6 flex flex-wrap items-center gap-3 rounded-xl bg-violet-50 px-4 py-3 text-sm text-violet-900 ring-1 ring-violet-200">
+              <ShieldAlert size={16} className="shrink-0 text-violet-600" />
+              <span className="min-w-0 flex-1">
+                Estás dentro de <strong>{activeTenant.name}</strong> como soporte
+                {activeTenant.support.canWrite ? ' con permiso de cambios' : ' en solo lectura'}.
+                El acceso vence {formatDateTime(activeTenant.support.expiresAt)}.
+              </span>
+              <button
+                type="button"
+                onClick={switchTenant}
+                className="shrink-0 font-semibold underline hover:no-underline"
+              >
+                Salir del negocio
+              </button>
+            </div>
+          )}
+
           {isSuspended && (
             <div className="mb-6 flex items-center gap-3 rounded-xl bg-red-50 px-4 py-3 text-sm text-red-700 ring-1 ring-red-200">
               <AlertTriangle size={16} className="shrink-0" />
@@ -355,9 +395,15 @@ export function AppLayout() {
               Contacta al administrador para reactivarla.
             </div>
           )}
-          <Outlet />
+
+          <ErrorBoundary>
+            <Outlet />
+          </ErrorBoundary>
         </main>
       </div>
+
+      {/* Un solo diálogo de reporte para toda la aplicación. */}
+      <ReportProblemDialog />
 
       {/* ══ Barra inferior (solo mobile) ══ */}
       <nav className="pb-safe fixed inset-x-0 bottom-0 z-30 border-t border-slate-200 bg-white md:hidden">

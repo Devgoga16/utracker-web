@@ -506,7 +506,7 @@ export function SettingsPage() {
         </SettingRow>
       </SettingGroup>
 
-      {mutation.isError && <Alert>{apiErrorMessage(mutation.error)}</Alert>}
+      {mutation.isError && <Alert error={mutation.error} />}
 
       {/* Sticky en vez de fixed: respeta el ancho del contenedor. */}
       {(dirty || saved) && (

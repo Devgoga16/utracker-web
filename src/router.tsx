@@ -30,6 +30,12 @@ import { CampaignsPage } from '@/pages/CampaignsPage'
 import { PublicCampaignPage } from '@/pages/PublicCampaignPage'
 import { HostedCheckoutPage } from '@/pages/HostedCheckoutPage'
 import { IntegrationPage } from '@/pages/IntegrationPage'
+import { SupportPage } from '@/pages/SupportPage'
+import { TicketDetailPage } from '@/pages/TicketDetailPage'
+import { SuperadminTicketsPage } from '@/pages/superadmin/SuperadminTicketsPage'
+import { SuperadminTicketDetailPage } from '@/pages/superadmin/SuperadminTicketDetailPage'
+import { SuperadminLogsPage } from '@/pages/superadmin/SuperadminLogsPage'
+import { SuperadminTenantDetailPage } from '@/pages/superadmin/SuperadminTenantDetailPage'
 
 export const router = createBrowserRouter([
   { path: '/', element: <LandingPage /> },
@@ -55,6 +61,10 @@ export const router = createBrowserRouter([
               { path: '/superadmin', element: <SuperadminDashboardPage /> },
               { path: '/superadmin/plans', element: <SuperadminPlansPage /> },
               { path: '/superadmin/tenants', element: <SuperadminTenantsPage /> },
+              { path: '/superadmin/tenants/:id', element: <SuperadminTenantDetailPage /> },
+              { path: '/superadmin/tickets', element: <SuperadminTicketsPage /> },
+              { path: '/superadmin/tickets/:id', element: <SuperadminTicketDetailPage /> },
+              { path: '/superadmin/logs', element: <SuperadminLogsPage /> },
               { path: '/superadmin/billing', element: <SuperadminBillingPage /> },
               { path: '/superadmin/whatsapp', element: <SuperadminWhatsappPage /> },
             ],
@@ -82,6 +92,8 @@ export const router = createBrowserRouter([
               { path: '/settings', element: <SettingsPage /> },
               { path: '/integration', element: <IntegrationPage /> },
               { path: '/billing', element: <BillingPage /> },
+              { path: '/support', element: <SupportPage /> },
+              { path: '/support/:id', element: <TicketDetailPage /> },
             ],
           },
         ],

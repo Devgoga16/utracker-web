@@ -3,7 +3,6 @@ import { useParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { AlertTriangle, ChevronLeft, ChevronRight, MessageCircle, X } from 'lucide-react'
 import { trackOrder, type TrackingStep } from '@/api/tracking'
-import { apiErrorMessage } from '@/api/client'
 import { Alert, Card, Spinner, StateBadge } from '@/components/ui'
 import { StateIcon } from '@/lib/icons'
 import { formatCurrency, formatDateTime } from '@/lib/cn'
@@ -56,7 +55,7 @@ export function TrackOrderPage() {
   if (isError) {
     return (
       <div className="mx-auto max-w-md px-4 py-16 sm:px-6 sm:py-20">
-        <Alert>{apiErrorMessage(error)}</Alert>
+        <Alert error={error} />
         <p className="mt-4 text-center text-sm text-slate-500">
           Revisa el enlace o pídele uno nuevo al negocio.
         </p>

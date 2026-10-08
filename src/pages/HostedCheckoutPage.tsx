@@ -195,7 +195,7 @@ export function HostedCheckoutPage() {
         <div className="divide-y divide-slate-100">
           {confirm.isError && (
             <div className="p-4">
-              <Alert>{apiErrorMessage(confirm.error)}</Alert>
+              <Alert error={confirm.error} />
             </div>
           )}
 

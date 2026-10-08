@@ -89,10 +89,13 @@ export function ReceiptPage() {
         </Button>
       </div>
 
-      <div id="receipt" className="rounded-xl bg-white p-8 ring-1 ring-slate-200 print:ring-0">
+      <div
+        id="receipt"
+        className="rounded-xl bg-white p-5 ring-1 ring-slate-200 sm:p-8 print:ring-0"
+      >
         {/* Cabecera */}
-        <div className="flex items-start justify-between gap-6 border-b border-slate-200 pb-5">
-          <div className="flex items-center gap-3">
+        <div className="flex items-start justify-between gap-4 border-b border-slate-200 pb-5 sm:gap-6">
+          <div className="flex min-w-0 items-center gap-3">
             {activeTenant?.logoUrl && (
               <img
                 src={activeTenant.logoUrl}
@@ -100,15 +103,15 @@ export function ReceiptPage() {
                 className="size-14 rounded-xl object-cover ring-1 ring-slate-200"
               />
             )}
-            <div>
-              <p className="text-lg font-bold text-slate-900">{activeTenant?.name}</p>
+            <div className="min-w-0">
+              <p className="truncate text-lg font-bold text-slate-900">{activeTenant?.name}</p>
               {activeTenant?.phone && (
                 <p className="text-sm text-slate-500">WhatsApp {activeTenant.phone}</p>
               )}
             </div>
           </div>
 
-          <div className="text-right">
+          <div className="shrink-0 text-right">
             <p className="text-xs font-semibold tracking-wide text-slate-400 uppercase">
               Comprobante
             </p>
@@ -155,7 +158,7 @@ export function ReceiptPage() {
             <tr className="border-b border-slate-200 text-left text-xs font-semibold tracking-wide text-slate-400 uppercase">
               <th className="py-2">Descripción</th>
               <th className="py-2 text-center">Cant.</th>
-              <th className="py-2 text-right">P. unit.</th>
+              <th className="hidden py-2 text-right sm:table-cell print:table-cell">P. unit.</th>
               <th className="py-2 text-right">Importe</th>
             </tr>
           </thead>
@@ -170,7 +173,7 @@ export function ReceiptPage() {
                   )}
                 </td>
                 <td className="py-2.5 text-center tabular-nums text-slate-600">{item.quantity}</td>
-                <td className="py-2.5 text-right tabular-nums text-slate-600">
+                <td className="hidden py-2.5 text-right tabular-nums text-slate-600 sm:table-cell print:table-cell">
                   {formatCurrency(item.unitPrice)}
                 </td>
                 <td className="py-2.5 text-right font-medium tabular-nums text-slate-900">

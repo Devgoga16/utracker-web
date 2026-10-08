@@ -21,7 +21,6 @@ import { CSS } from '@dnd-kit/utilities'
 import { GripVertical, Pencil, Plus, Trash2 } from 'lucide-react'
 import { getWorkflow } from '@/api/tenants'
 import { createState, deleteState, reorderStates, updateState } from '@/api/workflow'
-import { apiErrorMessage } from '@/api/client'
 import {
   Alert,
   Button,
@@ -150,7 +149,7 @@ function StateColumn({
     <Card title={title} description={description}>
       {reorderMutation.isError && (
         <div className="mb-3">
-          <Alert>{apiErrorMessage(reorderMutation.error)}</Alert>
+          <Alert error={reorderMutation.error} />
         </div>
       )}
 
@@ -182,7 +181,7 @@ function StateColumn({
             addMutation.mutate()
           }}
         >
-          {addMutation.isError && <Alert>{apiErrorMessage(addMutation.error)}</Alert>}
+          {addMutation.isError && <Alert error={addMutation.error} />}
           <Field label="Nombre del estado" htmlFor={`new-${kind}`}>
             <Input
               id={`new-${kind}`}
@@ -418,7 +417,7 @@ function StateRow({
 
       {error && (
         <div className="px-3 pb-3">
-          <Alert>{apiErrorMessage(error)}</Alert>
+          <Alert error={error} />
         </div>
       )}
 

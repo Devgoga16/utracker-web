@@ -3,7 +3,6 @@ import { useParams } from 'react-router-dom'
 import { useMutation, useQuery } from '@tanstack/react-query'
 import { CircleCheck, Clock } from 'lucide-react'
 import { confirmPublicOrderLink, getPublicOrderLink } from '@/api/orderLinks'
-import { apiErrorMessage } from '@/api/client'
 import { Alert, Button, Card, Field, Input, Select, Spinner } from '@/components/ui'
 import { cn, formatCurrency } from '@/lib/cn'
 import type { DaySchedule, Franja } from '@/types'
@@ -74,7 +73,7 @@ export function PublicOrderLinkPage() {
   if (isError) {
     return (
       <div className="mx-auto max-w-md px-4 py-16 sm:px-6 sm:py-20">
-        <Alert>{apiErrorMessage(error)}</Alert>
+        <Alert error={error} />
         <p className="mt-4 text-center text-sm text-slate-500">
           Pídele al negocio que te envíe un link nuevo.
         </p>
@@ -147,7 +146,7 @@ export function PublicOrderLinkPage() {
             confirmMutation.mutate()
           }}
         >
-          {confirmMutation.isError && <Alert>{apiErrorMessage(confirmMutation.error)}</Alert>}
+          {confirmMutation.isError && <Alert error={confirmMutation.error} />}
 
           <Field label="Tu nombre" htmlFor="pc-name">
             <Input

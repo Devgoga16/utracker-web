@@ -220,7 +220,7 @@ function AssignDialog({
         <div className="shrink-0 border-t border-slate-100 p-4">
           {save.isError && (
             <div className="mb-3">
-              <Alert>{apiErrorMessage(save.error)}</Alert>
+              <Alert error={save.error} />
             </div>
           )}
           <Button className="w-full" onClick={onClose}>
@@ -523,7 +523,7 @@ export function CatalogFiltersPage() {
             </div>
 
             {(add.isError || applyTemplate.isError) && (
-              <Alert>{apiErrorMessage(add.error ?? applyTemplate.error)}</Alert>
+              <Alert error={add.error ?? applyTemplate.error} />
             )}
           </div>
         </Card>

@@ -2,7 +2,6 @@ import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useMutation } from '@tanstack/react-query'
 import { login } from '@/api/auth'
-import { apiErrorMessage } from '@/api/client'
 import { useAuthStore } from '@/stores/authStore'
 import { Alert, Button, Card, Field, Input } from '@/components/ui'
 
@@ -36,7 +35,7 @@ export function LoginPage() {
               mutation.mutate()
             }}
           >
-            {mutation.isError && <Alert>{apiErrorMessage(mutation.error)}</Alert>}
+            {mutation.isError && <Alert error={mutation.error} />}
 
             <Field label="Email" htmlFor="email">
               <Input

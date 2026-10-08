@@ -134,6 +134,11 @@ export interface Tenant {
   lowStockThreshold?: number
   isActive: boolean
   role?: MembershipRole
+  /**
+   * Presente solo cuando se entró con un acceso de soporte, no por membresía.
+   * El panel lo usa para avisar que se está mirando un negocio ajeno.
+   */
+  support?: { canWrite: boolean; expiresAt: string; reason: string }
 }
 
 /** Un medio de pago del negocio: "Yape al 987654321 — María S." */
@@ -347,4 +352,81 @@ export interface FinanceSummary {
   orderCount: number
   avgOrderValue: number
   topProducts: { productId: string; name: string; revenue: number; quantity: number }[]
+}
+
+/* ─────────────────────────── Soporte ─────────────────────────── */
+
+export type TicketStatus = 'open' | 'in_progress' | 'waiting_customer' | 'resolved' | 'closed'
+export type TicketPriority = 'low' | 'normal' | 'high' | 'urgent'
+export type TicketCategory = 'error' | 'question' | 'billing' | 'feature' | 'other'
+
+export interface TicketMessage {
+  author?: string
+  authorName: string
+  /** true = lo escribió soporte; false = el negocio. */
+  fromSupport: boolean
+  body: string
+  attachments?: string[]
+  createdAt: string
+}
+
+/** Lo que el navegador sabía cuando se rompió: se arma solo, nadie lo copia a mano. */
+export interface TicketContext {
+  url?: string
+  userAgent?: string
+  appVersion?: string
+  /** Código del log de la API correspondiente. */
+  logRef?: string
+  recentErrors?: string[]
+}
+
+export interface Ticket {
+  _id: string
+  code: string
+  tenant?: string | { _id: string; name: string; slug: string; phone?: string }
+  createdBy?: string
+  createdByName: string
+  subject: string
+  category: TicketCategory
+  priority: TicketPriority
+  status: TicketStatus
+  assignedTo?: string | { _id: string; name: string }
+  messages: TicketMessage[]
+  context?: TicketContext
+  unreadForSupport: boolean
+  unreadForTenant: boolean
+  lastMessageAt: string
+  resolvedAt?: string
+  createdAt: string
+  updatedAt: string
+}
+
+export type LogLevel = 'error' | 'warn' | 'info'
+export type LogSource = 'api' | 'web' | 'whatsapp' | 'storefront' | 'support' | 'job'
+
+export interface SystemLog {
+  _id: string
+  /** Código corto que también ve el usuario que sufrió el error. */
+  ref: string
+  level: LogLevel
+  source: LogSource
+  message: string
+  action?: string
+  statusCode?: number
+  tenant?: { _id: string; name: string; slug: string } | null
+  user?: { _id: string; name: string; email: string } | null
+  stack?: string
+  context?: Record<string, unknown>
+  createdAt: string
+}
+
+export interface SupportAccess {
+  _id: string
+  tenant: string | { _id: string; name: string; slug: string }
+  user: string | { _id: string; name: string; email: string }
+  reason: string
+  canWrite: boolean
+  expiresAt: string
+  revokedAt?: string
+  createdAt: string
 }

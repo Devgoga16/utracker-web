@@ -1,6 +1,7 @@
 import { Fragment, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { AlertTriangle, MessageCircle, Trash2, X } from 'lucide-react'
+import { AlertTriangle, MessageCircle, Stethoscope, Trash2, X } from 'lucide-react'
 import {
   assignSubscription,
   deleteTenant,
@@ -207,7 +208,7 @@ function DeleteTenantDialog({
         </div>
 
         <div className="space-y-4 p-5">
-          {mutation.isError && <Alert>{apiErrorMessage(mutation.error)}</Alert>}
+          {mutation.isError && <Alert error={mutation.error} />}
 
           <div className="rounded-xl bg-red-50 p-4 ring-1 ring-red-200">
             <p className="text-sm font-semibold text-red-900">
@@ -310,7 +311,7 @@ export function SuperadminTenantsPage() {
         </div>
       )}
 
-      <div className="max-w-xs">
+      <div className="sm:max-w-xs">
         <Input
           placeholder="Buscar por nombre o email..."
           value={search}
@@ -318,7 +319,9 @@ export function SuperadminTenantsPage() {
         />
       </div>
 
-      <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white">
+      {/* Tabla en desktop, tarjetas en mobile: la fila trae cuatro acciones y
+          en un celular quedaban fuera de la pantalla, imposibles de tocar. */}
+      <div className="hidden overflow-x-auto rounded-xl border border-slate-200 bg-white lg:block">
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-slate-100 bg-slate-50">
@@ -338,8 +341,12 @@ export function SuperadminTenantsPage() {
                 <Fragment key={tenant._id}>
                   <tr className="border-b border-slate-50 hover:bg-slate-50">
                     <td className="px-4 py-3">
-                      <p className="font-medium text-slate-900">{tenant.name}</p>
-                      <p className="text-xs text-slate-400">{tenant.slug}</p>
+                      <Link to={`/superadmin/tenants/${tenant._id}`} className="group block">
+                        <p className="font-medium text-slate-900 group-hover:text-violet-700">
+                          {tenant.name}
+                        </p>
+                        <p className="text-xs text-slate-400">{tenant.slug}</p>
+                      </Link>
                     </td>
                     <td className="px-4 py-3">
                       {tenant.owner ? (
@@ -381,6 +388,14 @@ export function SuperadminTenantsPage() {
                         >
                           {assigning === tenant._id ? 'Cancelar' : 'Asignar plan'}
                         </Button>
+                        <Link
+                          to={`/superadmin/tenants/${tenant._id}`}
+                          aria-label={`Ficha de ${tenant.name}`}
+                          title="Ficha técnica y soporte"
+                          className="rounded-lg p-2 text-slate-400 transition-colors hover:bg-violet-50 hover:text-violet-600"
+                        >
+                          <Stethoscope size={15} />
+                        </Link>
                         <button
                           type="button"
                           onClick={() => setWhatsapping(tenant)}
@@ -420,6 +435,79 @@ export function SuperadminTenantsPage() {
             No se encontraron negocios.
           </div>
         )}
+      </div>
+
+      <div className="divide-y divide-slate-100 overflow-hidden rounded-xl border border-slate-200 bg-white lg:hidden">
+        {filtered?.length === 0 && (
+          <p className="py-10 text-center text-sm text-slate-400">No se encontraron negocios.</p>
+        )}
+
+        {filtered?.map((tenant) => {
+          const sub = tenant.subscription
+          const status = sub?.status as SubscriptionStatus | undefined
+
+          return (
+            <div key={tenant._id} className="p-4">
+              <div className="flex items-start justify-between gap-2">
+                <Link to={`/superadmin/tenants/${tenant._id}`} className="min-w-0">
+                  <p className="truncate font-semibold text-slate-900">{tenant.name}</p>
+                  <p className="truncate text-xs text-slate-400">/{tenant.slug}</p>
+                </Link>
+                {status && (
+                  <span
+                    className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-medium ${STATUS_COLORS[status]}`}
+                  >
+                    {STATUS_LABELS[status]}
+                  </span>
+                )}
+              </div>
+
+              <p className="mt-2 truncate text-sm text-slate-600">
+                {tenant.owner ? tenant.owner.name : 'Sin owner'}
+                {sub?.plan && (
+                  <span className="text-slate-400"> · {(sub.plan as any).name}</span>
+                )}
+              </p>
+
+              <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-slate-100 pt-3">
+                <Link to={`/superadmin/tenants/${tenant._id}`}>
+                  <Button size="sm" variant="secondary">
+                    <Stethoscope size={14} />
+                    Ficha
+                  </Button>
+                </Link>
+                <ToggleButton tenant={tenant} />
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  onClick={() => setAssigning((prev) => (prev === tenant._id ? null : tenant._id))}
+                >
+                  {assigning === tenant._id ? 'Cancelar' : 'Plan'}
+                </Button>
+                <button
+                  type="button"
+                  onClick={() => setWhatsapping(tenant)}
+                  aria-label={`WhatsApp de ${tenant.name}`}
+                  className="flex size-9 items-center justify-center rounded-lg text-slate-400 active:bg-emerald-50 active:text-emerald-600"
+                >
+                  <MessageCircle size={16} />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setDeleting(tenant)}
+                  aria-label={`Eliminar ${tenant.name}`}
+                  className="flex size-9 items-center justify-center rounded-lg text-slate-400 active:bg-red-50 active:text-red-600"
+                >
+                  <Trash2 size={16} />
+                </button>
+              </div>
+
+              {assigning === tenant._id && (
+                <AssignForm tenant={tenant} onClose={() => setAssigning(null)} />
+              )}
+            </div>
+          )
+        })}
       </div>
 
       {whatsapping && (

@@ -1,6 +1,15 @@
 import { useQuery } from '@tanstack/react-query'
-import { Building2, CreditCard, ShoppingBag, TrendingUp } from 'lucide-react'
+import { Link } from 'react-router-dom'
+import {
+  AlertOctagon,
+  Building2,
+  CreditCard,
+  LifeBuoy,
+  ShoppingBag,
+  TrendingUp,
+} from 'lucide-react'
 import { getSuperadminStats } from '@/api/superadmin'
+import { getLogStats, getTicketStats } from '@/api/support'
 import { PageHeader, StatCard, Spinner } from '@/components/ui'
 
 export function SuperadminDashboardPage() {
@@ -8,6 +17,8 @@ export function SuperadminDashboardPage() {
     queryKey: ['superadmin-stats'],
     queryFn: getSuperadminStats,
   })
+  const { data: tickets } = useQuery({ queryKey: ['ticket-stats'], queryFn: getTicketStats })
+  const { data: logs } = useQuery({ queryKey: ['log-stats'], queryFn: getLogStats })
 
   if (isLoading) return <Spinner />
 
@@ -16,6 +27,32 @@ export function SuperadminDashboardPage() {
   return (
     <div className="space-y-6">
       <PageHeader title="Dashboard" description="Resumen global de la plataforma." />
+
+      {/* Lo que pide atención va primero: el resto es contexto. */}
+      <div className="grid gap-4 sm:grid-cols-2">
+        <Link to="/superadmin/tickets">
+          <StatCard
+            icon={LifeBuoy}
+            tone={tickets?.open ? 'amber' : 'green'}
+            label="Tickets pendientes"
+            value={String(tickets?.open ?? 0)}
+            hint={
+              tickets?.unread
+                ? `${tickets.unread} sin leer${tickets.urgent ? ` · ${tickets.urgent} urgentes` : ''}`
+                : 'Todo respondido'
+            }
+          />
+        </Link>
+        <Link to="/superadmin/logs?level=error">
+          <StatCard
+            icon={AlertOctagon}
+            tone={logs?.last24h.error ? 'red' : 'green'}
+            label="Errores (24 h)"
+            value={String(logs?.last24h.error ?? 0)}
+            hint={`${logs?.errors7d ?? 0} en los últimos 7 días`}
+          />
+        </Link>
+      </div>
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard

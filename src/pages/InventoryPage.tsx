@@ -13,7 +13,6 @@ import {
 } from 'lucide-react'
 import { listInventory, adjustStock, listMovements } from '@/api/inventory'
 import type { InventoryRow } from '@/api/inventory'
-import { apiErrorMessage } from '@/api/client'
 import {
   Alert,
   Badge,
@@ -66,7 +65,7 @@ export function InventoryPage() {
         }
       />
 
-      {error && <Alert>{apiErrorMessage(error)}</Alert>}
+      {error && <Alert error={error} />}
 
       {products?.length === 0 ? (
         <EmptyState
@@ -271,7 +270,7 @@ function AdjustForm({ product, onDone }: { product: InventoryRow; onDone: () => 
         mutation.mutate()
       }}
     >
-      {mutation.isError && <Alert>{apiErrorMessage(mutation.error)}</Alert>}
+      {mutation.isError && <Alert error={mutation.error} />}
 
       <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
         <div className="sm:w-40 sm:shrink-0">

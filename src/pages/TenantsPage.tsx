@@ -2,7 +2,6 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { createTenant, listMyTenants } from '@/api/tenants'
-import { apiErrorMessage } from '@/api/client'
 import { useAuthStore } from '@/stores/authStore'
 import { Alert, Button, Card, Field, Input, Spinner } from '@/components/ui'
 import type { Tenant } from '@/types'
@@ -75,9 +74,16 @@ export function TenantsPage() {
                   <p className="truncate text-sm text-slate-500">/{tenant.slug}</p>
                 </div>
               </div>
-              <span className="shrink-0 rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-600">
-                {tenant.role}
-              </span>
+              {/* Un negocio al que se entra por soporte no es "tuyo": que se note. */}
+              {tenant.support ? (
+                <span className="shrink-0 rounded-full bg-violet-100 px-2.5 py-1 text-xs font-medium text-violet-700">
+                  soporte · {tenant.support.canWrite ? 'cambios' : 'lectura'}
+                </span>
+              ) : (
+                <span className="shrink-0 rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-600">
+                  {tenant.role}
+                </span>
+              )}
             </button>
           ))}
 
@@ -90,7 +96,7 @@ export function TenantsPage() {
                   createMutation.mutate()
                 }}
               >
-                {createMutation.isError && <Alert>{apiErrorMessage(createMutation.error)}</Alert>}
+                {createMutation.isError && <Alert error={createMutation.error} />}
 
                 <Field
                   label="Nombre del negocio"

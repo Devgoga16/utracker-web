@@ -4,7 +4,6 @@ import { useMutation, useQuery } from '@tanstack/react-query'
 import { Check, Copy, Image, Link2, Package, Plus, Search, Trash2, Wrench, X } from 'lucide-react'
 import { createOrder, createOrderLink } from '@/api/orders'
 import { listProducts } from '@/api/products'
-import { apiErrorMessage } from '@/api/client'
 import {
   Alert,
   Badge,
@@ -356,7 +355,7 @@ export function NewOrderPage() {
       <PageHeader backTo="/orders" backLabel="Volver a pedidos" title="Nuevo pedido" />
 
       {(orderMutation.isError || linkMutation.isError) && (
-        <Alert>{apiErrorMessage(orderMutation.error ?? linkMutation.error)}</Alert>
+        <Alert error={orderMutation.error ?? linkMutation.error} />
       )}
 
       <div className="grid gap-6 lg:grid-cols-3">

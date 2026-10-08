@@ -4,12 +4,16 @@ import type {
   InputHTMLAttributes,
   ReactNode,
   SelectHTMLAttributes,
+  TextareaHTMLAttributes,
 } from 'react'
 import { Link } from 'react-router-dom'
 import { ArrowLeft, ChevronLeft, ChevronRight, X } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import { cn } from '@/lib/cn'
 import { StateIcon } from '@/lib/icons'
+import { apiErrorMessage, apiErrorRef, isReportableError } from '@/api/client'
+import { useAuthStore } from '@/stores/authStore'
+import { useSupportStore } from '@/stores/supportStore'
 
 /* ─────────────────────────── Botones ─────────────────────────── */
 
@@ -272,6 +276,21 @@ export function Select({ className, ...props }: SelectHTMLAttributes<HTMLSelectE
   )
 }
 
+export function Textarea({
+  className,
+  ...props
+}: TextareaHTMLAttributes<HTMLTextAreaElement>) {
+  return (
+    <textarea
+      className={cn(
+        'w-full resize-y rounded-lg border-0 bg-white px-3 py-2.5 text-base text-slate-900 ring-1 ring-slate-300 transition-shadow placeholder:text-slate-400 focus:ring-2 focus:ring-brand-500 focus:outline-none sm:py-2 sm:text-sm',
+        className,
+      )}
+      {...props}
+    />
+  )
+}
+
 interface CheckboxFieldProps {
   label: string
   hint?: string
@@ -423,10 +442,55 @@ export function StateBadge({
 
 /* ─────────────────────────── Estados ─────────────────────────── */
 
-export function Alert({ children }: { children: ReactNode }) {
+/**
+ * Cartel de error, y la puerta a soporte desde cualquier pantalla.
+ *
+ * Si se le pasa el error en crudo (`error={mutation.error}`) y la falla es
+ * reportable, aparece el botón para abrir un ticket ya armado con el contexto.
+ * Está acá, en el componente, y no en cada página: así cualquier error que el
+ * sistema ya muestra queda reportable sin tener que acordarse de cablearlo.
+ */
+export function Alert({
+  children,
+  error,
+}: {
+  children?: ReactNode
+  /** El error tal como lo atrapó la mutación o la query. */
+  error?: unknown
+}) {
+  const openReporter = useSupportStore((s) => s.openReporter)
+  const canReport = useAuthStore((s) => Boolean(s.accessToken && s.activeTenant))
+
+  const message = error !== undefined ? apiErrorMessage(error) : children
+  const ref = apiErrorRef(error)
+  const showReport = canReport && error !== undefined && isReportableError(error)
+
   return (
     <div className="rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700 ring-1 ring-red-200">
-      {children}
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="min-w-0 flex-1">
+          {message}
+          {ref && (
+            <span className="mt-0.5 block font-mono text-xs text-red-500">Ref {ref}</span>
+          )}
+        </div>
+
+        {showReport && (
+          <button
+            type="button"
+            onClick={() =>
+              openReporter({
+                category: 'error',
+                subject: typeof message === 'string' ? message.slice(0, 120) : undefined,
+                logRef: ref,
+              })
+            }
+            className="shrink-0 rounded-lg bg-white px-2.5 py-1 text-xs font-semibold text-red-700 ring-1 ring-red-200 transition-colors hover:bg-red-100"
+          >
+            Reportar
+          </button>
+        )}
+      </div>
     </div>
   )
 }
@@ -554,6 +618,71 @@ export function Lightbox({
         className="max-h-[85dvh] max-w-full rounded-xl object-contain shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       />
+    </div>
+  )
+}
+
+/* ─────────────────────────── Modal ─────────────────────────── */
+
+interface ModalProps {
+  title: string
+  description?: ReactNode
+  onClose: () => void
+  children: ReactNode
+  footer?: ReactNode
+  /** Para formularios largos que necesitan más ancho que el default. */
+  wide?: boolean
+}
+
+/**
+ * Diálogo centrado que cierra con Escape o clic en el fondo.
+ *
+ * Bloquea el scroll del documento mientras está abierto: en mobile, un modal
+ * sobre una página que todavía se desliza se siente roto.
+ */
+export function Modal({ title, description, onClose, children, footer, wide }: ModalProps) {
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if (e.key === 'Escape') onClose()
+    }
+    document.addEventListener('keydown', onKey)
+    const previous = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    return () => {
+      document.removeEventListener('keydown', onKey)
+      document.body.style.overflow = previous
+    }
+  }, [onClose])
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-end justify-center bg-slate-900/40 p-0 backdrop-blur-sm sm:items-center sm:p-4">
+      <button type="button" aria-label="Cerrar" onClick={onClose} className="absolute inset-0 cursor-default" />
+
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-label={title}
+        className={cn(
+          'relative flex max-h-[92vh] w-full flex-col overflow-hidden rounded-t-2xl bg-white shadow-xl sm:rounded-2xl',
+          wide ? 'sm:max-w-2xl' : 'sm:max-w-md',
+        )}
+      >
+        <div className="flex items-start justify-between gap-3 border-b border-slate-100 px-5 py-4">
+          <div className="min-w-0">
+            <h2 className="font-semibold text-slate-900">{title}</h2>
+            {description && <p className="mt-0.5 text-sm text-slate-500">{description}</p>}
+          </div>
+          <IconButton label="Cerrar" onClick={onClose}>
+            <X size={17} />
+          </IconButton>
+        </div>
+
+        <div className="min-h-0 flex-1 overflow-y-auto px-5 py-4">{children}</div>
+
+        {footer && (
+          <div className="flex justify-end gap-2 border-t border-slate-100 px-5 py-3">{footer}</div>
+        )}
+      </div>
     </div>
   )
 }
