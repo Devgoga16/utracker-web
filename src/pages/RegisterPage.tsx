@@ -3,7 +3,8 @@ import { Link, useNavigate } from 'react-router-dom'
 import { useMutation } from '@tanstack/react-query'
 import { register } from '@/api/auth'
 import { useAuthStore } from '@/stores/authStore'
-import { Alert, Button, Card, Field, Input } from '@/components/ui'
+import { Alert, Button, Field, Input } from '@/components/ui'
+import { AuthShell } from '@/components/AuthShell'
 
 export function RegisterPage() {
   const navigate = useNavigate()
@@ -21,63 +22,67 @@ export function RegisterPage() {
   })
 
   return (
-    <div className="flex min-h-full items-center justify-center px-4 py-10 sm:px-6 sm:py-16">
-      <div className="w-full max-w-sm space-y-6">
-        <div className="text-center">
-          <h1 className="text-2xl font-bold text-brand-600">uTracker</h1>
-          <p className="mt-1 text-sm text-slate-500">Crea tu cuenta</p>
-        </div>
-
-        <Card>
-          <form
-            className="space-y-4"
-            onSubmit={(e) => {
-              e.preventDefault()
-              mutation.mutate()
-            }}
-          >
-            {mutation.isError && <Alert error={mutation.error} />}
-
-            <Field label="Nombre" htmlFor="name">
-              <Input id="name" required value={name} onChange={(e) => setName(e.target.value)} />
-            </Field>
-
-            <Field label="Email" htmlFor="email">
-              <Input
-                id="email"
-                type="email"
-                autoComplete="email"
-                required
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-              />
-            </Field>
-
-            <Field label="Contraseña" htmlFor="password" hint="Mínimo 8 caracteres">
-              <Input
-                id="password"
-                type="password"
-                autoComplete="new-password"
-                required
-                minLength={8}
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-              />
-            </Field>
-
-            <Button type="submit" className="w-full" disabled={mutation.isPending}>
-              {mutation.isPending ? 'Creando...' : 'Crear cuenta'}
-            </Button>
-          </form>
-        </Card>
-
-        <p className="text-center text-sm text-slate-500">
+    <AuthShell
+      title="Crea tu cuenta"
+      subtitle="Sin tarjeta y sin contrato. Lleva menos de un minuto."
+      footer={
+        <>
           ¿Ya tienes cuenta?{' '}
           <Link to="/login" className="font-medium text-brand-600 hover:underline">
-            Ingresar
+            Ingresa
           </Link>
-        </p>
-      </div>
-    </div>
+        </>
+      }
+    >
+      <form
+        className="space-y-4"
+        onSubmit={(e) => {
+          e.preventDefault()
+          mutation.mutate()
+        }}
+      >
+        {mutation.isError && <Alert error={mutation.error} />}
+
+        <Field label="Tu nombre" htmlFor="name">
+          <Input
+            id="name"
+            required
+            autoFocus
+            autoComplete="name"
+            placeholder="María Sánchez"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+          />
+        </Field>
+
+        <Field label="Tu correo" htmlFor="email">
+          <Input
+            id="email"
+            type="email"
+            autoComplete="email"
+            required
+            placeholder="maria@minegocio.com"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+          />
+        </Field>
+
+        <Field label="Contraseña" htmlFor="password" hint="Al menos 8 caracteres.">
+          <Input
+            id="password"
+            type="password"
+            autoComplete="new-password"
+            required
+            minLength={8}
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+          />
+        </Field>
+
+        <Button type="submit" className="w-full py-3" disabled={mutation.isPending}>
+          {mutation.isPending ? 'Creando tu cuenta…' : 'Crear mi cuenta'}
+        </Button>
+      </form>
+    </AuthShell>
   )
 }

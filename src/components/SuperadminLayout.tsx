@@ -5,6 +5,8 @@ import {
   BarChart2,
   Building2,
   CreditCard,
+  ExternalLink,
+  Globe,
   LifeBuoy,
   LogOut,
   Menu,
@@ -97,6 +99,19 @@ export function SuperadminLayout() {
     </ul>
   )
 
+  const webLink = (
+    <a
+      href="/?vista=web"
+      target="_blank"
+      rel="noreferrer"
+      className="flex min-h-11 w-full items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-900 md:min-h-0"
+    >
+      <Globe size={16} className="shrink-0" />
+      <span className="min-w-0 flex-1 truncate">Ver la web</span>
+      <ExternalLink size={13} className="shrink-0 text-slate-400" />
+    </a>
+  )
+
   const logoutButton = (
     <button
       type="button"
@@ -123,7 +138,10 @@ export function SuperadminLayout() {
       <aside className="fixed inset-y-0 left-0 z-40 hidden w-56 flex-col border-r border-slate-200 bg-white md:flex">
         <div className="shrink-0 border-b border-slate-100 px-5 py-4">{brand}</div>
         <nav className="min-h-0 flex-1 overflow-y-auto p-3">{navLinks}</nav>
-        <div className="shrink-0 border-t border-slate-100 p-3">{logoutButton}</div>
+        <div className="shrink-0 space-y-0.5 border-t border-slate-100 p-3">
+          {webLink}
+          {logoutButton}
+        </div>
       </aside>
 
       {/* ══ Cajón (mobile) ══ */}
@@ -148,7 +166,10 @@ export function SuperadminLayout() {
               </button>
             </div>
             <nav className="min-h-0 flex-1 overflow-y-auto p-3">{navLinks}</nav>
-            <div className="pb-safe shrink-0 border-t border-slate-100 p-3">{logoutButton}</div>
+            <div className="pb-safe shrink-0 space-y-0.5 border-t border-slate-100 p-3">
+              {webLink}
+              {logoutButton}
+            </div>
           </div>
         </div>
       )}

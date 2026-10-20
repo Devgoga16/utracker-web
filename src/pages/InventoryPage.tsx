@@ -71,7 +71,7 @@ export function InventoryPage() {
         <EmptyState
           icon={PackageSearch}
           title="Ningún producto tiene control de stock"
-          description='Ve al catálogo, edita un producto y activa "Control de stock" para verlo acá.'
+          description='Ve al catálogo, edita un producto y activa "Control de stock" para verlo aquí.'
           action={
             <Link to="/catalog">
               <Button>Ir al catálogo</Button>

@@ -18,6 +18,7 @@ import {
   Settings,
   ShieldAlert,
   Store as Storefront,
+  Users,
   Workflow,
   Zap,
 } from 'lucide-react'
@@ -28,14 +29,14 @@ import { ErrorBoundary, useGlobalErrorReporting } from '@/components/ErrorBounda
 import { ReportProblemDialog } from '@/components/ReportProblemDialog'
 import { useSupportStore } from '@/stores/supportStore'
 import { cn, formatDateTime } from '@/lib/cn'
-import type { PlanFeatures } from '@/types'
+import type { FeatureKey } from '@/types'
 
 interface NavItem {
   to: string
   label: string
   icon: LucideIcon
-  /** Si está, el ítem solo se muestra cuando el plan incluye esa feature. */
-  featureKey?: keyof PlanFeatures
+  /** Si está, el ítem solo se muestra cuando el plan incluye esa funcionalidad. */
+  featureKey?: FeatureKey
   /** Exige coincidencia exacta: evita que un padre se marque junto al hijo. */
   end?: boolean
 }
@@ -58,8 +59,8 @@ const NAV_GROUPS: NavGroup[] = [
     label: 'Operación',
     items: [
       { to: '/orders', label: 'Pedidos', icon: ClipboardList },
-      { to: '/calendar', label: 'Calendario', icon: CalendarDays },
-      { to: '/campaigns', label: 'Campañas', icon: Zap },
+      { to: '/calendar', label: 'Calendario', icon: CalendarDays, featureKey: 'orderCalendar' },
+      { to: '/campaigns', label: 'Campañas', icon: Zap, featureKey: 'campaigns' },
       { to: '/finances', label: 'Finanzas', icon: BarChart2, featureKey: 'finances' },
     ],
   },
@@ -68,7 +69,7 @@ const NAV_GROUPS: NavGroup[] = [
     items: [
       // `end` porque /catalog/filters es su hermano en el menú, no su hijo.
       { to: '/catalog', label: 'Productos', icon: Package, end: true },
-      { to: '/catalog/filters', label: 'Filtros', icon: ListFilter },
+      { to: '/catalog/filters', label: 'Filtros', icon: ListFilter, featureKey: 'productFilters' },
       { to: '/inventory', label: 'Inventario', icon: PackageSearch, featureKey: 'inventory' },
     ],
   },
@@ -76,8 +77,9 @@ const NAV_GROUPS: NavGroup[] = [
     label: 'Configuración',
     items: [
       { to: '/workflow', label: 'Workflow', icon: Workflow },
+      { to: '/team', label: 'Equipo', icon: Users },
       { to: '/settings', label: 'Ajustes', icon: Settings },
-      { to: '/integration', label: 'Integración', icon: Plug },
+      { to: '/integration', label: 'Integración', icon: Plug, featureKey: 'storefrontApi' },
       { to: '/billing', label: 'Suscripción', icon: CreditCard },
       { to: '/support', label: 'Soporte', icon: LifeBuoy },
     ],

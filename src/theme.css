@@ -1,0 +1,56 @@
+/**
+ * Tokens de marca: colores y sombras.
+ *
+ * Viven aparte para que el video de presentación (/video) importe exactamente
+ * los mismos. Si cambia el indigo de uTracker, cambia aquí y en ningún otro lado.
+ */
+@theme {
+  /**
+   * Curvas de animación.
+   *
+   * Las de CSS (`ease`, `ease-out`) son demasiado blandas: empiezan a moverse
+   * tarde y la interfaz se siente lenta aunque dure lo mismo. Estas arrancan
+   * con fuerza.
+   *
+   * - snappy: entradas y respuestas al toque. Rápida al principio.
+   * - smooth: algo que se desplaza dentro de la pantalla, de un lugar a otro.
+   */
+  --ease-snappy: cubic-bezier(0.23, 1, 0.32, 1);
+  --ease-smooth: cubic-bezier(0.77, 0, 0.175, 1);
+
+  /* Movimiento constante (la fila de socios): lineal, sin acelerar ni frenar. */
+  --animate-marquee: marquee 40s linear infinite;
+
+  /**
+   * Sombras de superficie.
+   *
+   * Estaban repetidas a mano como `shadow-sm shadow-slate-900/[0.03]` en una
+   * docena de archivos, así que cada pantalla tenía su propia idea de cuánto
+   * levantar una tarjeta. Aquí hay una sola.
+   */
+  --shadow-card: 0 1px 2px 0 rgb(15 23 42 / 0.04), 0 1px 3px 0 rgb(15 23 42 / 0.03);
+  --shadow-card-hover: 0 4px 14px -3px rgb(15 23 42 / 0.1), 0 2px 5px -2px rgb(15 23 42 / 0.05);
+  --shadow-float: 0 12px 32px -8px rgb(15 23 42 / 0.18), 0 4px 10px -4px rgb(15 23 42 / 0.1);
+
+  /**
+   * La landing: papel cálido de fondo y tinta casi negra para las secciones
+   * oscuras. El blanco puro de antes hacía que la web y el panel se vieran
+   * iguales; la landing tiene que sentirse como la portada, no como el sistema.
+   */
+  --color-paper: #f6f4ef;
+  --color-ink: #0c0d14;
+
+  /* Solo para las palabras que se destacan dentro de un título. */
+  --font-display: 'Instrument Serif', ui-serif, Georgia, serif;
+
+  --color-brand-50: #eef2ff;
+  --color-brand-100: #e0e7ff;
+  --color-brand-200: #c7d2fe;
+  --color-brand-300: #a5b4fc;
+  --color-brand-400: #818cf8;
+  --color-brand-500: #6366f1;
+  --color-brand-600: #4f46e5;
+  --color-brand-700: #4338ca;
+  --color-brand-800: #3730a3;
+  --color-brand-900: #312e81;
+}

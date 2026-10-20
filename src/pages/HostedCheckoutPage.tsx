@@ -31,7 +31,7 @@ const FRANJA_LABELS: Record<string, string> = {
 /**
  * Checkout hospedado por uTracker, abierto desde la web de un tercero.
  *
- * Vive acá y no en la web del integrador para que los datos del comprador y
+ * Vive aquí y no en la web del integrador para que los datos del comprador y
  * el comprobante nunca pasen por un sitio que no controlamos. El tercero solo
  * sabe qué se pidió; quién lo pidió y cómo pagó es nuestro.
  */

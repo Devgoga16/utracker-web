@@ -202,7 +202,7 @@ export function SuperadminTicketDetailPage() {
             </Card>
           )}
 
-          {/* Lo que el navegador adjuntó solo: la mitad del diagnóstico ya está acá. */}
+          {/* Lo que el navegador adjuntó solo: la mitad del diagnóstico ya está aquí. */}
           {ticket.context && (
             <Card title="Contexto técnico">
               <dl className="space-y-2 text-xs">

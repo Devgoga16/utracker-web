@@ -8,6 +8,7 @@ import { apiErrorMessage } from '@/api/client'
 import {
   Alert,
   Button,
+  CheckboxField,
   IconButton,
   Input,
   PageHeader,
@@ -61,6 +62,7 @@ export function SettingsPage() {
     activeTenant?.paymentMethods ?? [],
   )
   const [lowStockThreshold, setLowStockThreshold] = useState(activeTenant?.lowStockThreshold ?? 5)
+  const [showcase, setShowcase] = useState(activeTenant?.showcase ?? false)
   const [scheduleState, setScheduleState] = useState<ScheduleDay[]>(() =>
     initSchedule(activeTenant?.schedule),
   )
@@ -83,6 +85,7 @@ export function SettingsPage() {
         deliveryFranjas,
         paymentMethods: paymentMethods.filter((m) => m.name.trim()),
         lowStockThreshold,
+        showcase,
       }),
     onSuccess: (tenant) => {
       setActiveTenant({ ...activeTenant!, ...tenant })
@@ -133,6 +136,7 @@ export function SettingsPage() {
       JSON.stringify([...(activeTenant?.deliveryFranjas ?? [])].sort()) ||
     JSON.stringify(paymentMethods) !== JSON.stringify(activeTenant?.paymentMethods ?? []) ||
     lowStockThreshold !== (activeTenant?.lowStockThreshold ?? 5) ||
+    showcase !== (activeTenant?.showcase ?? false) ||
     currentScheduleStr !== savedScheduleStr
 
   return (
@@ -212,6 +216,20 @@ export function SettingsPage() {
               </IconButton>
             </a>
           </div>
+        </SettingRow>
+
+        <SettingRow
+          label="Aparecer en la web de uTracker"
+          hint="Tu nombre, tu logo y el link a tu tienda en la sección de negocios que trabajan con uTracker. Te trae visitas."
+        >
+          <CheckboxField
+            label={showcase ? 'Sí, mostrar mi negocio' : 'No, por ahora'}
+            checked={showcase}
+            onChange={(v) => {
+              setShowcase(v)
+              setSaved(false)
+            }}
+          />
         </SettingRow>
 
         <SettingRow

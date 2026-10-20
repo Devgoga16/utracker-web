@@ -358,7 +358,7 @@ function StateRow({
             {state.name}
           </span>
 
-          {/* En mobile los tags bajan a su propia línea: acá se desbordaban. */}
+          {/* En mobile los tags bajan a su propia línea: aquí se desbordaban. */}
           <div className="hidden items-center gap-1.5 text-xs sm:flex">
             {tags.map((tag) => (
               <Tag key={tag}>{tag}</Tag>

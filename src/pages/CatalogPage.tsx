@@ -755,7 +755,7 @@ export function CatalogPage() {
       ) : !visible?.length ? (
         <EmptyState
           icon={Package}
-          title="Nada por acá"
+          title="Nada por aquí"
           description="Carga tus productos y servicios para poder armar pedidos."
           action={
             !showForm && (
@@ -816,7 +816,7 @@ function ProductCard({
 
   return (
     <div
-      className={`flex flex-col overflow-hidden rounded-xl bg-white shadow-sm shadow-slate-900/[0.03] ring-1 transition-shadow ${
+      className={`flex flex-col overflow-hidden rounded-xl bg-white shadow-card ring-1 transition-shadow ${
         editing ? 'ring-2 ring-brand-500' : 'ring-slate-200'
       }`}
     >

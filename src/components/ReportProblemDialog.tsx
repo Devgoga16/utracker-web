@@ -110,12 +110,12 @@ export function ReportProblemDialog() {
     return (
       <Modal title="Reportar un problema" onClose={handleClose}>
         <p className="text-sm text-slate-600">
-          Entrá a uno de tus negocios para abrir un ticket: los reportes van asociados al negocio
+          Entra a uno de tus negocios para abrir un ticket: los reportes van asociados al negocio
           donde pasó el problema.
         </p>
         {logRef && (
           <p className="mt-3 text-sm text-slate-600">
-            Igual ya registramos el error. Si escribís por otro medio, pasá este código:{' '}
+            Igual ya registramos el error. Si escribís por otro medio, pasa este código:{' '}
             <span className="font-mono font-semibold text-slate-900">{logRef}</span>
           </p>
         )}

@@ -71,35 +71,112 @@ export interface Bill {
   createdAt: string
 }
 
-export interface PlanFeatures {
-  maxOrdersPerMonth: number
-  maxCatalogItems: number
-  maxMembers: number
-  maxWorkflowStates: number
-  workflowCustomization: boolean
-  publicOrderLinks: boolean
-  imageUploads: boolean
-  deliveryTypes: boolean
-  publicTracking: boolean
-  advancePayments: boolean
-  inventory: boolean
-  finances: boolean
-}
+/**
+ * Las claves del catálogo de funcionalidades.
+ *
+ * Repite a propósito la lista que vive en la API
+ * (`config/features.catalog.ts`): aquí sirve para que `can('inventario')` mal
+ * escrito no compile. La que manda es la del servidor —el front solo esconde,
+ * quien bloquea es la API— así que si se desincronizan, gana la API.
+ */
+export type FeatureKey =
+  // Límites
+  | 'maxOrdersPerMonth'
+  | 'maxCatalogItems'
+  | 'maxWorkflowStates'
+  | 'maxCampaigns'
+  | 'maxStoreKeys'
+  | 'maxMembers'
+  // Operación
+  | 'workflowCustomization'
+  | 'orderCalendar'
+  | 'deliveryTypes'
+  | 'deliveryAttempts'
+  // Cobros
+  | 'advancePayments'
+  | 'receipts'
+  | 'finances'
+  // Catálogo
+  | 'imageUploads'
+  | 'productFilters'
+  | 'inventory'
+  // Venta online
+  | 'publicTracking'
+  | 'publicOrderLinks'
+  | 'publicStore'
+  | 'campaigns'
+  | 'storefrontApi'
+  // Comunicación y marca
+  | 'whatsappNotifications'
+  | 'branding'
+  | 'prioritySupport'
+
+export type FeatureValue = boolean | number
+
+/** Lo que define un plan: puede no traer todas las claves. */
+export type FeatureMap = Partial<Record<FeatureKey, FeatureValue>>
+
+/** Ya resuelto por el servidor: trae todas las claves. */
+export type ResolvedFeatures = Record<FeatureKey, FeatureValue>
+
+/** Nombre viejo, conservado para no romper importaciones. */
+export type PlanFeatures = FeatureMap
 
 export interface Plan {
   _id: string
+  /** Identificador estable en minúsculas. No cambia. */
+  code?: string
   name: string
   description?: string
   price: number
-  features: PlanFeatures
+  priceYearly?: number
+  features: FeatureMap
+  isPublic: boolean
   isActive: boolean
+  sortOrder: number
   createdAt: string
+  /** Cuántos negocios lo tienen. Solo viene en el listado del superadmin. */
+  tenantCount?: number
+}
+
+/* ─────── El catálogo, tal como lo sirve la API ─────── */
+
+export type FeatureKind = 'flag' | 'limit'
+
+export interface FeatureDefinition {
+  key: FeatureKey
+  kind: FeatureKind
+  label: string
+  hint?: string
+  group: string
+  /** 'api' = el servidor bloquea; 'ui' = solo se esconde; 'none' = todavía nada. */
+  enforcement: 'api' | 'ui' | 'none'
+}
+
+export interface FeatureCatalog {
+  groups: { key: string; label: string; features: FeatureDefinition[] }[]
+}
+
+export type EffectiveStatus = SubscriptionStatus | 'expired'
+
+/** Lo que responde GET /subscription/me. */
+export interface MyEntitlements {
+  subscription: Subscription | null
+  features: ResolvedFeatures
+  status: EffectiveStatus
+  readOnly: boolean
+  plan: { _id: string; code?: string; name: string; price: number } | null
+  /** Claves que vienen de una excepción del negocio y no del plan. */
+  overridden: FeatureKey[]
+  expiresAt: string | null
 }
 
 export interface Subscription {
   _id: string
   tenant: string
   plan: Plan
+  /** Excepciones solo para este negocio: reemplazan el valor del plan. */
+  overrides?: FeatureMap
   status: SubscriptionStatus
   expiresAt?: string
   notes?: string
@@ -132,6 +209,8 @@ export interface Tenant {
   paymentMethods?: PaymentMethod[]
   /** Umbral por defecto de stock bajo, para productos sin uno propio. */
   lowStockThreshold?: number
+  /** Aparece como socio en la web de uTracker. Solo con su permiso. */
+  showcase?: boolean
   isActive: boolean
   role?: MembershipRole
   /**
@@ -429,4 +508,61 @@ export interface SupportAccess {
   expiresAt: string
   revokedAt?: string
   createdAt: string
+}
+
+/* ─────────────────────────── Equipo ─────────────────────────── */
+
+export interface TeamMember {
+  _id: string
+  role: MembershipRole
+  isActive: boolean
+  createdAt: string
+  user: { _id: string; name: string; email: string; phone?: string } | null
+  /** El propio usuario: el panel no ofrece acciones sobre uno mismo. */
+  isMe: boolean
+}
+
+export interface TeamInvitation {
+  _id: string
+  email: string
+  role: MembershipRole
+  phone?: string
+  expiresAt: string
+  createdAt: string
+  invitedBy?: { name: string } | null
+  /** Para reenviarlo por donde sea. */
+  url: string
+}
+
+/** Lugares del plan: los pendientes también ocupan. */
+export interface SeatUsage {
+  members: number
+  pending: number
+  used: number
+  /** 0 = ilimitado. */
+  limit: number
+  /** null cuando es ilimitado. */
+  available: number | null
+  full: boolean
+}
+
+export interface Team {
+  members: TeamMember[]
+  invitations: TeamInvitation[]
+  seats: SeatUsage
+  /** Si Resend está configurado. Sin esto, la invitación solo va como link. */
+  emailEnabled: boolean
+  roles: { value: MembershipRole; label: string }[]
+}
+
+export interface PublicInvitation {
+  business: { name: string; logoUrl?: string }
+  email: string
+  role: MembershipRole
+  roleLabel: string
+  invitedBy: string | null
+  expiresAt: string
+  /** No tiene cuenta: hay que pedirle nombre y contraseña nueva. */
+  needsAccount: boolean
+  name: string | null
 }

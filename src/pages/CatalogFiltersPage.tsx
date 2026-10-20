@@ -101,7 +101,7 @@ function AssignDialog({
 
   const save = useMutation({
     mutationFn: async ({ product, values }: { product: Product; values: string[] }) => {
-      // Se conservan los atributos de los otros filtros: acá solo toca el suyo.
+      // Se conservan los atributos de los otros filtros: aquí solo toca el suyo.
       const others = (product.attributes ?? []).filter((a) => a.filter !== filter._id)
       const next = values.length ? [...others, { filter: filter._id, values }] : others
       return updateProduct(product._id, { attributes: next })

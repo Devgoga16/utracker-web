@@ -111,7 +111,7 @@ export function SuperadminTicketsPage() {
       ) : !tickets?.length ? (
         <EmptyState
           icon={TicketIcon}
-          title="Nada por acá"
+          title="Nada por aquí"
           description="Cuando un negocio reporte algo, aparece en esta bandeja."
         />
       ) : (

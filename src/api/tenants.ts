@@ -21,6 +21,7 @@ export async function updateTenantSettings(payload: {
   deliveryFranjas?: string[]
   paymentMethods?: { name: string; details?: string; qrImageUrl?: string }[]
   lowStockThreshold?: number
+  showcase?: boolean
 }) {
   const { data } = await api.patch<{ tenant: Tenant }>('/tenants/settings', payload)
   return data.tenant

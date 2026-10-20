@@ -82,7 +82,7 @@ export function TicketDetailPage() {
         onSend={(body) => reply.mutate(body)}
         disabledReason={
           isClosed
-            ? 'Este ticket está cerrado. Si el problema volvió, abrí uno nuevo desde Soporte.'
+            ? 'Este ticket está cerrado. Si el problema volvió, abre uno nuevo desde Soporte.'
             : undefined
         }
       />

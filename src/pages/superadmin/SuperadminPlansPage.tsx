@@ -1,286 +1,506 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Check, Plus, Trash2, X } from 'lucide-react'
-import { createPlan, deletePlan, listSuperadminPlans, updatePlan } from '@/api/superadmin'
-import { apiErrorMessage } from '@/api/client'
-import { Alert, Button, Card, CheckboxField, Field, Input, PageHeader, Spinner } from '@/components/ui'
-import type { Plan, PlanFeatures } from '@/types'
-import { formatCurrency } from '@/lib/cn'
+import { AlertTriangle, Check, Eye, EyeOff, Package, Plus, Users } from 'lucide-react'
+import {
+  createPlan,
+  deletePlan,
+  getFeatureCatalog,
+  listPlansAdmin,
+  updatePlan,
+  type PlanInput,
+} from '@/api/plans'
+import {
+  Alert,
+  Badge,
+  Button,
+  Card,
+  CheckboxField,
+  EmptyState,
+  Field,
+  Input,
+  Modal,
+  PageHeader,
+  Spinner,
+  Textarea,
+} from '@/components/ui'
+import { cn, formatCurrency } from '@/lib/cn'
+import type { FeatureDefinition, FeatureMap, Plan } from '@/types'
 
-const emptyFeatures = (): PlanFeatures => ({
-  maxOrdersPerMonth: 0,
-  maxCatalogItems: 0,
-  maxMembers: 0,
-  maxWorkflowStates: 0,
-  workflowCustomization: false,
-  publicOrderLinks: false,
-  imageUploads: false,
-  deliveryTypes: false,
-  publicTracking: false,
-  advancePayments: false,
-  inventory: false,
-  finances: false,
-})
-
-const emptyForm = () => ({ name: '', description: '', price: 0, features: emptyFeatures() })
-
-function planToForm(p: Plan) {
-  return { name: p.name, description: p.description ?? '', price: p.price, features: { ...p.features } }
-}
-
-const FEATURE_FLAGS: (keyof PlanFeatures)[] = [
-  'workflowCustomization',
-  'publicOrderLinks',
-  'imageUploads',
-  'deliveryTypes',
-  'publicTracking',
-  'advancePayments',
-  'inventory',
-  'finances',
-]
-
-const FLAG_LABELS: Record<string, string> = {
-  workflowCustomization: 'Workflow personalizable',
-  publicOrderLinks: 'Links públicos de pedido',
-  imageUploads: 'Subida de imágenes',
-  deliveryTypes: 'Tipos de entrega',
-  publicTracking: 'Seguimiento público',
-  advancePayments: 'Adelantos de pago',
-  inventory: 'Inventario',
-  finances: 'Finanzas',
-}
-
-const LIMIT_KEYS: (keyof PlanFeatures)[] = [
-  'maxOrdersPerMonth',
-  'maxCatalogItems',
-  'maxMembers',
-  'maxWorkflowStates',
-]
-
-const LIMIT_LABELS: Record<string, string> = {
-  maxOrdersPerMonth: 'Pedidos / mes (0 = ilimitado)',
-  maxCatalogItems: 'Productos en catálogo (0 = ilimitado)',
-  maxMembers: 'Miembros del equipo (0 = ilimitado)',
-  maxWorkflowStates: 'Estados del workflow (0 = ilimitado)',
-}
-
+/**
+ * Planes de suscripción.
+ *
+ * El formulario no enumera ninguna funcionalidad: se dibuja con el catálogo
+ * que sirve la API. Agregar una funcionalidad al sistema es agregarla al
+ * catálogo y nada más — esta pantalla la muestra sola, agrupada y con su
+ * etiqueta.
+ */
 export function SuperadminPlansPage() {
   const qc = useQueryClient()
+
+  const { data: catalog, isLoading: catalogLoading } = useQuery({
+    queryKey: ['feature-catalog'],
+    queryFn: getFeatureCatalog,
+    staleTime: Infinity,
+  })
+
   const { data: plans, isLoading } = useQuery({
     queryKey: ['superadmin-plans'],
-    queryFn: listSuperadminPlans,
+    queryFn: listPlansAdmin,
   })
 
   const [editing, setEditing] = useState<Plan | null>(null)
   const [creating, setCreating] = useState(false)
-  const [form, setForm] = useState(emptyForm())
-  const [confirmDelete, setConfirmDelete] = useState<string | null>(null)
-  const [error, setError] = useState('')
+  const [retireTarget, setRetireTarget] = useState<Plan | null>(null)
+  const [notice, setNotice] = useState('')
 
-  function openCreate() {
-    setForm(emptyForm())
-    setEditing(null)
-    setCreating(true)
-    setError('')
-  }
-
-  function openEdit(p: Plan) {
-    setForm(planToForm(p))
-    setEditing(p)
-    setCreating(true)
-    setError('')
-  }
-
-  function closeForm() {
-    setCreating(false)
-    setEditing(null)
-    setError('')
-  }
-
-  const saveMutation = useMutation({
-    mutationFn: () =>
-      editing
-        ? updatePlan(editing._id, form)
-        : createPlan(form),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['superadmin-plans'] })
-      closeForm()
-    },
-    onError: (e) => setError(apiErrorMessage(e)),
-  })
-
-  const deleteMutation = useMutation({
+  const retire = useMutation({
     mutationFn: (id: string) => deletePlan(id),
-    onSuccess: () => {
+    onSuccess: (res) => {
       qc.invalidateQueries({ queryKey: ['superadmin-plans'] })
-      setConfirmDelete(null)
+      setRetireTarget(null)
+      setNotice(res.message ?? 'El plan se eliminó.')
     },
-    onError: (e) => setError(apiErrorMessage(e)),
   })
 
-  function setFeature(key: keyof PlanFeatures, value: boolean | number) {
-    setForm((f) => ({ ...f, features: { ...f.features, [key]: value } }))
-  }
+  if (isLoading || catalogLoading) return <Spinner />
 
-  if (isLoading) return <Spinner />
+  const allFeatures = catalog?.groups.flatMap((g) => g.features) ?? []
 
   return (
     <div className="space-y-6">
       <PageHeader
         title="Planes"
-        description="Define los planes de suscripción y sus límites."
+        description="Qué incluye cada plan. Lo que edites aquí se aplica al instante a todos los negocios que lo tienen."
         actions={
-          <Button onClick={openCreate}>
+          <Button onClick={() => setCreating(true)}>
             <Plus size={15} />
-            Nuevo plan
+            <span className="hidden sm:inline">Nuevo plan</span>
+            <span className="sm:hidden">Nuevo</span>
           </Button>
         }
       />
 
-      {error && <Alert>{error}</Alert>}
-
-      {creating && (
-        <Card title={editing ? `Editar: ${editing.name}` : 'Nuevo plan'}>
-          <div className="space-y-5">
-            <div className="grid gap-4 sm:grid-cols-2">
-              <Field label="Nombre" htmlFor="p-name">
-                <Input
-                  id="p-name"
-                  value={form.name}
-                  onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
-                />
-              </Field>
-              <Field label="Precio referencial (S/)" htmlFor="p-price">
-                <Input
-                  id="p-price"
-                  type="number"
-                  min={0}
-                  step="0.01"
-                  value={form.price || ''}
-                  onChange={(e) => setForm((f) => ({ ...f, price: Number(e.target.value) }))}
-                />
-              </Field>
-              <div className="sm:col-span-2">
-                <Field label="Descripción (opcional)" htmlFor="p-desc">
-                  <Input
-                    id="p-desc"
-                    value={form.description}
-                    onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
-                  />
-                </Field>
-              </div>
-            </div>
-
-            <div>
-              <p className="mb-3 text-sm font-semibold text-slate-700">Límites numéricos</p>
-              <div className="grid gap-3 sm:grid-cols-2">
-                {LIMIT_KEYS.map((key) => (
-                  <Field key={key} label={LIMIT_LABELS[key]} htmlFor={`lim-${key}`}>
-                    <Input
-                      id={`lim-${key}`}
-                      type="number"
-                      min={0}
-                      value={form.features[key] as number}
-                      onChange={(e) => setFeature(key, Number(e.target.value))}
-                    />
-                  </Field>
-                ))}
-              </div>
-            </div>
-
-            <div>
-              <p className="mb-3 text-sm font-semibold text-slate-700">Funcionalidades</p>
-              <div className="grid gap-2 sm:grid-cols-2">
-                {FEATURE_FLAGS.map((key) => (
-                  <CheckboxField
-                    key={key}
-                    label={FLAG_LABELS[key]}
-                    checked={form.features[key] as boolean}
-                    onChange={(v) => setFeature(key, v)}
-                  />
-                ))}
-              </div>
-            </div>
-
-            <div className="flex gap-2 border-t border-slate-100 pt-4">
-              <Button
-                disabled={!form.name || saveMutation.isPending}
-                onClick={() => saveMutation.mutate()}
-              >
-                {saveMutation.isPending ? 'Guardando...' : 'Guardar plan'}
-              </Button>
-              <Button variant="ghost" onClick={closeForm}>
-                Cancelar
-              </Button>
-            </div>
-          </div>
-        </Card>
+      {notice && (
+        <div className="rounded-xl bg-slate-900 px-4 py-3 text-sm text-white">{notice}</div>
       )}
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {plans?.map((plan) => (
-          <Card key={plan._id} title={plan.name} description={plan.description}>
-            <p className="text-2xl font-bold text-slate-900">
-              {plan.price === 0 ? 'Gratis' : formatCurrency(plan.price)}
-              {plan.price > 0 && <span className="text-sm font-normal text-slate-400"> / mes</span>}
-            </p>
+      {retire.isError && <Alert error={retire.error} />}
 
-            <ul className="mt-3 space-y-1">
-              {FEATURE_FLAGS.filter((k) => plan.features[k]).map((k) => (
-                <li key={k} className="flex items-center gap-1.5 text-xs text-slate-600">
-                  <Check size={12} className="text-emerald-500 shrink-0" />
-                  {FLAG_LABELS[k]}
-                </li>
-              ))}
-            </ul>
-
-            <div className="mt-2 space-y-0.5">
-              {LIMIT_KEYS.filter((k) => (plan.features[k] as number) > 0).map((k) => (
-                <p key={k} className="text-xs text-slate-400">
-                  {LIMIT_LABELS[k].split(' (')[0]}: {plan.features[k]}
-                </p>
-              ))}
-            </div>
-
-            {!plan.isActive && (
-              <span className="mt-2 inline-block rounded-full bg-slate-100 px-2 py-0.5 text-xs text-slate-400">
-                Inactivo
-              </span>
-            )}
-
-            <div className="mt-4 flex gap-2 border-t border-slate-100 pt-3">
-              <Button size="sm" variant="secondary" onClick={() => openEdit(plan)}>
-                Editar
-              </Button>
-              {confirmDelete === plan._id ? (
-                <div className="flex items-center gap-1">
-                  <Button
-                    size="sm"
-                    variant="danger"
-                    disabled={deleteMutation.isPending}
-                    onClick={() => deleteMutation.mutate(plan._id)}
-                  >
-                    Confirmar
-                  </Button>
-                  <Button size="sm" variant="ghost" onClick={() => setConfirmDelete(null)}>
-                    <X size={14} />
-                  </Button>
-                </div>
-              ) : (
-                <Button size="sm" variant="ghost" onClick={() => setConfirmDelete(plan._id)}>
-                  <Trash2 size={14} />
-                </Button>
-              )}
-            </div>
-          </Card>
-        ))}
-      </div>
-
-      {plans?.length === 0 && !creating && (
-        <div className="rounded-xl border-2 border-dashed border-slate-200 py-12 text-center">
-          <p className="text-sm text-slate-500">No hay planes todavía. Crea el primero.</p>
+      {!plans?.length ? (
+        <EmptyState
+          icon={Package}
+          title="No hay planes todavía"
+          description="Crea el primero. Hasta entonces, los negocios sin suscripción operan sin límites."
+          action={
+            <Button onClick={() => setCreating(true)}>
+              <Plus size={15} />
+              Crear un plan
+            </Button>
+          }
+        />
+      ) : (
+        <div className="grid gap-4 lg:grid-cols-2 xl:grid-cols-3">
+          {plans.map((plan) => (
+            <PlanCard
+              key={plan._id}
+              plan={plan}
+              features={allFeatures}
+              onEdit={() => setEditing(plan)}
+              onRetire={() => setRetireTarget(plan)}
+            />
+          ))}
         </div>
       )}
+
+      {(creating || editing) && catalog && (
+        <PlanForm
+          plan={editing}
+          catalog={catalog.groups}
+          onClose={() => {
+            setCreating(false)
+            setEditing(null)
+          }}
+        />
+      )}
+
+      {retireTarget && (
+        <Modal
+          title={
+            retireTarget.tenantCount ? 'Retirar el plan' : `Eliminar "${retireTarget.name}"`
+          }
+          onClose={() => setRetireTarget(null)}
+          footer={
+            <>
+              <Button variant="ghost" onClick={() => setRetireTarget(null)}>
+                Cancelar
+              </Button>
+              <Button
+                variant="danger"
+                disabled={retire.isPending}
+                onClick={() => retire.mutate(retireTarget._id)}
+              >
+                {retire.isPending
+                  ? 'Procesando…'
+                  : retireTarget.tenantCount
+                    ? 'Retirar'
+                    : 'Eliminar'}
+              </Button>
+            </>
+          }
+        >
+          {retireTarget.tenantCount ? (
+            <p className="text-sm text-slate-600">
+              Lo usan <strong>{retireTarget.tenantCount}</strong> negocio(s), así que no se puede
+              borrar: quedaría una suscripción apuntando a la nada. Se va a marcar{' '}
+              <strong>inactivo y no público</strong>, así nadie nuevo lo contrata y los que ya lo
+              tienen siguen funcionando igual.
+            </p>
+          ) : (
+            <p className="text-sm text-slate-600">
+              Ningún negocio lo tiene, así que se borra de verdad. No se puede deshacer.
+            </p>
+          )}
+        </Modal>
+      )}
     </div>
+  )
+}
+
+function PlanCard({
+  plan,
+  features,
+  onEdit,
+  onRetire,
+}: {
+  plan: Plan
+  features: FeatureDefinition[]
+  onEdit: () => void
+  onRetire: () => void
+}) {
+  const flags = features.filter((f) => f.kind === 'flag' && plan.features[f.key])
+  const limits = features.filter((f) => f.kind === 'limit')
+
+  return (
+    <Card
+      title={
+        <span className="flex flex-wrap items-center gap-2">
+          {plan.name}
+          {!plan.isActive && <Badge tone="slate">Inactivo</Badge>}
+          {!plan.isPublic && (
+            <Badge tone="slate">
+              <EyeOff size={11} />
+              Oculto
+            </Badge>
+          )}
+        </span>
+      }
+      description={plan.description}
+    >
+      <div className="flex items-end justify-between gap-3">
+        <p className="text-2xl font-bold text-slate-900">
+          {plan.price === 0 ? 'Gratis' : formatCurrency(plan.price)}
+          {plan.price > 0 && <span className="text-sm font-normal text-slate-400"> /mes</span>}
+        </p>
+        {!!plan.tenantCount && (
+          <span className="flex items-center gap-1.5 text-xs text-slate-400">
+            <Users size={13} />
+            {plan.tenantCount} negocio{plan.tenantCount === 1 ? '' : 's'}
+          </span>
+        )}
+      </div>
+
+      {plan.code && <p className="mt-0.5 font-mono text-xs text-slate-400">{plan.code}</p>}
+
+      <dl className="mt-3 space-y-0.5 border-t border-slate-100 pt-3 text-xs">
+        {limits.map((f) => {
+          const value = Number(plan.features[f.key] ?? 0)
+          return (
+            <div key={f.key} className="flex justify-between gap-2">
+              <dt className="truncate text-slate-500">{f.label}</dt>
+              <dd className="shrink-0 font-medium tabular-nums text-slate-700">
+                {value === 0 ? 'Sin límite' : value}
+              </dd>
+            </div>
+          )
+        })}
+      </dl>
+
+      <ul className="mt-3 space-y-1 border-t border-slate-100 pt-3">
+        {flags.length === 0 && (
+          <li className="text-xs text-slate-400">Sin funcionalidades adicionales.</li>
+        )}
+        {flags.map((f) => (
+          <li key={f.key} className="flex items-start gap-1.5 text-xs text-slate-600">
+            <Check size={12} className="mt-0.5 shrink-0 text-emerald-500" />
+            {f.label}
+          </li>
+        ))}
+      </ul>
+
+      <div className="mt-4 flex gap-2 border-t border-slate-100 pt-3">
+        <Button size="sm" variant="secondary" onClick={onEdit}>
+          Editar
+        </Button>
+        <Button size="sm" variant="ghost" onClick={onRetire}>
+          {plan.tenantCount ? 'Retirar' : 'Eliminar'}
+        </Button>
+      </div>
+    </Card>
+  )
+}
+
+function PlanForm({
+  plan,
+  catalog,
+  onClose,
+}: {
+  plan: Plan | null
+  catalog: { key: string; label: string; features: FeatureDefinition[] }[]
+  onClose: () => void
+}) {
+  const qc = useQueryClient()
+
+  const [form, setForm] = useState<PlanInput>(() => ({
+    code: plan?.code ?? '',
+    name: plan?.name ?? '',
+    description: plan?.description ?? '',
+    price: plan?.price ?? 0,
+    priceYearly: plan?.priceYearly ?? null,
+    features: { ...(plan?.features ?? {}) } as FeatureMap,
+    isPublic: plan?.isPublic ?? true,
+    isActive: plan?.isActive ?? true,
+    sortOrder: plan?.sortOrder ?? 0,
+  }))
+
+  // Si se cambia de plan sin cerrar el diálogo, el formulario se rearma.
+  useEffect(() => {
+    setForm({
+      code: plan?.code ?? '',
+      name: plan?.name ?? '',
+      description: plan?.description ?? '',
+      price: plan?.price ?? 0,
+      priceYearly: plan?.priceYearly ?? null,
+      features: { ...(plan?.features ?? {}) } as FeatureMap,
+      isPublic: plan?.isPublic ?? true,
+      isActive: plan?.isActive ?? true,
+      sortOrder: plan?.sortOrder ?? 0,
+    })
+  }, [plan])
+
+  const save = useMutation({
+    mutationFn: () => {
+      const payload: PlanInput = {
+        ...form,
+        description: form.description?.trim() || undefined,
+        priceYearly: form.priceYearly ? Number(form.priceYearly) : null,
+      }
+      // El código no se edita: es lo que referencian los enlaces y los acuerdos.
+      if (plan) {
+        const { code: _code, ...rest } = payload
+        return updatePlan(plan._id, rest)
+      }
+      return createPlan({ ...payload, code: payload.code?.trim() || undefined })
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['superadmin-plans'] })
+      onClose()
+    },
+  })
+
+  function setFeature(key: FeatureDefinition['key'], value: boolean | number) {
+    setForm((f) => ({ ...f, features: { ...f.features, [key]: value } }))
+  }
+
+  return (
+    <Modal
+      title={plan ? `Editar: ${plan.name}` : 'Nuevo plan'}
+      description={
+        plan?.tenantCount
+          ? `Lo usan ${plan.tenantCount} negocio(s): el cambio les aplica al instante.`
+          : 'Elige qué incluye y qué bloquea.'
+      }
+      onClose={onClose}
+      wide
+      footer={
+        <>
+          <Button variant="ghost" onClick={onClose}>
+            Cancelar
+          </Button>
+          <Button disabled={!form.name.trim() || save.isPending} onClick={() => save.mutate()}>
+            {save.isPending ? 'Guardando…' : 'Guardar plan'}
+          </Button>
+        </>
+      }
+    >
+      <div className="space-y-5">
+        {save.isError && <Alert error={save.error} />}
+
+        <div className="grid gap-3 sm:grid-cols-2">
+          <Field label="Nombre" htmlFor="plan-name">
+            <Input
+              id="plan-name"
+              value={form.name}
+              onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
+            />
+          </Field>
+
+          <Field
+            label="Código"
+            htmlFor="plan-code"
+            hint={plan ? 'No se puede cambiar.' : 'Si lo dejas vacío, sale del nombre.'}
+          >
+            <Input
+              id="plan-code"
+              value={form.code ?? ''}
+              disabled={Boolean(plan)}
+              placeholder="negocio"
+              onChange={(e) => setForm((f) => ({ ...f, code: e.target.value }))}
+            />
+          </Field>
+
+          <Field label="Precio mensual (S/)" htmlFor="plan-price">
+            <Input
+              id="plan-price"
+              type="number"
+              min={0}
+              step="0.01"
+              value={form.price || ''}
+              onChange={(e) => setForm((f) => ({ ...f, price: Number(e.target.value) }))}
+            />
+          </Field>
+
+          <Field
+            label="Precio anual (S/)"
+            htmlFor="plan-price-year"
+            hint="El año completo, ya con descuento. Opcional."
+          >
+            <Input
+              id="plan-price-year"
+              type="number"
+              min={0}
+              step="0.01"
+              value={form.priceYearly ?? ''}
+              onChange={(e) =>
+                setForm((f) => ({
+                  ...f,
+                  priceYearly: e.target.value === '' ? null : Number(e.target.value),
+                }))
+              }
+            />
+          </Field>
+
+          <div className="sm:col-span-2">
+            <Field label="Descripción" htmlFor="plan-desc" hint="Una línea, para la tarjeta.">
+              <Textarea
+                id="plan-desc"
+                rows={2}
+                value={form.description ?? ''}
+                onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
+              />
+            </Field>
+          </div>
+
+          <Field label="Orden" htmlFor="plan-order" hint="Menor primero.">
+            <Input
+              id="plan-order"
+              type="number"
+              value={form.sortOrder}
+              onChange={(e) => setForm((f) => ({ ...f, sortOrder: Number(e.target.value) }))}
+            />
+          </Field>
+
+          <div className="space-y-2 self-end">
+            <CheckboxField
+              label="Se puede contratar"
+              hint="Uno inactivo sigue valiendo para quien ya lo tiene."
+              checked={form.isActive}
+              onChange={(v) => setForm((f) => ({ ...f, isActive: v }))}
+            />
+            <CheckboxField
+              label="Visible en la página de precios"
+              checked={form.isPublic}
+              onChange={(v) => setForm((f) => ({ ...f, isPublic: v }))}
+            />
+          </div>
+        </div>
+
+        {/* Todo lo de abajo sale del catálogo de la API, no de esta pantalla. */}
+        {catalog.map((group) => (
+          <div key={group.key} className="border-t border-slate-100 pt-4">
+            <p className="mb-3 text-[11px] font-semibold tracking-wide text-slate-400 uppercase">
+              {group.label}
+            </p>
+
+            <div className="grid gap-3 sm:grid-cols-2">
+              {group.features.map((feature) =>
+                feature.kind === 'limit' ? (
+                  <Field
+                    key={feature.key}
+                    label={feature.label}
+                    htmlFor={`f-${feature.key}`}
+                    hint={limitHint(feature)}
+                  >
+                    <Input
+                      id={`f-${feature.key}`}
+                      type="number"
+                      min={0}
+                      placeholder="0 = sin límite"
+                      value={(form.features[feature.key] as number) ?? ''}
+                      onChange={(e) => setFeature(feature.key, Number(e.target.value) || 0)}
+                    />
+                  </Field>
+                ) : (
+                  <div key={feature.key}>
+                    <CheckboxField
+                      label={feature.label}
+                      hint={feature.hint}
+                      checked={Boolean(form.features[feature.key])}
+                      onChange={(v) => setFeature(feature.key, v)}
+                    />
+                    <EnforcementNote feature={feature} />
+                  </div>
+                ),
+              )}
+            </div>
+          </div>
+        ))}
+      </div>
+    </Modal>
+  )
+}
+
+function limitHint(feature: FeatureDefinition): string {
+  const base = '0 = sin límite.'
+  return feature.hint ? `${base} ${feature.hint}` : base
+}
+
+/**
+ * Avisa cuando apagar la funcionalidad no bloquea nada en el servidor.
+ *
+ * Es la diferencia entre un plan y una promesa: si la API no lo rechaza, el
+ * negocio lo va a poder usar igual y conviene saberlo antes de venderlo.
+ */
+function EnforcementNote({ feature }: { feature: FeatureDefinition }) {
+  if (feature.enforcement === 'api') return null
+
+  return (
+    <p
+      className={cn(
+        'mt-1 ml-6.5 flex items-start gap-1 text-xs',
+        feature.enforcement === 'none' ? 'text-amber-600' : 'text-slate-400',
+      )}
+    >
+      {feature.enforcement === 'none' ? (
+        <>
+          <AlertTriangle size={11} className="mt-0.5 shrink-0" />
+          No bloquea nada todavía: el valor se guarda y no tiene efecto.
+        </>
+      ) : (
+        <>
+          <Eye size={11} className="mt-0.5 shrink-0" />
+          Solo se esconde del panel; no hay endpoint que bloquear.
+        </>
+      )}
+    </p>
   )
 }

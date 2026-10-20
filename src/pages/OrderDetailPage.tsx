@@ -36,6 +36,7 @@ import {
   StateBadge,
 } from '@/components/ui'
 import { ImageUploader } from '@/components/ImageUploader'
+import { useSubscription } from '@/hooks/useSubscription'
 import { StateIcon } from '@/lib/icons'
 import { cn, formatCurrency, formatDateTime } from '@/lib/cn'
 import type { Franja, PaymentKind, WorkflowKind, WorkflowState } from '@/types'
@@ -57,6 +58,7 @@ export function OrderDetailPage() {
     enabled: Boolean(id),
   })
   const { data: workflow } = useQuery({ queryKey: ['workflow'], queryFn: getWorkflow })
+  const { can } = useSubscription()
 
   const stateMutation = useMutation({
     mutationFn: (payload: { kind: WorkflowKind; stateId: string; link?: string }) =>
@@ -154,7 +156,7 @@ export function OrderDetailPage() {
         actions={
           <div className="flex items-center gap-2">
             {/* El comprobante recien tiene sentido con el pago completo. */}
-            {remaining <= 0 && totalPaid > 0 && (
+            {can('receipts') && remaining <= 0 && totalPaid > 0 && (
               <Link to={`/orders/${order._id}/receipt`}>
                 <Button variant="secondary">
                   <Receipt size={15} />

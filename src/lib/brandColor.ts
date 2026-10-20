@@ -1,5 +1,5 @@
 /**
- * El dueño elige un solo color; acá se deriva la escala completa (50–900) que
+ * El dueño elige un solo color; aquí se deriva la escala completa (50–900) que
  * usan las páginas públicas.
  *
  * Se conserva el tono y la saturación de lo que eligió, pero la luminosidad

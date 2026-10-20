@@ -193,7 +193,7 @@ export function OrdersPage() {
               <li key={order._id}>
                 <Link
                   to={`/orders/${order._id}`}
-                  className="block rounded-xl bg-white p-4 shadow-sm shadow-slate-900/[0.03] ring-1 ring-slate-200 transition-colors active:bg-slate-50"
+                  className="block rounded-xl bg-white p-4 shadow-card ring-1 ring-slate-200 transition-colors active:bg-slate-50"
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">

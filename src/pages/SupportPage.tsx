@@ -17,7 +17,7 @@ const CLOSED: TicketStatus[] = ['resolved', 'closed']
 /**
  * Portal de soporte del negocio: sus tickets y el estado de cada uno.
  *
- * El alta no vive acá sino en el diálogo global, que es el mismo que se abre
+ * El alta no vive aquí sino en el diálogo global, que es el mismo que se abre
  * desde un error. Así un reporte nace igual de completo venga de donde venga.
  */
 export function SupportPage() {
@@ -35,7 +35,7 @@ export function SupportPage() {
     <div className="space-y-6">
       <PageHeader
         title="Soporte"
-        description="Reportá un problema o seguí la conversación con el equipo de uTracker."
+        description="Reporta un problema o sigue la conversación con el equipo de uTracker."
         actions={
           <Button onClick={() => openReporter({ category: 'question' })}>
             <Plus size={15} />
@@ -50,8 +50,8 @@ export function SupportPage() {
       ) : !tickets?.length ? (
         <EmptyState
           icon={LifeBuoy}
-          title="No tenés tickets abiertos"
-          description="Si algo no funciona o no se entiende, abrí un ticket: queda registrado con los detalles técnicos y te respondemos por WhatsApp."
+          title="No tienes tickets abiertos"
+          description="Si algo no funciona o no se entiende, abre un ticket: queda registrado con los detalles técnicos y te respondemos por WhatsApp."
           action={
             <Button onClick={() => openReporter({ category: 'question' })}>
               <Plus size={15} />

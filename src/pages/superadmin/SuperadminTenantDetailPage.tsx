@@ -8,6 +8,7 @@ import {
   LogIn,
   MessageCircle,
   ShieldAlert,
+  SlidersHorizontal,
   Store,
   Ticket as TicketIcon,
   XCircle,
@@ -19,6 +20,7 @@ import {
   type HealthCheck,
 } from '@/api/support'
 import { apiErrorMessage } from '@/api/client'
+import { PlanOverridesDialog } from '@/components/PlanOverridesDialog'
 import { useAuthStore } from '@/stores/authStore'
 import {
   Alert,
@@ -62,6 +64,7 @@ const ROLE_LABELS: Record<MembershipRole, string> = {
 export function SuperadminTenantDetailPage() {
   const { id } = useParams<{ id: string }>()
   const [showAccess, setShowAccess] = useState(false)
+  const [showOverrides, setShowOverrides] = useState(false)
 
   const { data, isLoading, error } = useQuery({
     queryKey: ['tenant-detail', id],
@@ -79,6 +82,8 @@ export function SuperadminTenantDetailPage() {
   const activeAccess = supportAccesses.find(
     (a) => !a.revokedAt && new Date(a.expiresAt) > new Date(),
   )
+
+  const overrideCount = Object.keys(subscription?.overrides ?? {}).length
 
   return (
     <div className="space-y-6">
@@ -159,7 +164,17 @@ export function SuperadminTenantDetailPage() {
         </Card>
 
         <div className="space-y-5">
-          <Card title="Suscripción">
+          <Card
+            title="Suscripción"
+            actions={
+              subscription ? (
+                <Button size="sm" variant="secondary" onClick={() => setShowOverrides(true)}>
+                  <SlidersHorizontal size={14} />
+                  Excepciones
+                </Button>
+              ) : undefined
+            }
+          >
             {subscription ? (
               <dl className="space-y-1.5 text-sm">
                 <Row label="Plan" value={subscription.plan?.name ?? '—'} />
@@ -183,6 +198,16 @@ export function SuperadminTenantDetailPage() {
                   <Row label="Vence" value={formatDateTime(subscription.expiresAt)} />
                 )}
                 {subscription.notes && <Row label="Notas" value={subscription.notes} />}
+                {!!overrideCount && (
+                  <div className="flex items-center gap-2 pt-1">
+                    <dt className="shrink-0 text-slate-400">Excepciones:</dt>
+                    <dd>
+                      <Badge tone="brand">
+                        {overrideCount} clave{overrideCount === 1 ? '' : 's'} por encima del plan
+                      </Badge>
+                    </dd>
+                  </div>
+                )}
               </dl>
             ) : (
               <p className="text-sm text-slate-500">Sin suscripción asignada.</p>
@@ -297,6 +322,15 @@ export function SuperadminTenantDetailPage() {
           )}
         </Card>
       </div>
+
+      {showOverrides && subscription && (
+        <PlanOverridesDialog
+          tenantId={id!}
+          tenantName={tenant.name}
+          subscription={subscription}
+          onClose={() => setShowOverrides(false)}
+        />
+      )}
 
       {showAccess && (
         <GrantAccessDialog

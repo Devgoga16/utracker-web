@@ -81,7 +81,7 @@ export function TicketThread({
             <Textarea
               rows={3}
               value={body}
-              placeholder="Escribí tu respuesta…"
+              placeholder="Escribe tu respuesta…"
               onChange={(e) => setBody(e.target.value)}
               // Ctrl+Enter envía: el Enter solo tiene que poder hacer párrafos.
               onKeyDown={(e) => {

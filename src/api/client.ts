@@ -6,7 +6,7 @@ import { recordFailure } from '@/lib/problemReport'
  * Única fuente de verdad de a dónde vive la API.
  *
  * Se define con VITE_API_URL (solo el origen, sin `/api`). Todo lo demás
- * —cliente autenticado, refresh y endpoints públicos— cuelga de acá, así que
+ * —cliente autenticado, refresh y endpoints públicos— cuelga de aquí, así que
  * cambiar de entorno es cambiar esta variable y nada más.
  *
  * Ojo: Vite la resuelve al compilar, no al ejecutar. Si la cambias en Vercel

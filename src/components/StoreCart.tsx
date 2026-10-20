@@ -44,7 +44,7 @@ export function linePrice(line: CartLine) {
 
 /**
  * Adelanto de una línea. Es un espejo del cálculo del servidor, que es el que
- * manda: acá solo sirve para mostrárselo al cliente antes de confirmar.
+ * manda: aquí solo sirve para mostrárselo al cliente antes de confirmar.
  */
 export function lineAdvance(line: CartLine) {
   const p = line.product

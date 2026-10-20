@@ -1,17 +1,6 @@
 @import 'tailwindcss';
+@import './theme.css';
 
-@theme {
-  --color-brand-50: #eef2ff;
-  --color-brand-100: #e0e7ff;
-  --color-brand-200: #c7d2fe;
-  --color-brand-300: #a5b4fc;
-  --color-brand-400: #818cf8;
-  --color-brand-500: #6366f1;
-  --color-brand-600: #4f46e5;
-  --color-brand-700: #4338ca;
-  --color-brand-800: #3730a3;
-  --color-brand-900: #312e81;
-}
 
 html,
 body,
@@ -40,6 +29,21 @@ button,
 a,
 [role='button'] {
   -webkit-tap-highlight-color: transparent;
+}
+
+/**
+ * Anillo de foco único para todo lo que se puede enfocar.
+ *
+ * `focus-visible` y no `focus`: así el anillo sale cuando alguien navega con
+ * teclado y no cada vez que se toca un botón con el dedo. Antes cada control
+ * definía el suyo —o no definía ninguno—, y recorrer un formulario con Tab
+ * dejaba de mostrar dónde estabas.
+ */
+@utility focus-ring {
+  &:focus-visible {
+    outline: 2px solid var(--color-brand-500);
+    outline-offset: 2px;
+  }
 }
 
 /* Barra inferior y contenido tienen que respetar el notch / la barra
@@ -126,5 +130,15 @@ a,
   .animate-sheet,
   .animate-fade {
     animation: none;
+  }
+}
+
+/* La fila de socios: se corre la mitad, que es una copia exacta de la otra. */
+@keyframes marquee {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
   }
 }

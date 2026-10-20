@@ -1,14 +1,15 @@
 import { Fragment, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { AlertTriangle, MessageCircle, Stethoscope, Trash2, X } from 'lucide-react'
+import { AlertTriangle, Globe, MessageCircle, Stethoscope, Trash2, X } from 'lucide-react'
 import {
   assignSubscription,
   deleteTenant,
-  listSuperadminPlans,
   listSuperadminTenants,
+  setTenantShowcase,
   type DeletedTenantSummary,
 } from '@/api/superadmin'
+import { listPlansAdmin } from '@/api/plans'
 import { toggleTenantSubscription } from '@/api/billing'
 import type { TenantRow } from '@/api/superadmin'
 import { apiErrorMessage } from '@/api/client'
@@ -30,7 +31,7 @@ const STATUS_COLORS: Record<SubscriptionStatus, string> = {
 
 function AssignForm({ tenant, onClose }: { tenant: TenantRow; onClose: () => void }) {
   const qc = useQueryClient()
-  const { data: plans } = useQuery({ queryKey: ['superadmin-plans'], queryFn: listSuperadminPlans })
+  const { data: plans } = useQuery({ queryKey: ['superadmin-plans'], queryFn: listPlansAdmin })
 
   const [planId, setPlanId] = useState(tenant.subscription?.plan?._id ?? '')
   const [status, setStatus] = useState<SubscriptionStatus>(tenant.subscription?.status ?? 'trial')
@@ -115,6 +116,39 @@ function AssignForm({ tenant, onClose }: { tenant: TenantRow; onClose: () => voi
         </Button>
       </div>
     </div>
+  )
+}
+
+/**
+ * Mostrar o no al negocio como socio en el landing.
+ *
+ * Es su marca la que se usa para promocionar uTracker: se prende después de
+ * pedírselo. El dueño también puede cambiarlo desde sus Ajustes.
+ */
+function ShowcaseToggle({ tenant }: { tenant: TenantRow }) {
+  const qc = useQueryClient()
+  const on = Boolean(tenant.showcase)
+
+  const mutation = useMutation({
+    mutationFn: () => setTenantShowcase(tenant._id, !on),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['superadmin-tenants'] }),
+  })
+
+  return (
+    <button
+      type="button"
+      onClick={() => mutation.mutate()}
+      disabled={mutation.isPending}
+      title={on ? 'Aparece en el landing como socio' : 'No aparece en el landing'}
+      className={`focus-ring inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium ring-1 transition-[background-color,color,transform] duration-150 active:scale-95 disabled:opacity-50 ${
+        on
+          ? 'bg-violet-50 text-violet-700 ring-violet-200'
+          : 'bg-white text-slate-500 ring-slate-200 hover:text-slate-700'
+      }`}
+    >
+      <Globe size={12} />
+      {on ? 'En la web' : 'Oculto'}
+    </button>
   )
 }
 
@@ -378,6 +412,7 @@ export function SuperadminTenantsPage() {
                     </td>
                     <td className="px-4 py-3 text-right">
                       <div className="flex items-center justify-end gap-2">
+                        <ShowcaseToggle tenant={tenant} />
                         <ToggleButton tenant={tenant} />
                         <Button
                           size="sm"
@@ -470,6 +505,7 @@ export function SuperadminTenantsPage() {
               </p>
 
               <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-slate-100 pt-3">
+                <ShowcaseToggle tenant={tenant} />
                 <Link to={`/superadmin/tenants/${tenant._id}`}>
                   <Button size="sm" variant="secondary">
                     <Stethoscope size={14} />

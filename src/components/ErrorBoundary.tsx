@@ -71,7 +71,7 @@ function CrashScreen({
 
       <h1 className="text-lg font-semibold text-slate-900">Esta pantalla se rompió</h1>
       <p className="mt-1 max-w-sm text-sm text-slate-500">
-        No es algo que hayas hecho mal. Ya quedó registrado; podés reintentar o avisarnos para que
+        No es algo que hayas hecho mal. Ya quedó registrado; puedes reintentar o avisarnos para que
         lo arreglemos.
       </p>
 

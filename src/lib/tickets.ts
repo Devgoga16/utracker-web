@@ -12,7 +12,7 @@ export const TICKET_STATUS_LABELS: Record<TicketStatus, string> = {
   closed: 'Cerrado',
 }
 
-/** Lo mismo, pero visto desde soporte: quien espera es el negocio, no "vos". */
+/** Lo mismo, pero visto desde soporte: quien espera es el negocio, no "tú". */
 export const TICKET_STATUS_LABELS_SUPPORT: Record<TicketStatus, string> = {
   ...TICKET_STATUS_LABELS,
   waiting_customer: 'Esperando al negocio',

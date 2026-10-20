@@ -677,7 +677,7 @@ const DAY_NAMES = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Vierne
 /**
  * Cierre con la información que una tienda de verdad muestra: cómo pedir y a
  * qué hora atienden. El horario ya se configuraba en Ajustes pero solo se
- * usaba para el "Abierto ahora"; acá se aprovecha completo.
+ * usaba para el "Abierto ahora"; aquí se aprovecha completo.
  */
 function StoreFooter({ tenant }: { tenant: Tenant }) {
   const today = new Date().getDay()

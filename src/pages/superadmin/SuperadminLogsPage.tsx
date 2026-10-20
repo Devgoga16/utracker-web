@@ -46,11 +46,11 @@ const SOURCE_LABELS: Record<LogSource, string> = {
  * Visor de logs del sistema.
  *
  * Es la contraparte del código que se le muestra al usuario cuando algo falla:
- * él dice "me salió E3F9A1C2" y acá aparece el stack, el negocio, el usuario y
+ * él dice "me salió E3F9A1C2" y aquí aparece el stack, el negocio, el usuario y
  * el body de esa request exacta.
  */
 export function SuperadminLogsPage() {
-  // Los enlaces de un ticket y de la ficha de un negocio caen acá ya filtrados:
+  // Los enlaces de un ticket y de la ficha de un negocio caen aquí ya filtrados:
   // "ver el log de este error" tiene que ser un clic, no una búsqueda a mano.
   const [searchParams] = useSearchParams()
   const initialRef = searchParams.get('ref') ?? ''
@@ -239,7 +239,7 @@ export function SuperadminLogsPage() {
         <EmptyState
           icon={ScrollText}
           title="No hay eventos con estos filtros"
-          description="Probá ampliar el rango de fechas o quitar el filtro de nivel."
+          description="Prueba ampliar el rango de fechas o quitar el filtro de nivel."
         />
       ) : (
         <Card flush>

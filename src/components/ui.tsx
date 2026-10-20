@@ -42,7 +42,8 @@ export function Button({ variant = 'primary', size = 'md', className, ...props }
   return (
     <button
       className={cn(
-        'inline-flex items-center justify-center gap-2 rounded-lg font-medium transition-colors select-none disabled:cursor-not-allowed disabled:opacity-50',
+        // active:scale-[.98]: confirma el toque en mobile, donde no hay hover.
+        'focus-ring inline-flex items-center justify-center gap-2 rounded-lg font-medium transition-[background-color,box-shadow,transform] duration-150 select-none active:scale-[.98] disabled:cursor-not-allowed disabled:opacity-50 disabled:active:scale-100',
         buttonSizes[size],
         buttonVariants[variant],
         className,
@@ -65,7 +66,7 @@ export function IconButton({ label, tone = 'default', className, children, ...pr
       aria-label={label}
       title={label}
       className={cn(
-        'inline-flex size-9 shrink-0 items-center justify-center rounded-lg transition-colors',
+        'focus-ring inline-flex size-9 shrink-0 items-center justify-center rounded-lg transition-colors active:scale-95',
         tone === 'danger'
           ? 'text-slate-400 hover:bg-red-50 hover:text-red-600'
           : 'text-slate-400 hover:bg-slate-100 hover:text-slate-700',
@@ -142,7 +143,7 @@ export function Card({ className, children, title, description, actions, flush }
   return (
     <div
       className={cn(
-        'rounded-xl bg-white shadow-sm shadow-slate-900/[0.03] ring-1 ring-slate-200',
+        'rounded-xl bg-white shadow-card ring-1 ring-slate-200',
         className,
       )}
     >
@@ -183,10 +184,10 @@ interface SettingRowProps {
  * Una fila de configuración: etiqueta a la izquierda, control a la derecha.
  *
  * Es el patrón de toda pantalla de ajustes seria. Cuando cada sección inventa
- * su propio layout —chips acá, cajas allá— la página se vuelve ilegible aunque
+ * su propio layout —chips aquí, cajas allá— la página se vuelve ilegible aunque
  * cada pieza por separado se vea bien.
  *
- * En móvil se apila, porque a 375px no entran dos columnas útiles.
+ * En el celular se apila, porque a 375px no entran dos columnas útiles.
  */
 export function SettingRow({ label, hint, htmlFor, wide, children }: SettingRowProps) {
   return (
@@ -219,7 +220,7 @@ export function SettingGroup({
   children: ReactNode
 }) {
   return (
-    <section className="overflow-hidden rounded-xl bg-white shadow-sm shadow-slate-900/[0.03] ring-1 ring-slate-200">
+    <section className="overflow-hidden rounded-xl bg-white shadow-card ring-1 ring-slate-200">
       <header className="border-b border-slate-200 bg-slate-50/70 px-4 py-3 sm:px-5">
         <h2 className="text-sm font-semibold text-slate-900">{title}</h2>
         {description && <p className="mt-0.5 text-xs text-slate-500">{description}</p>}
@@ -256,7 +257,7 @@ export function Input({ className, ...props }: InputHTMLAttributes<HTMLInputElem
     <input
       className={cn(
         // text-base en mobile: por debajo de 16px Safari hace zoom al enfocar.
-        'w-full rounded-lg border-0 bg-white px-3 py-2.5 text-base text-slate-900 ring-1 ring-slate-300 transition-shadow placeholder:text-slate-400 focus:ring-2 focus:ring-brand-500 focus:outline-none sm:py-2 sm:text-sm',
+        'w-full rounded-lg border-0 bg-white px-3 py-2.5 text-base text-slate-900 ring-1 ring-slate-300 transition-shadow placeholder:text-slate-400 hover:ring-slate-400 focus:ring-2 focus:ring-brand-500 focus:outline-none disabled:cursor-not-allowed disabled:bg-slate-50 disabled:text-slate-500 sm:py-2 sm:text-sm',
         className,
       )}
       {...props}
@@ -268,7 +269,7 @@ export function Select({ className, ...props }: SelectHTMLAttributes<HTMLSelectE
   return (
     <select
       className={cn(
-        'w-full rounded-lg border-0 bg-white px-3 py-2.5 text-base text-slate-900 ring-1 ring-slate-300 transition-shadow focus:ring-2 focus:ring-brand-500 focus:outline-none sm:py-2 sm:text-sm',
+        'w-full cursor-pointer rounded-lg border-0 bg-white px-3 py-2.5 text-base text-slate-900 ring-1 ring-slate-300 transition-shadow hover:ring-slate-400 focus:ring-2 focus:ring-brand-500 focus:outline-none disabled:cursor-not-allowed disabled:bg-slate-50 disabled:text-slate-500 sm:py-2 sm:text-sm',
         className,
       )}
       {...props}
@@ -283,7 +284,7 @@ export function Textarea({
   return (
     <textarea
       className={cn(
-        'w-full resize-y rounded-lg border-0 bg-white px-3 py-2.5 text-base text-slate-900 ring-1 ring-slate-300 transition-shadow placeholder:text-slate-400 focus:ring-2 focus:ring-brand-500 focus:outline-none sm:py-2 sm:text-sm',
+        'w-full resize-y rounded-lg border-0 bg-white px-3 py-2.5 text-base text-slate-900 ring-1 ring-slate-300 transition-shadow placeholder:text-slate-400 hover:ring-slate-400 focus:ring-2 focus:ring-brand-500 focus:outline-none disabled:cursor-not-allowed disabled:bg-slate-50 sm:py-2 sm:text-sm',
         className,
       )}
       {...props}
@@ -305,7 +306,7 @@ export function CheckboxField({ label, hint, checked, onChange }: CheckboxFieldP
         type="checkbox"
         checked={checked}
         onChange={(e) => onChange(e.target.checked)}
-        className="mt-0.5 size-4 shrink-0 rounded border-slate-300 text-brand-600 focus:ring-brand-500"
+        className="focus-ring mt-0.5 size-4 shrink-0 cursor-pointer rounded border-slate-300 text-brand-600"
       />
       <span className="min-w-0">
         {label}
@@ -327,7 +328,7 @@ export function Chip({ active, count, className, children, ...props }: ChipProps
     <button
       type="button"
       className={cn(
-        'inline-flex shrink-0 items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium whitespace-nowrap ring-1 transition-colors',
+        'focus-ring inline-flex shrink-0 items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium whitespace-nowrap ring-1 transition-colors active:scale-95',
         active
           ? 'bg-slate-900 text-white ring-slate-900'
           : 'bg-white text-slate-600 ring-slate-300 hover:bg-slate-50',
@@ -376,7 +377,7 @@ interface StatCardProps {
 
 export function StatCard({ icon: Icon, label, value, hint, tone = 'slate' }: StatCardProps) {
   return (
-    <div className="rounded-xl bg-white p-4 shadow-sm shadow-slate-900/[0.03] ring-1 ring-slate-200">
+    <div className="rounded-xl bg-white p-4 shadow-card ring-1 ring-slate-200 transition-shadow hover:shadow-card-hover">
       <div className="flex items-center gap-2.5">
         {Icon && (
           <span
@@ -447,7 +448,7 @@ export function StateBadge({
  *
  * Si se le pasa el error en crudo (`error={mutation.error}`) y la falla es
  * reportable, aparece el botón para abrir un ticket ya armado con el contexto.
- * Está acá, en el componente, y no en cada página: así cualquier error que el
+ * Está aquí, en el componente, y no en cada página: así cualquier error que el
  * sistema ya muestra queda reportable sin tener que acordarse de cablearlo.
  */
 export function Alert({
@@ -504,10 +505,10 @@ interface EmptyStateProps {
 
 export function EmptyState({ title, description, icon: Icon, action }: EmptyStateProps) {
   return (
-    <div className="rounded-xl border-2 border-dashed border-slate-200 px-4 py-10 text-center sm:py-14">
+    <div className="rounded-xl bg-white px-4 py-10 text-center ring-1 ring-slate-200 sm:py-14">
       {Icon && (
-        <span className="mx-auto mb-3 flex size-11 items-center justify-center rounded-full bg-slate-100 text-slate-400">
-          <Icon size={20} />
+        <span className="mx-auto mb-3 flex size-12 items-center justify-center rounded-2xl bg-slate-50 text-slate-400 ring-1 ring-slate-100">
+          <Icon size={21} />
         </span>
       )}
       <p className="font-medium text-slate-700">{title}</p>
@@ -521,8 +522,8 @@ export function EmptyState({ title, description, icon: Icon, action }: EmptyStat
 
 export function Spinner({ inline }: { inline?: boolean }) {
   return (
-    <div className={cn('flex justify-center', inline ? 'py-6' : 'py-14')}>
-      <div className="size-6 animate-spin rounded-full border-2 border-slate-200 border-t-brand-600" />
+    <div className={cn('flex justify-center', inline ? 'py-6' : 'py-14')} role="status" aria-label="Cargando">
+      <div className="size-6 animate-spin rounded-full border-[2.5px] border-slate-200 border-t-brand-600" />
     </div>
   )
 }
@@ -663,7 +664,7 @@ export function Modal({ title, description, onClose, children, footer, wide }: M
         aria-modal="true"
         aria-label={title}
         className={cn(
-          'relative flex max-h-[92vh] w-full flex-col overflow-hidden rounded-t-2xl bg-white shadow-xl sm:rounded-2xl',
+          'relative flex max-h-[92vh] w-full flex-col overflow-hidden rounded-t-2xl bg-white shadow-float sm:rounded-2xl',
           wide ? 'sm:max-w-2xl' : 'sm:max-w-md',
         )}
       >

@@ -31,6 +31,8 @@ import { PublicCampaignPage } from '@/pages/PublicCampaignPage'
 import { HostedCheckoutPage } from '@/pages/HostedCheckoutPage'
 import { IntegrationPage } from '@/pages/IntegrationPage'
 import { SupportPage } from '@/pages/SupportPage'
+import { TeamPage } from '@/pages/TeamPage'
+import { AcceptInvitePage } from '@/pages/AcceptInvitePage'
 import { TicketDetailPage } from '@/pages/TicketDetailPage'
 import { SuperadminTicketsPage } from '@/pages/superadmin/SuperadminTicketsPage'
 import { SuperadminTicketDetailPage } from '@/pages/superadmin/SuperadminTicketDetailPage'
@@ -44,6 +46,8 @@ export const router = createBrowserRouter([
   { path: '/order/:token', element: <PublicOrderLinkPage /> },
   { path: '/track/:token', element: <TrackOrderPage /> },
   { path: '/store/:slug', element: <StorePage /> },
+  // Invitacion al equipo: la abre el invitado, sin sesion.
+  { path: '/invite/:token', element: <AcceptInvitePage /> },
   { path: '/c/:token', element: <PublicCampaignPage /> },
   // Checkout hospedado: lo abre la web de un tercero, sin sesión.
   { path: '/checkout/:token', element: <HostedCheckoutPage /> },
@@ -92,6 +96,7 @@ export const router = createBrowserRouter([
               { path: '/settings', element: <SettingsPage /> },
               { path: '/integration', element: <IntegrationPage /> },
               { path: '/billing', element: <BillingPage /> },
+              { path: '/team', element: <TeamPage /> },
               { path: '/support', element: <SupportPage /> },
               { path: '/support/:id', element: <TicketDetailPage /> },
             ],

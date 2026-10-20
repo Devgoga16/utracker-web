@@ -18,7 +18,7 @@ import {
  * Bot compartido de uTracker.
  *
  * Ya no hay pantalla de QR: la sesión se administra fuera de uTracker y la API
- * del bot no expone ni estado ni código. Lo único verificable desde acá es si
+ * del bot no expone ni estado ni código. Lo único verificable desde aquí es si
  * tenemos credenciales y si un envío real llega.
  */
 export function SuperadminWhatsappPage() {

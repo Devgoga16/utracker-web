@@ -96,7 +96,7 @@ export function FinancesPage() {
     ...(productId && { productId }),
   }
 
-  // El periodo tiene su propia tira de chips, así que no cuenta acá.
+  // El periodo tiene su propia tira de chips, así que no cuenta aquí.
   const extraFilterCount = [type, fulfillmentStateId, paymentStateId, productId].filter(
     Boolean,
   ).length
