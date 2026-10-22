@@ -73,11 +73,11 @@ export function TenantWhatsappDialog({
         role="dialog"
         aria-modal="true"
         aria-label={`WhatsApp de ${tenant.name}`}
-        className="flex max-h-[90dvh] w-full max-w-lg flex-col overflow-hidden rounded-2xl bg-white shadow-2xl"
+        className="flex max-h-[90dvh] w-full max-w-lg flex-col overflow-hidden rounded-xl bg-white shadow-2xl"
       >
         <div className="flex items-start gap-3 border-b border-slate-100 p-5">
           <div className="min-w-0 flex-1">
-            <h2 className="font-bold text-slate-900">WhatsApp</h2>
+            <h2 className="font-semibold text-slate-900">WhatsApp</h2>
             <p className="mt-0.5 truncate text-sm text-slate-500">{tenant.name}</p>
           </div>
           <IconButton label="Cerrar" onClick={onClose}>
@@ -180,7 +180,7 @@ export function TenantWhatsappDialog({
               )}
 
               {save.isSuccess && (
-                <p className="flex items-center gap-1.5 text-sm font-medium text-emerald-700">
+                <p className="flex items-center gap-1.5 text-sm font-medium text-success-700">
                   <Check size={15} />
                   Guardado
                 </p>
@@ -214,10 +214,10 @@ export function TenantWhatsappDialog({
                 </Field>
 
                 {test.isError && (
-                  <p className="mt-2 text-xs text-red-600">{apiErrorMessage(test.error)}</p>
+                  <p className="mt-2 text-xs text-danger-600">{apiErrorMessage(test.error)}</p>
                 )}
                 {test.isSuccess && (
-                  <p className="mt-2 flex items-center gap-1.5 text-xs font-medium text-emerald-700">
+                  <p className="mt-2 flex items-center gap-1.5 text-xs font-medium text-success-700">
                     <Check size={13} />
                     Enviado a {test.data.to}
                   </p>

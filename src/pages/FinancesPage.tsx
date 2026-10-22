@@ -2,12 +2,7 @@ import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import {
   BarChart2,
-  Clock,
-  DollarSign,
-  Receipt,
   SlidersHorizontal,
-  TrendingUp,
-  Wallet,
 } from 'lucide-react'
 import { getFinanceSummary, getFinanceOrders, type FinanceFilters } from '@/api/finance'
 import { getWorkflow } from '@/api/tenants'
@@ -26,7 +21,7 @@ import {
   Select,
   Spinner,
   StateBadge,
-  StatCard,
+  StatStrip,
 } from '@/components/ui'
 import { cn, formatCurrency } from '@/lib/cn'
 import type { OrderType } from '@/types'
@@ -144,7 +139,7 @@ export function FinancesPage() {
             {extraFilterCount > 0 && (
               <span
                 className={cn(
-                  'flex size-5 items-center justify-center rounded-full text-[11px] font-bold',
+                  'flex size-5 items-center justify-center rounded-full text-[11px] font-semibold',
                   showFilters ? 'bg-white/20 text-white' : 'bg-brand-100 text-brand-700',
                 )}
               >
@@ -291,39 +286,29 @@ export function FinancesPage() {
         <Spinner />
       ) : summary ? (
         <>
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            <StatCard
-              icon={TrendingUp}
-              label="Total facturado"
-              value={formatCurrency(summary.totalRevenue)}
-              hint={`${summary.orderCount} pedido${summary.orderCount === 1 ? '' : 's'}`}
-              tone="brand"
-            />
-            <StatCard
-              icon={DollarSign}
-              label="Total cobrado"
-              value={formatCurrency(summary.totalCollected)}
-              hint={`${Math.round(collectedRatio * 100)}% de lo facturado`}
-              tone="green"
-            />
-            <StatCard
-              icon={Clock}
-              label="Pendiente por cobrar"
-              value={formatCurrency(summary.totalPending)}
-              hint={summary.totalPending > 0 ? 'Falta cobrar' : 'Todo cobrado'}
-              tone={summary.totalPending > 0 ? 'amber' : 'green'}
-            />
-            <StatCard
-              icon={Receipt}
-              label="Ticket promedio"
-              value={formatCurrency(summary.avgOrderValue)}
-            />
-            <StatCard
-              icon={Wallet}
-              label="Pedidos en el periodo"
-              value={String(summary.orderCount)}
-            />
-          </div>
+          {/* Valores en neutro; el color solo en la línea de abajo, cuando dice algo. */}
+          <StatStrip
+            stats={[
+              {
+                label: 'Total vendido',
+                value: formatCurrency(summary.totalRevenue),
+                hint: `${summary.orderCount} pedido${summary.orderCount === 1 ? '' : 's'} · sin cancelados`,
+              },
+              {
+                label: 'Total cobrado',
+                value: formatCurrency(summary.totalCollected),
+                hint: `${Math.round(collectedRatio * 100)} % de lo vendido`,
+                tone: collectedRatio >= 1 ? 'good' : 'default',
+              },
+              {
+                label: 'Pendiente por cobrar',
+                value: formatCurrency(summary.totalPending),
+                hint: summary.totalPending > 0 ? 'Saldos de pedidos abiertos' : 'Todo cobrado',
+                tone: summary.totalPending > 0 ? 'warn' : 'good',
+              },
+              { label: 'Ticket promedio', value: formatCurrency(summary.avgOrderValue), hint: 'Por pedido' },
+            ]}
+          />
 
           {/* Barra de avance de cobro: lee más rápido que dos cifras sueltas. */}
           {summary.totalRevenue > 0 && (
@@ -336,7 +321,7 @@ export function FinancesPage() {
               </div>
               <div className="mt-2 h-2 overflow-hidden rounded-full bg-slate-100">
                 <div
-                  className="h-full rounded-full bg-emerald-500 transition-[width] duration-500"
+                  className="h-full rounded-full bg-success-500 transition-[width] duration-500"
                   style={{ width: `${Math.min(100, collectedRatio * 100)}%` }}
                 />
               </div>
@@ -356,7 +341,7 @@ export function FinancesPage() {
                   return (
                     <li key={p.productId}>
                       <div className="flex items-center gap-3">
-                        <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-slate-100 text-xs font-bold text-slate-500">
+                        <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-slate-100 text-xs font-semibold text-slate-500">
                           {i + 1}
                         </span>
                         <span className="min-w-0 flex-1 truncate text-sm font-medium text-slate-800">
@@ -451,9 +436,9 @@ export function FinancesPage() {
                           className={cn(
                             'px-5 py-3 text-right font-medium tabular-nums',
                             cobrado >= order.totalAmount
-                              ? 'text-emerald-600'
+                              ? 'text-success-600'
                               : cobrado > 0
-                                ? 'text-amber-600'
+                                ? 'text-warning-600'
                                 : 'text-slate-300',
                           )}
                         >
@@ -509,9 +494,9 @@ export function FinancesPage() {
                         className={cn(
                           'font-semibold tabular-nums',
                           cobrado >= order.totalAmount
-                            ? 'text-emerald-600'
+                            ? 'text-success-600'
                             : cobrado > 0
-                              ? 'text-amber-600'
+                              ? 'text-warning-600'
                               : 'text-slate-300',
                         )}
                       >

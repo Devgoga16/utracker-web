@@ -31,6 +31,8 @@ export interface TrackingView {
     remaining: number
     /** Comprobante enviado que el negocio aún no confirma. */
     pending: number
+    /** Lo que el negocio le devolvió; ya está restado de totalPaid. */
+    refunded?: number
   }
   /** El negocio rechazó un comprobante: hay algo que regularizar. */
   paymentRejected: boolean

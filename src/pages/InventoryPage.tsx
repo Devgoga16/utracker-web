@@ -2,14 +2,12 @@ import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
-  AlertTriangle,
   History,
   Minus,
   Package,
   PackageSearch,
   Plus,
   TrendingDown,
-  XCircle,
 } from 'lucide-react'
 import { listInventory, adjustStock, listMovements } from '@/api/inventory'
 import type { InventoryRow } from '@/api/inventory'
@@ -17,23 +15,29 @@ import {
   Alert,
   Badge,
   Button,
-  Card,
   EmptyState,
   Field,
   Input,
   PageHeader,
   SectionLabel,
   Spinner,
-  StatCard,
+  StatStrip,
+  Tabs,
 } from '@/components/ui'
 import { cn, formatCurrency } from '@/lib/cn'
 import type { StockMovement } from '@/types'
+import { useRole } from '@/hooks/useRole'
+import { getWorkflow } from '@/api/tenants'
+import { stockRuleText } from '@/lib/stockRule'
 
 export function InventoryPage() {
   const { data, isLoading, error } = useQuery({
     queryKey: ['inventory'],
     queryFn: listInventory,
   })
+
+  // Para contar cuándo sale el stock con el estado real de este negocio.
+  const { data: workflow } = useQuery({ queryKey: ['workflow'], queryFn: getWorkflow })
 
   const [onlyAlerts, setOnlyAlerts] = useState(false)
 
@@ -67,6 +71,18 @@ export function InventoryPage() {
 
       {error && <Alert error={error} />}
 
+      {workflow && (
+        <p className="flex gap-2 rounded-xl bg-white px-4 py-3 text-sm leading-relaxed text-slate-600 border border-slate-200">
+          <PackageSearch size={16} className="mt-0.5 shrink-0 text-slate-400" />
+          <span>
+            {stockRuleText(workflow.fulfillment)}{' '}
+            <Link to="/workflow" className="font-medium text-brand-600 hover:underline">
+              Cambiarlo en Workflow
+            </Link>
+          </span>
+        </p>
+      )}
+
       {products?.length === 0 ? (
         <EmptyState
           icon={PackageSearch}
@@ -80,45 +96,38 @@ export function InventoryPage() {
         />
       ) : (
         <>
-          <div className="grid gap-3 sm:grid-cols-3">
-            <StatCard
-              icon={Package}
-              label="Productos rastreados"
-              value={String(products?.length ?? 0)}
-              hint={`Valor en stock: ${formatCurrency(stockValue)}`}
-            />
-            <StatCard
-              icon={AlertTriangle}
-              label="Stock bajo"
-              value={String(lowStock)}
-              hint="según el umbral de cada producto"
-              tone={lowStock > 0 ? 'amber' : 'slate'}
-            />
-            <StatCard
-              icon={XCircle}
-              label="Sin stock"
-              value={String(outOfStock)}
-              hint={outOfStock > 0 ? 'Requieren reposición' : 'Todo disponible'}
-              tone={outOfStock > 0 ? 'red' : 'slate'}
-            />
-          </div>
+          <StatStrip
+            stats={[
+              { label: 'Productos con stock', value: String(products?.length ?? 0), hint: `Valor en stock: ${formatCurrency(stockValue)}` },
+              {
+                label: 'Stock bajo',
+                value: String(lowStock),
+                hint: lowStock > 0 ? 'Bajo el umbral de cada producto' : 'Ninguno bajo su umbral',
+                tone: lowStock > 0 ? 'warn' : 'default',
+              },
+              {
+                label: 'Sin stock',
+                value: String(outOfStock),
+                hint: outOfStock > 0 ? 'Requieren reposición' : 'Todo disponible',
+                tone: outOfStock > 0 ? 'bad' : 'default',
+              },
+            ]}
+          />
 
-          {(lowStock > 0 || outOfStock > 0) && (
-            <label className="flex cursor-pointer items-center gap-2.5 text-sm text-slate-700">
-              <input
-                type="checkbox"
-                checked={onlyAlerts}
-                onChange={(e) => setOnlyAlerts(e.target.checked)}
-                className="size-4 shrink-0 rounded border-slate-300 text-brand-600 focus:ring-brand-500"
-              />
-              Ver solo los que necesitan reposición
-            </label>
-          )}
+          <Tabs
+            value={onlyAlerts ? 'alerts' : 'all'}
+            onChange={(key) => setOnlyAlerts(key === 'alerts')}
+            items={[
+              { key: 'all', label: 'Todos', count: products?.length ?? 0 },
+              { key: 'alerts', label: 'Necesitan reposición', count: lowStock + outOfStock },
+            ]}
+          />
 
           {visible?.length === 0 ? (
             <EmptyState title="Nada que reponer" description="Todos los productos tienen stock suficiente." />
           ) : (
-            <div className="space-y-3">
+            // Una sola lista con separadores, no una tarjeta por producto.
+            <div className="divide-y divide-slate-200 overflow-hidden rounded-xl border border-slate-200 bg-white">
               {visible?.map((product) => (
                 <ProductRow key={product._id} product={product} />
               ))}
@@ -131,6 +140,8 @@ export function InventoryPage() {
 }
 
 function ProductRow({ product }: { product: InventoryRow }) {
+  // Ajustar el stock cambia el inventario de todos: dueño y administrador.
+  const { isManager } = useRole()
   const [panel, setPanel] = useState<'none' | 'adjust' | 'history'>('none')
   const queryClient = useQueryClient()
 
@@ -149,13 +160,13 @@ function ProductRow({ product }: { product: InventoryRow }) {
   }
 
   return (
-    <Card flush>
-      <div className="flex items-center gap-3 p-4">
+    <div>
+      <div className="flex items-center gap-3 px-4 py-3">
         {product.images[0] ? (
           <img
             src={product.images[0]}
             alt=""
-            className="size-12 shrink-0 rounded-lg object-cover ring-1 ring-slate-200"
+            className="size-12 shrink-0 rounded-lg object-cover border border-slate-200"
           />
         ) : (
           <div className="flex size-12 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-slate-300">
@@ -175,7 +186,7 @@ function ProductRow({ product }: { product: InventoryRow }) {
             <p
               className={cn(
                 'mt-1 flex items-center gap-1 text-xs font-medium',
-                daysLeft! <= 3 ? 'text-red-600' : 'text-amber-600',
+                daysLeft! <= 3 ? 'text-danger-600' : 'text-warning-600',
               )}
             >
               <TrendingDown size={11} />
@@ -192,10 +203,10 @@ function ProductRow({ product }: { product: InventoryRow }) {
         <div className="shrink-0 text-right">
           <p
             className={cn(
-              'text-xl font-bold tabular-nums',
-              tone === 'green' && 'text-emerald-600',
-              tone === 'amber' && 'text-amber-600',
-              tone === 'red' && 'text-red-600',
+              'text-xl font-semibold tabular-nums',
+              tone === 'green' && 'text-success-600',
+              tone === 'amber' && 'text-warning-600',
+              tone === 'red' && 'text-danger-600',
             )}
           >
             {stock}
@@ -204,13 +215,15 @@ function ProductRow({ product }: { product: InventoryRow }) {
         </div>
 
         <div className="flex shrink-0 items-center gap-1">
-          <Button
-            size="sm"
-            variant={panel === 'adjust' ? 'primary' : 'secondary'}
-            onClick={() => toggle('adjust')}
-          >
-            Ajustar
-          </Button>
+          {isManager && (
+            <Button
+              size="sm"
+              variant={panel === 'adjust' ? 'primary' : 'secondary'}
+              onClick={() => toggle('adjust')}
+            >
+              Ajustar
+            </Button>
+          )}
           <button
             type="button"
             aria-label="Ver historial"
@@ -246,7 +259,7 @@ function ProductRow({ product }: { product: InventoryRow }) {
           <MovementHistory productId={product._id} />
         </div>
       )}
-    </Card>
+    </div>
   )
 }
 
@@ -323,7 +336,7 @@ function AdjustForm({ product, onDone }: { product: InventoryRow; onDone: () => 
           <span className="tabular-nums">
             {current} → <strong className="text-slate-900">{next}</strong> unidades
           </span>
-          {next < 0 && <span className="text-red-600">El stock quedaría negativo.</span>}
+          {next < 0 && <span className="text-danger-600">El stock quedaría negativo.</span>}
         </p>
       )}
 
@@ -370,8 +383,8 @@ function MovementRow({ movement }: { movement: StockMovement }) {
     <li className="flex items-start gap-2.5 text-sm">
       <span
         className={cn(
-          'mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full text-[11px] font-bold',
-          isIn ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700',
+          'mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full text-[11px] font-semibold',
+          isIn ? 'bg-success-100 text-success-700' : 'bg-danger-100 text-danger-700',
         )}
       >
         {isIn ? '+' : '−'}
@@ -379,7 +392,7 @@ function MovementRow({ movement }: { movement: StockMovement }) {
 
       <div className="min-w-0 flex-1">
         <p className="text-slate-800">
-          <span className={cn('font-semibold tabular-nums', isIn ? 'text-emerald-700' : 'text-red-700')}>
+          <span className={cn('font-semibold tabular-nums', isIn ? 'text-success-700' : 'text-danger-700')}>
             {isIn ? '+' : ''}
             {movement.delta} u.
           </span>

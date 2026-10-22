@@ -2,6 +2,7 @@ import { createBrowserRouter, Navigate } from 'react-router-dom'
 import { AppLayout } from '@/components/AppLayout'
 import { SuperadminLayout } from '@/components/SuperadminLayout'
 import { RequireAuth, RequireSuperAdmin, RequireTenant } from '@/components/guards'
+import { CHANGE_PASSWORD_PATH } from '@/lib/paths'
 import { LandingPage } from '@/pages/LandingPage'
 import { LoginPage } from '@/pages/LoginPage'
 import { RegisterPage } from '@/pages/RegisterPage'
@@ -34,10 +35,15 @@ import { SupportPage } from '@/pages/SupportPage'
 import { TeamPage } from '@/pages/TeamPage'
 import { AcceptInvitePage } from '@/pages/AcceptInvitePage'
 import { TicketDetailPage } from '@/pages/TicketDetailPage'
+import { PosPage } from '@/pages/PosPage'
+import { TodayPage } from '@/pages/TodayPage'
+import { CashSessionDetailPage, CashSessionsPage } from '@/pages/CashSessionsPage'
 import { SuperadminTicketsPage } from '@/pages/superadmin/SuperadminTicketsPage'
 import { SuperadminTicketDetailPage } from '@/pages/superadmin/SuperadminTicketDetailPage'
 import { SuperadminLogsPage } from '@/pages/superadmin/SuperadminLogsPage'
 import { SuperadminTenantDetailPage } from '@/pages/superadmin/SuperadminTenantDetailPage'
+import { SuperadminUsersPage } from '@/pages/superadmin/SuperadminUsersPage'
+import { ChangePasswordPage } from '@/pages/ChangePasswordPage'
 
 export const router = createBrowserRouter([
   { path: '/', element: <LandingPage /> },
@@ -56,6 +62,7 @@ export const router = createBrowserRouter([
     element: <RequireAuth />,
     children: [
       { path: '/tenants', element: <TenantsPage /> },
+      { path: CHANGE_PASSWORD_PATH, element: <ChangePasswordPage /> },
       {
         element: <RequireSuperAdmin />,
         children: [
@@ -66,6 +73,7 @@ export const router = createBrowserRouter([
               { path: '/superadmin/plans', element: <SuperadminPlansPage /> },
               { path: '/superadmin/tenants', element: <SuperadminTenantsPage /> },
               { path: '/superadmin/tenants/:id', element: <SuperadminTenantDetailPage /> },
+              { path: '/superadmin/users', element: <SuperadminUsersPage /> },
               { path: '/superadmin/tickets', element: <SuperadminTicketsPage /> },
               { path: '/superadmin/tickets/:id', element: <SuperadminTicketDetailPage /> },
               { path: '/superadmin/logs', element: <SuperadminLogsPage /> },
@@ -81,8 +89,12 @@ export const router = createBrowserRouter([
           {
             element: <AppLayout />,
             children: [
+              { path: '/today', element: <TodayPage /> },
               { path: '/orders', element: <OrdersPage /> },
               { path: '/calendar', element: <CalendarPage /> },
+              { path: '/pos', element: <PosPage /> },
+              { path: '/pos/cajas', element: <CashSessionsPage /> },
+              { path: '/pos/cajas/:id', element: <CashSessionDetailPage /> },
               { path: '/orders/new', element: <NewOrderPage /> },
               { path: '/orders/:id', element: <OrderDetailPage /> },
               { path: '/orders/:id/receipt', element: <ReceiptPage /> },

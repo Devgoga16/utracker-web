@@ -197,7 +197,7 @@ function PlanCard({
       description={plan.description}
     >
       <div className="flex items-end justify-between gap-3">
-        <p className="text-2xl font-bold text-slate-900">
+        <p className="text-2xl font-semibold text-slate-900">
           {plan.price === 0 ? 'Gratis' : formatCurrency(plan.price)}
           {plan.price > 0 && <span className="text-sm font-normal text-slate-400"> /mes</span>}
         </p>
@@ -231,7 +231,7 @@ function PlanCard({
         )}
         {flags.map((f) => (
           <li key={f.key} className="flex items-start gap-1.5 text-xs text-slate-600">
-            <Check size={12} className="mt-0.5 shrink-0 text-emerald-500" />
+            <Check size={12} className="mt-0.5 shrink-0 text-success-500" />
             {f.label}
           </li>
         ))}
@@ -487,7 +487,7 @@ function EnforcementNote({ feature }: { feature: FeatureDefinition }) {
     <p
       className={cn(
         'mt-1 ml-6.5 flex items-start gap-1 text-xs',
-        feature.enforcement === 'none' ? 'text-amber-600' : 'text-slate-400',
+        feature.enforcement === 'none' ? 'text-warning-600' : 'text-slate-400',
       )}
     >
       {feature.enforcement === 'none' ? (

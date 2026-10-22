@@ -14,7 +14,7 @@ export interface ScheduledFor {
 }
 export type WorkflowKind = 'fulfillment' | 'payment'
 export type OrderType = 'pickup' | 'delivery_third_party' | 'delivery_own'
-export type OrderCreatedVia = 'manual' | 'order_link' | 'store'
+export type OrderCreatedVia = 'manual' | 'order_link' | 'store' | 'pos'
 export type OrderLinkStatus = 'pending' | 'used' | 'expired' | 'cancelled'
 export type OrderLinkDeliveryType = OrderType | 'customer_choice'
 
@@ -23,6 +23,21 @@ export interface User {
   name: string
   email: string
   isSuperAdmin?: boolean
+  /** Entró con una contraseña temporal del superadmin: tiene que elegir una propia. */
+  mustChangePassword?: boolean
+}
+
+/** Una cuenta vista desde el superadmin, con los negocios donde está. */
+export interface AdminUser {
+  _id: string
+  name: string
+  email: string
+  isActive: boolean
+  isSuperAdmin: boolean
+  mustChangePassword?: boolean
+  passwordChangedAt?: string
+  createdAt: string
+  tenants: { _id: string; name: string; role: MembershipRole; isActive: boolean }[]
 }
 
 export type SubscriptionStatus = 'trial' | 'active' | 'suspended'
@@ -92,6 +107,7 @@ export type FeatureKey =
   | 'orderCalendar'
   | 'deliveryTypes'
   | 'deliveryAttempts'
+  | 'pos'
   // Cobros
   | 'advancePayments'
   | 'receipts'
@@ -347,7 +363,13 @@ export interface DeliveryInfo {
 
 export type PaymentKind = 'advance' | 'balance'
 
+/** Cómo se cobró. Los pagos de antes del punto de venta no lo tienen. */
+export type PaymentMethodKind = 'cash' | 'yape' | 'plin' | 'card' | 'transfer' | 'other'
+
 export interface PaymentEntry {
+  /** Lo trae todo pago al abrir el pedido; las listas pueden no tenerlo. */
+  _id?: string
+  /** Lo deduce el servidor: «advance» si dejó saldo, «balance» si completó el total. */
   kind: PaymentKind
   amount: number
   proofImageUrl?: string
@@ -357,6 +379,10 @@ export interface PaymentEntry {
   validatedAt?: string
   registeredAt: string
   registeredBy?: string
+  method?: PaymentMethodKind
+  /** Con cuánto pagó en efectivo; el vuelto es esto menos `amount`. */
+  received?: number
+  cashSession?: string
 }
 
 /** Display data is frozen at transition time — editing the workflow later never rewrites it. */
@@ -368,6 +394,18 @@ export interface StateHistoryEntry {
   stateIcon?: string
   changedAt: string
   changedBy?: string
+  /** El motivo, cuando lo hay: una cancelación, una devolución. */
+  note?: string
+}
+
+/** Dinero devuelto al cliente. */
+export interface Refund {
+  _id?: string
+  amount: number
+  method?: PaymentMethodKind
+  note?: string
+  at: string
+  by?: string
 }
 
 export interface Order {
@@ -383,12 +421,17 @@ export interface Order {
   paymentState: WorkflowState
   stateHistory: StateHistoryEntry[]
   payments: PaymentEntry[]
+  refunds?: Refund[]
   createdVia: OrderCreatedVia
   orderLink?: string
   campaign?: string
   fulfillmentLink?: string
   scheduledFor?: ScheduledFor
   notes?: string
+  /** Caja de la venta de mostrador. */
+  cashSession?: string
+  /** Venta de mostrador anulada. */
+  voidedAt?: string
   createdAt: string
   updatedAt: string
 }
@@ -565,4 +608,49 @@ export interface PublicInvitation {
   /** No tiene cuenta: hay que pedirle nombre y contraseña nueva. */
   needsAccount: boolean
   name: string | null
+}
+
+/* ─────────────────────────── Punto de venta ─────────────────────────── */
+
+export interface CashMovement {
+  type: 'in' | 'out'
+  amount: number
+  note?: string
+  at: string
+  by?: { _id: string; name: string } | string
+}
+
+export interface CashSummary {
+  salesCount: number
+  salesTotal: number
+  byMethod: Partial<Record<PaymentMethodKind, number>>
+  /** Devuelto a clientes desde esta caja; ya restado de byMethod. */
+  refunds?: number
+  cashIn: number
+  cashOut: number
+  expectedCash: number
+}
+
+export interface CashSession {
+  _id: string
+  tenant: string
+  status: 'open' | 'closed'
+  openingAmount: number
+  openedAt: string
+  openedBy?: { _id: string; name: string }
+  movements?: CashMovement[]
+  closedAt?: string
+  closedBy?: { _id: string; name: string }
+  countedCash?: number
+  difference?: number
+  closingNote?: string
+  summary?: CashSummary
+}
+
+/** Una venta de mostrador tal como la devuelve la caja. */
+export interface PosSale extends Omit<Order, 'customer' | 'fulfillmentState' | 'paymentState'> {
+  customer: Pick<Customer, '_id' | 'name' | 'phone'>
+  fulfillmentState: string
+  paymentState: string
+  createdBy?: { _id: string; name: string }
 }

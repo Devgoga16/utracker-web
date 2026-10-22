@@ -65,7 +65,7 @@ function CrashScreen({
 
   return (
     <div className="flex min-h-[60vh] flex-col items-center justify-center px-4 text-center">
-      <span className="mb-4 flex size-12 items-center justify-center rounded-full bg-red-50 text-red-500">
+      <span className="mb-4 flex size-12 items-center justify-center rounded-full bg-danger-50 text-danger-500">
         <AlertTriangle size={22} />
       </span>
 

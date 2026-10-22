@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useMutation, useQuery } from '@tanstack/react-query'
 import { Check, Copy, Image, Link2, Package, Plus, Search, Trash2, Wrench, X } from 'lucide-react'
@@ -20,13 +20,11 @@ import {
 import { ImageUploader } from '@/components/ImageUploader'
 import { formatCurrency, cn } from '@/lib/cn'
 import { useAuthStore } from '@/stores/authStore'
-import type { DaySchedule, Franja, OrderType, Product } from '@/types'
+import { MethodChips } from '@/components/OrderPayments'
+import type { DaySchedule, Franja, OrderType, PaymentMethodKind, Product } from '@/types'
+// Turnos con nombre que no se confunde con «mañana, el día siguiente».
+import { FRANJA_LABELS } from '@/lib/dates'
 
-const FRANJA_LABELS: Record<Franja, string> = {
-  morning: 'Mañana',
-  afternoon: 'Tarde',
-  evening: 'Noche',
-}
 const ALL_FRANJAS: Franja[] = ['morning', 'afternoon', 'evening']
 
 function getAvailableFranjas(schedule: DaySchedule[], dateStr: string): Franja[] {
@@ -51,6 +49,25 @@ interface DraftLine {
   specs: string
   isService: boolean
   isQuoted: boolean
+}
+
+/**
+ * "2026-10-20" en la hora de Lima, no en UTC.
+ *
+ * `toISOString()` da la fecha UTC: desde las 7 p. m. en Perú ya es mañana, y
+ * el pedido de la noche quedaba agendado para el día siguiente sin que nadie
+ * lo pidiera.
+ */
+function localDate(offsetDays = 0) {
+  const d = new Date()
+  d.setDate(d.getDate() + offsetDays)
+  const pad = (n: number) => String(n).padStart(2, '0')
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
+}
+
+function longDate(iso: string) {
+  const [y, m, d] = iso.split('-').map(Number)
+  return new Date(y, m - 1, d).toLocaleDateString('es-PE', { weekday: 'long', day: 'numeric', month: 'long' })
 }
 
 let lineCounter = 0
@@ -106,9 +123,9 @@ function ProductCard({
         <p className="line-clamp-2 text-sm font-semibold leading-snug text-slate-900">
           {product.name}
         </p>
-        <p className="mt-auto pt-1 text-sm font-bold text-brand-600">
+        <p className="mt-auto pt-1 text-sm font-semibold text-brand-600">
           {isQuoted ? (
-            <span className="text-amber-600">A cotizar</span>
+            <span className="text-warning-600">A cotizar</span>
           ) : (
             formatCurrency(product.price)
           )}
@@ -154,7 +171,7 @@ function CatalogPicker({
     >
       {/* Panel */}
       <div
-        className="relative flex h-[85vh] w-full flex-col overflow-hidden rounded-t-2xl bg-white shadow-2xl sm:h-[75vh] sm:max-w-2xl sm:rounded-2xl"
+        className="relative flex h-[85vh] w-full flex-col overflow-hidden rounded-t-2xl bg-white shadow-2xl sm:h-[75vh] sm:max-w-2xl sm:rounded-xl"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
@@ -239,13 +256,33 @@ export function NewOrderPage() {
   const [notes, setNotes] = useState('')
   const [generatedLink, setGeneratedLink] = useState<{ url: string; expiresAt: string } | null>(null)
   const [hasAdvance, setHasAdvance] = useState(false)
-  const [advance, setAdvance] = useState({ amount: 0, proofImageUrl: '' })
+  const [advance, setAdvance] = useState<{
+    amount: number
+    proofImageUrl: string
+    method: PaymentMethodKind | ''
+  }>({ amount: 0, proofImageUrl: '', method: '' })
   const [copied, setCopied] = useState(false)
   // Por defecto hoy: es lo mas comun y ahorra un campo que llenar.
-  const [scheduledDate, setScheduledDate] = useState(() =>
-    new Date().toISOString().slice(0, 10),
-  )
+  const [scheduledDate, setScheduledDate] = useState(() => localDate())
+  // Mientras nadie toque la fecha, sigue a la preparación de lo que se agrega.
+  const [dateTouched, setDateTouched] = useState(false)
   const [scheduledFranja, setScheduledFranja] = useState<Franja | null>(null)
+
+  /*
+   * Lo más pronto que se puede entregar: hoy, o lo que tarde en prepararse el
+   * producto que más demora. Hay productos listos al toque y otros que piden
+   * días; la fecha se acomoda sola a lo que lleva el pedido.
+   */
+  const prepDays = Math.max(
+    0,
+    ...lines.map((l) => catalog?.find((p) => p._id === l.productId)?.preparationDays ?? 0),
+  )
+  const earliestDate = localDate(prepDays)
+  const tooSoon = Boolean(scheduledDate) && scheduledDate < earliestDate
+
+  useEffect(() => {
+    if (!dateTouched) setScheduledDate(earliestDate)
+  }, [earliestDate, dateTouched])
 
   const tenantSchedule = activeTenant?.schedule ?? []
   const hasScheduleConfig = tenantSchedule.length > 0
@@ -277,7 +314,11 @@ export function NewOrderPage() {
         notes: notes || undefined,
         advance:
           hasAdvance && advance.amount > 0
-            ? { amount: advance.amount, proofImageUrl: advance.proofImageUrl || undefined }
+            ? {
+                amount: advance.amount,
+                proofImageUrl: advance.proofImageUrl || undefined,
+                method: advance.method || undefined,
+              }
             : undefined,
         scheduledFor:
           scheduledDate
@@ -345,8 +386,16 @@ export function NewOrderPage() {
   }
 
   const missingAdHocName = lines.some((l) => !l.productId && !l.name.trim())
+  // Lo pagado nunca puede pasar el total: el servidor también lo rechaza.
+  const advanceTooHigh = hasAdvance && advance.amount > total + 0.001
+
   const canCreate =
-    lines.length > 0 && !!customer.name && !!customer.phone && !missingAdHocName && !!scheduledDate
+    lines.length > 0 &&
+    !!customer.name &&
+    !!customer.phone &&
+    !missingAdHocName &&
+    !!scheduledDate &&
+    !advanceTooHigh
 
   if (isLoading) return <Spinner />
 
@@ -412,7 +461,7 @@ export function NewOrderPage() {
                           />
                         )}
                         {line.isQuoted && (
-                          <p className="mt-1 text-xs text-amber-600">
+                          <p className="mt-1 text-xs text-warning-600">
                             Se cotiza por trabajo — indica el precio acordado
                           </p>
                         )}
@@ -477,7 +526,7 @@ export function NewOrderPage() {
             {lines.length > 0 && (
               <div className="mt-4 flex items-center justify-between border-t-2 border-slate-100 pt-3">
                 <span className="font-semibold">Total</span>
-                <span className="text-lg font-bold tabular-nums">{formatCurrency(total)}</span>
+                <span className="text-lg font-semibold tabular-nums">{formatCurrency(total)}</span>
               </div>
             )}
           </Card>
@@ -539,8 +588,9 @@ export function NewOrderPage() {
                       type="date"
                       className="w-auto"
                       value={scheduledDate}
-                      min={new Date().toISOString().slice(0, 10)}
+                      min={localDate()}
                       onChange={(e) => {
+                        setDateTouched(true)
                         setScheduledDate(e.target.value)
                         setScheduledFranja(null)
                       }}
@@ -563,15 +613,36 @@ export function NewOrderPage() {
                     {scheduledDate && (
                       <button
                         type="button"
-                        onClick={() => { setScheduledDate(''); setScheduledFranja(null) }}
-                        className="text-xs text-slate-400 hover:text-red-500"
+                        onClick={() => { setDateTouched(true); setScheduledDate(''); setScheduledFranja(null) }}
+                        className="text-xs text-slate-400 hover:text-danger-500"
                       >
                         Limpiar
                       </button>
                     )}
                   </div>
+                  {prepDays > 0 && !tooSoon && (
+                    <p className="mt-1.5 text-xs text-slate-500">
+                      Este pedido necesita {prepDays} {prepDays === 1 ? 'día' : 'días'} de preparación.
+                    </p>
+                  )}
+                  {tooSoon && (
+                    <p className="mt-1.5 text-xs text-warning-600">
+                      Lo que lleva este pedido necesita {prepDays} {prepDays === 1 ? 'día' : 'días'} de
+                      preparación: lo más pronto es el {longDate(earliestDate)}.{' '}
+                      <button
+                        type="button"
+                        className="font-semibold underline"
+                        onClick={() => {
+                          setScheduledDate(earliestDate)
+                          setScheduledFranja(null)
+                        }}
+                      >
+                        Usar esa fecha
+                      </button>
+                    </p>
+                  )}
                   {isClosedDay && (
-                    <p className="mt-1.5 text-xs text-amber-600">
+                    <p className="mt-1.5 text-xs text-warning-600">
                       Este día no está en tu horario de atención configurado.
                     </p>
                   )}
@@ -587,16 +658,16 @@ export function NewOrderPage() {
 
           <Card>
             <CheckboxField
-              label="El cliente dejó un adelanto"
-              hint="Puedes cargarlo ahora o registrarlo después desde el detalle del pedido."
+              label="El cliente ya pagó algo"
+              hint="Un adelanto o el total. Si paga después, lo registras desde el pedido."
               checked={hasAdvance}
               onChange={setHasAdvance}
             />
 
             {hasAdvance && (
               <div className="mt-4 space-y-4 border-t border-slate-100 pt-4">
-                <div className="max-w-[14rem]">
-                  <Field label="Monto del adelanto" htmlFor="adv-amount">
+                <div className="flex flex-wrap items-end gap-2">
+                  <Field label="¿Cuánto pagó?" htmlFor="adv-amount" className="w-full max-w-[14rem]">
                     <Input
                       id="adv-amount"
                       type="number"
@@ -607,6 +678,27 @@ export function NewOrderPage() {
                       onChange={(e) => setAdvance({ ...advance, amount: Number(e.target.value) })}
                     />
                   </Field>
+                  {total > 0 && (
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      onClick={() => setAdvance({ ...advance, amount: Math.round(total * 100) / 100 })}
+                    >
+                      Pagó todo ({formatCurrency(total)})
+                    </Button>
+                  )}
+                </div>
+                {advanceTooHigh && (
+                  <p className="text-xs text-danger-600">
+                    Es más que el total del pedido ({formatCurrency(total)}).
+                  </p>
+                )}
+                <div>
+                  <p className="mb-1.5 text-sm font-medium text-slate-700">¿Cómo pagó? (opcional)</p>
+                  <MethodChips
+                    value={advance.method}
+                    onChange={(method) => setAdvance({ ...advance, method })}
+                  />
                 </div>
                 <div>
                   <p className="mb-1.5 text-sm font-medium text-slate-700">
@@ -649,7 +741,7 @@ export function NewOrderPage() {
           >
             {generatedLink ? (
               <div className="space-y-3">
-                <div className="rounded-lg bg-slate-50 px-3 py-2.5 ring-1 ring-slate-200">
+                <div className="rounded-lg bg-slate-50 px-3 py-2.5 border border-slate-200">
                   <p className="font-mono text-xs break-all text-slate-600">{generatedLink.url}</p>
                 </div>
                 <Button variant="secondary" className="w-full" onClick={copyLink}>

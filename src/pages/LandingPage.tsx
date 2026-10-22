@@ -57,7 +57,7 @@ export function LandingPage() {
    */
   const forceLanding = new URLSearchParams(window.location.search).get('vista') === 'web'
   if (accessToken && !forceLanding) {
-    return <Navigate to={activeTenant ? '/orders' : '/tenants'} replace />
+    return <Navigate to={activeTenant ? '/today' : '/tenants'} replace />
   }
 
   return (

@@ -25,7 +25,8 @@ export function AuthShell({
       {/* Mismo halo del hero de la landing: se siente el mismo producto. */}
       <div
         aria-hidden
-        className="pointer-events-none absolute -top-40 left-1/2 size-[30rem] -translate-x-1/2 rounded-full bg-brand-500/15 blur-[110px]"
+        className="pointer-events-none absolute inset-x-0 top-0 h-72"
+        style={{ background: 'radial-gradient(60% 100% at 50% 0%, color-mix(in srgb, var(--color-brand-500) 12%, transparent), transparent)' }}
       />
 
       <div className="relative w-full max-w-sm">
@@ -37,13 +38,13 @@ export function AuthShell({
           Volver al inicio
         </Link>
 
-        <div className="rounded-2xl bg-white p-6 shadow-card ring-1 ring-slate-200 sm:p-7">
+        <div className="rounded-xl bg-white p-6 border border-slate-200 sm:p-7">
           <div className="flex items-center gap-2.5">
             <img src="/uTrackerLogo.png" alt="" className="size-9" />
             <span className="text-lg font-semibold tracking-tight text-slate-900">uTracker</span>
           </div>
 
-          <h1 className="mt-5 text-xl font-bold tracking-tight text-slate-900">{title}</h1>
+          <h1 className="mt-5 text-xl font-semibold tracking-tight text-slate-900">{title}</h1>
           {subtitle && <p className="mt-1 text-sm text-slate-500">{subtitle}</p>}
 
           <div className="mt-6">{children}</div>

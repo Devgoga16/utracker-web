@@ -6,13 +6,10 @@ import { getOrder } from '@/api/orders'
 import { Button, Spinner } from '@/components/ui'
 import { useAuthStore } from '@/stores/authStore'
 import { formatCurrency } from '@/lib/cn'
-import type { Franja } from '@/types'
+import { PAYMENT_METHOD_LABELS } from '@/lib/pos'
+// Turnos con nombre que no se confunde con «mañana, el día siguiente».
+import { FRANJA_LABELS } from '@/lib/dates'
 
-const FRANJA_LABELS: Record<Franja, string> = {
-  morning: 'Mañana',
-  afternoon: 'Tarde',
-  evening: 'Noche',
-}
 
 const TYPE_LABELS: Record<string, string> = {
   pickup: 'Recojo en tienda',
@@ -28,6 +25,11 @@ function longDate(iso: string) {
     month: 'long',
     year: 'numeric',
   })
+}
+
+/** "14 ago": la fecha de un pago, sin año ni hora, para que la línea quepa. */
+function formatShortDate(iso: string) {
+  return new Date(iso).toLocaleDateString('es-PE', { day: 'numeric', month: 'short' })
 }
 
 /**
@@ -91,7 +93,7 @@ export function ReceiptPage() {
 
       <div
         id="receipt"
-        className="rounded-xl bg-white p-5 ring-1 ring-slate-200 sm:p-8 print:ring-0"
+        className="rounded-xl bg-white p-5 border border-slate-200 sm:p-8 print:ring-0"
       >
         {/* Cabecera */}
         <div className="flex items-start justify-between gap-4 border-b border-slate-200 pb-5 sm:gap-6">
@@ -100,7 +102,7 @@ export function ReceiptPage() {
               <img
                 src={activeTenant.logoUrl}
                 alt=""
-                className="size-14 rounded-xl object-cover ring-1 ring-slate-200"
+                className="size-14 rounded-xl object-cover border border-slate-200"
               />
             )}
             <div className="min-w-0">
@@ -198,14 +200,17 @@ export function ReceiptPage() {
               .filter((p) => p.validated !== false)
               .map((p, i) => (
                 <div key={i} className="flex justify-between text-slate-500">
-                  <span>{p.kind === 'advance' ? 'Adelanto' : 'Saldo'}</span>
+                  <span>
+                    Pago {formatShortDate(p.registeredAt)}
+                    {p.method ? ` · ${PAYMENT_METHOD_LABELS[p.method]}` : ''}
+                  </span>
                   <span className="tabular-nums">− {formatCurrency(p.amount)}</span>
                 </div>
               ))}
 
             <div
               className={`flex justify-between border-t border-slate-200 pt-2 text-base font-bold ${
-                pending === 0 ? 'text-emerald-700' : 'text-amber-700'
+                pending === 0 ? 'text-success-700' : 'text-warning-700'
               }`}
             >
               <span>{pending === 0 ? 'Pagado' : 'Pendiente'}</span>

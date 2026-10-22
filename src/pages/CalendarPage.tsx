@@ -15,15 +15,15 @@ import { calendarOrders } from '@/api/orders'
 import { getWorkflow } from '@/api/tenants'
 import { Card, Chip, ChipBar, PageHeader, Spinner, StateBadge } from '@/components/ui'
 import { cn, formatCurrency } from '@/lib/cn'
-import type { Franja, Order, OrderType } from '@/types'
+import type { Order, OrderType } from '@/types'
+// Turnos con nombre que no se confunde con «mañana, el día siguiente».
+import { FRANJA_LABELS } from '@/lib/dates'
+import { deliveryStatus } from '@/lib/orderStatus'
+import { owed } from '@/lib/orders'
+import { shortDay } from '@/lib/dates'
 
 const DAY_NAMES = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom']
 
-const FRANJA_LABELS: Record<Franja, string> = {
-  morning: 'Mañana',
-  afternoon: 'Tarde',
-  evening: 'Noche',
-}
 
 const DELIVERY_LABELS: Record<OrderType, string> = {
   pickup: 'Recojo',
@@ -167,7 +167,7 @@ export function CalendarPage() {
       />
 
       {/* Resumen de la semana */}
-      <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl bg-white px-4 py-3 ring-1 ring-slate-200">
+      <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl bg-white px-4 py-3 border border-slate-200">
         <p className="text-sm font-semibold text-slate-800 capitalize">{monthLabel}</p>
         <p className="text-sm text-slate-500">
           {scheduled.length} pedido{scheduled.length === 1 ? '' : 's'}
@@ -293,7 +293,7 @@ export function CalendarPage() {
                       </span>
                       <span
                         className={cn(
-                          'text-lg font-bold tabular-nums',
+                          'text-lg font-semibold tabular-nums',
                           isToday ? 'text-brand-700' : 'text-slate-900',
                         )}
                       >
@@ -301,7 +301,7 @@ export function CalendarPage() {
                       </span>
                     </div>
                     {orders.length > 0 && (
-                      <span className="rounded-full bg-slate-900/5 px-1.5 text-[11px] font-bold text-slate-600">
+                      <span className="rounded-full bg-slate-900/5 px-1.5 text-[11px] font-semibold text-slate-600">
                         {orders.length}
                       </span>
                     )}
@@ -331,9 +331,9 @@ export function CalendarPage() {
           {unscheduled.length > 0 && (
             <Card>
               <div className="mb-3 flex items-center gap-2">
-                <Inbox size={16} className="text-amber-500" />
+                <Inbox size={16} className="text-warning-500" />
                 <h2 className="text-sm font-semibold text-slate-900">Sin fecha programada</h2>
-                <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-bold text-amber-700">
+                <span className="rounded-full bg-warning-100 px-2 py-0.5 text-[11px] font-semibold text-warning-700">
                   {unscheduled.length}
                 </span>
               </div>
@@ -358,11 +358,17 @@ export function CalendarPage() {
 function DayOrder({ order, showDate }: { order: Order; showDate?: boolean }) {
   const isPickup = order.type === 'pickup'
   const Icon = isPickup ? Store : Truck
+  const delivery = deliveryStatus(order)
+  const due = owed(order)
 
   return (
     <Link
       to={`/orders/${order._id}`}
-      className="block rounded-lg bg-white p-2 ring-1 ring-slate-200 transition-all hover:-translate-y-px hover:shadow-sm hover:ring-brand-300"
+      className={cn(
+        'focus-ring block rounded-lg border bg-white p-2 transition-colors hover:border-slate-300',
+        // Atrasado: el borde lo dice antes de leer nada.
+        delivery.key === 'overdue' ? 'border-danger-200 border-l-2 border-l-danger-500' : 'border-slate-200',
+      )}
     >
       <div className="flex items-center gap-1 text-[10px] font-medium text-slate-400">
         <Icon size={10} className="shrink-0" />
@@ -372,7 +378,7 @@ function DayOrder({ order, showDate }: { order: Order; showDate?: boolean }) {
             {FRANJA_LABELS[order.scheduledFor.franja]}
           </>
         )}
-        {showDate && order.scheduledFor?.date && <span>{order.scheduledFor.date.slice(5)}</span>}
+        {showDate && order.scheduledFor?.date && <span>{shortDay(order.scheduledFor.date)}</span>}
       </div>
 
       <p className="mt-0.5 truncate text-xs font-semibold text-slate-900">
@@ -386,7 +392,7 @@ function DayOrder({ order, showDate }: { order: Order; showDate?: boolean }) {
         )}
       </p>
 
-      <div className="mt-1.5 flex items-center justify-between gap-1">
+      <div className="mt-1.5 flex flex-wrap items-center justify-between gap-1">
         {order.fulfillmentState && (
           <StateBadge
             name={order.fulfillmentState.name}
@@ -394,10 +400,16 @@ function DayOrder({ order, showDate }: { order: Order; showDate?: boolean }) {
             icon={order.fulfillmentState.icon}
           />
         )}
-        <span className="shrink-0 text-[11px] font-bold tabular-nums text-slate-700">
+        <span className="shrink-0 text-[11px] font-medium tabular-nums text-slate-700">
           {formatCurrency(order.totalAmount)}
         </span>
       </div>
+      {(delivery.key === 'overdue' || due > 0) && (
+        <p className="mt-1 flex flex-wrap gap-x-2 text-[10.5px] font-medium">
+          {delivery.key === 'overdue' && <span className="text-danger-600">{delivery.label}</span>}
+          {due > 0 && <span className="text-warning-700">Saldo {formatCurrency(due)}</span>}
+        </p>
+      )}
     </Link>
   )
 }

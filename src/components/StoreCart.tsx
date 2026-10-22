@@ -17,6 +17,8 @@ import { apiErrorMessage } from '@/api/client'
 import { Alert, Button, Field, Input } from '@/components/ui'
 import { cn, formatCurrency } from '@/lib/cn'
 import type { Franja, Product, Tenant } from '@/types'
+// Turnos con nombre que no se confunde con «mañana, el día siguiente».
+import { FRANJA_SHORT as FRANJA_LABELS } from '@/lib/dates'
 
 /** Una línea del carrito. `variant` distingue dos líneas del mismo producto. */
 export interface CartLine {
@@ -25,11 +27,6 @@ export interface CartLine {
   quantity: number
 }
 
-const FRANJA_LABELS: Record<string, string> = {
-  morning: 'Mañana',
-  afternoon: 'Tarde',
-  evening: 'Noche',
-}
 
 export function lineKey(productId: string, variant?: string) {
   return variant ? `${productId}__${variant}` : productId

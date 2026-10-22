@@ -6,14 +6,11 @@ import { confirmPublicOrderLink, getPublicOrderLink } from '@/api/orderLinks'
 import { Alert, Button, Card, Field, Input, Select, Spinner } from '@/components/ui'
 import { cn, formatCurrency } from '@/lib/cn'
 import type { DaySchedule, Franja } from '@/types'
+// Turnos con nombre que no se confunde con «mañana, el día siguiente».
+import { FRANJA_SHORT as FRANJA_LABELS } from '@/lib/dates'
 
 type DeliveryChoice = 'pickup' | 'delivery_third_party' | 'delivery_own'
 
-const FRANJA_LABELS: Record<Franja, string> = {
-  morning: 'Mañana',
-  afternoon: 'Tarde',
-  evening: 'Noche',
-}
 const ALL_FRANJAS: Franja[] = ['morning', 'afternoon', 'evening']
 
 function getAvailableFranjas(schedule: DaySchedule[], dateStr: string): Franja[] {

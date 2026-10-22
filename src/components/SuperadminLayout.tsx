@@ -13,6 +13,7 @@ import {
   MessageCircle,
   Receipt,
   ScrollText,
+  Users,
   X,
 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
@@ -34,6 +35,7 @@ const NAV: NavItem[] = [
   { to: '/superadmin/tickets', label: 'Tickets', icon: LifeBuoy },
   { to: '/superadmin/logs', label: 'Logs', icon: ScrollText },
   { to: '/superadmin/tenants', label: 'Negocios', icon: Building2 },
+  { to: '/superadmin/users', label: 'Usuarios', icon: Users },
   { to: '/superadmin/plans', label: 'Planes', icon: CreditCard },
   { to: '/superadmin/billing', label: 'Facturación', icon: Receipt },
   { to: '/superadmin/whatsapp', label: 'WhatsApp', icon: MessageCircle },
@@ -116,7 +118,7 @@ export function SuperadminLayout() {
     <button
       type="button"
       onClick={logout}
-      className="flex min-h-11 w-full items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium text-slate-500 transition-colors hover:bg-slate-100 hover:text-red-600 md:min-h-0"
+      className="flex min-h-11 w-full items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium text-slate-500 transition-colors hover:bg-slate-100 hover:text-danger-600 md:min-h-0"
     >
       <LogOut size={16} className="shrink-0" />
       Cerrar sesión
@@ -205,7 +207,7 @@ export function SuperadminLayout() {
           </div>
         </header>
 
-        <main className="mx-auto max-w-7xl px-4 py-5 sm:px-6 sm:py-8">
+        <main className="mx-auto max-w-7xl px-4 py-5 sm:px-6 sm:py-6">
           <ErrorBoundary>
             <Outlet />
           </ErrorBoundary>

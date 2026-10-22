@@ -1,5 +1,5 @@
 import { api } from './client'
-import type { Subscription, SubscriptionStatus } from '@/types'
+import type { AdminUser, Subscription, SubscriptionStatus } from '@/types'
 
 export interface SuperadminStats {
   totalTenants: number
@@ -94,3 +94,19 @@ export const setTenantWhatsapp = (
 /** Prueba de envío. Con tenantId usa la sesión de ese negocio. */
 export const sendWhatsappTest = (data: { to: string; message?: string; tenantId?: string }) =>
   api.post<{ ok: boolean; to: string }>('/superadmin/whatsapp/test', data).then((r) => r.data)
+
+/* ── Cuentas de personas ── */
+
+export const listAdminUsers = (q: string) =>
+  api.get<{ users: AdminUser[] }>('/superadmin/users', { params: { q } }).then((r) => r.data.users)
+
+export const changeUserEmail = (userId: string, email: string) =>
+  api
+    .patch<{ user: { _id: string; name: string; email: string } }>(`/superadmin/users/${userId}/email`, { email })
+    .then((r) => r.data.user)
+
+/** Devuelve la contraseña temporal: es la única vez que se puede ver. */
+export const resetUserPassword = (userId: string) =>
+  api
+    .post<{ temporaryPassword: string; email: string; name: string }>(`/superadmin/users/${userId}/reset-password`)
+    .then((r) => r.data)

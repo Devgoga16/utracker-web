@@ -20,6 +20,7 @@ import { useAuthStore } from '@/stores/authStore'
 import { cn } from '@/lib/cn'
 import { BRAND_PRESETS, DEFAULT_BRAND, buildBrandRamp, isValidHex } from '@/lib/brandColor'
 import type { DaySchedule, PaymentMethod } from '@/types'
+import { NotificationsGuide } from '@/components/NotificationsGuide'
 
 type ScheduleDay = { day: number; enabled: boolean; open: string; close: string }
 
@@ -140,7 +141,7 @@ export function SettingsPage() {
     currentScheduleStr !== savedScheduleStr
 
   return (
-    <div className="max-w-3xl space-y-5">
+    <div className="space-y-5 [&>*:not(:first-child)]:max-w-3xl">
       <PageHeader title="Ajustes" description="La configuración de tu negocio y su tienda." />
 
       {/* ── Identidad ──────────────────────────────────────────────── */}
@@ -152,7 +153,7 @@ export function SettingsPage() {
               <button
                 type="button"
                 onClick={() => setLogoUrls([])}
-                className="text-xs text-slate-400 transition-colors hover:text-red-600"
+                className="text-xs text-slate-400 transition-colors hover:text-danger-600"
               >
                 Quitar
               </button>
@@ -201,14 +202,17 @@ export function SettingsPage() {
       </SettingGroup>
 
       {/* ── Tienda pública ─────────────────────────────────────────── */}
+      {/* Justo después de Identidad: el WhatsApp de ahí es a donde llegan los avisos del negocio. */}
+      <NotificationsGuide businessPhone={phone} />
+
       <SettingGroup title="Tienda pública" description="El catálogo que compartes con tus clientes.">
         <SettingRow label="Link de tu tienda" wide>
-          <div className="flex items-center gap-2 rounded-lg bg-slate-50 px-3 py-2 ring-1 ring-slate-200">
+          <div className="flex items-center gap-2 rounded-lg bg-slate-50 px-3 py-2 border border-slate-200">
             <span className="min-w-0 flex-1 truncate font-mono text-xs text-slate-600">
               {storeUrl}
             </span>
             <IconButton label="Copiar link" onClick={copyStoreUrl} className="shrink-0">
-              {copied ? <Check size={15} className="text-emerald-600" /> : <Copy size={15} />}
+              {copied ? <Check size={15} className="text-success-600" /> : <Copy size={15} />}
             </IconButton>
             <a href={storeUrl} target="_blank" rel="noreferrer" className="shrink-0">
               <IconButton label="Abrir tienda">
@@ -304,7 +308,7 @@ export function SettingsPage() {
             hint="Se le muestran al cliente cuando un producto pide adelanto."
             wide
           >
-            <div className="overflow-hidden rounded-lg ring-1 ring-slate-200">
+            <div className="overflow-hidden rounded-lg border border-slate-200">
               <table className="w-full text-sm">
                 <thead className="bg-slate-50 text-left text-[11px] font-semibold tracking-wide text-slate-400 uppercase">
                   <tr>
@@ -356,7 +360,7 @@ export function SettingsPage() {
                               setPaymentMethods(paymentMethods.filter((_, j) => j !== i))
                               setSaved(false)
                             }}
-                            className="hover:bg-red-50 hover:text-red-600"
+                            className="hover:bg-danger-50 hover:text-danger-600"
                           >
                             <X size={15} />
                           </IconButton>
@@ -461,7 +465,7 @@ export function SettingsPage() {
                     type="button"
                     aria-label={`Eliminar ${cat.name}`}
                     onClick={() => deleteCatMutation.mutate(cat._id)}
-                    className="rounded p-0.5 transition-colors hover:bg-slate-200 hover:text-red-600"
+                    className="rounded p-0.5 transition-colors hover:bg-slate-200 hover:text-danger-600"
                   >
                     <X size={11} />
                   </button>
@@ -488,7 +492,7 @@ export function SettingsPage() {
           </form>
 
           {addCatMutation.isError && (
-            <p className="mt-1.5 text-xs text-red-600">{apiErrorMessage(addCatMutation.error)}</p>
+            <p className="mt-1.5 text-xs text-danger-600">{apiErrorMessage(addCatMutation.error)}</p>
           )}
         </SettingRow>
 
@@ -529,9 +533,9 @@ export function SettingsPage() {
       {/* Sticky en vez de fixed: respeta el ancho del contenedor. */}
       {(dirty || saved) && (
         <div className="sticky bottom-4 z-20">
-          <div className="flex items-center gap-3 rounded-xl bg-slate-900 px-4 py-3 shadow-lg shadow-slate-900/20">
+          <div className="flex items-center gap-3 rounded-xl bg-navy px-4 py-3 shadow-[0_16px_40px_-12px_rgb(27_34_54/0.6)]">
             {saved && !dirty ? (
-              <p className="flex items-center gap-2 text-sm font-medium text-emerald-400">
+              <p className="flex items-center gap-2 text-sm font-medium text-success-400">
                 <Check size={16} />
                 Cambios guardados
               </p>
@@ -612,11 +616,11 @@ function BrandColorPicker({
           placeholder="#4f46e5"
           className="max-w-28 font-mono text-xs"
         />
-        {!valid && <span className="text-xs text-red-600">Formato: #rrggbb</span>}
+        {!valid && <span className="text-xs text-danger-600">Formato: #rrggbb</span>}
       </div>
 
       {/* Vista previa compacta */}
-      <div className="mt-3 flex items-center gap-2 overflow-hidden rounded-lg ring-1 ring-slate-200">
+      <div className="mt-3 flex items-center gap-2 overflow-hidden rounded-lg border border-slate-200">
         <div
           className="flex h-10 w-28 shrink-0 items-center justify-center text-[11px] font-semibold text-white"
           style={{ background: `linear-gradient(135deg, ${ramp[600]}, ${ramp[800]})` }}

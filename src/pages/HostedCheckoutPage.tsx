@@ -21,12 +21,9 @@ import { Alert, Button, Field, Input, Spinner } from '@/components/ui'
 import { cn, formatCurrency } from '@/lib/cn'
 import { applyBrandColor } from '@/lib/brandColor'
 import type { Franja } from '@/types'
+// Turnos con nombre que no se confunde con «mañana, el día siguiente».
+import { FRANJA_SHORT as FRANJA_LABELS } from '@/lib/dates'
 
-const FRANJA_LABELS: Record<string, string> = {
-  morning: 'Mañana',
-  afternoon: 'Tarde',
-  evening: 'Noche',
-}
 
 /**
  * Checkout hospedado por uTracker, abierto desde la web de un tercero.

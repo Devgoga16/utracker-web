@@ -18,7 +18,8 @@ import {
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
-import { GripVertical, Pencil, Plus, Trash2 } from 'lucide-react'
+import { GripVertical, PackageSearch, Pencil, Plus, Trash2 } from 'lucide-react'
+import { stockRuleText } from '@/lib/stockRule'
 import { getWorkflow } from '@/api/tenants'
 import { createState, deleteState, reorderStates, updateState } from '@/api/workflow'
 import {
@@ -79,12 +80,7 @@ export function WorkflowPage() {
           kind="fulfillment"
           states={workflow?.fulfillment ?? []}
         />
-        <StateColumn
-          title="Estados del pago"
-          description="Se mueven solos según lo que registres cobrado."
-          kind="payment"
-          states={workflow?.payment ?? []}
-        />
+        <PaymentStatesCard states={workflow?.payment ?? []} />
       </div>
     </div>
   )
@@ -147,6 +143,12 @@ function StateColumn({
 
   return (
     <Card title={title} description={description}>
+      {kind === 'fulfillment' && (
+        <p className="mb-3 flex gap-2 rounded-lg bg-slate-50 px-3 py-2.5 text-xs leading-relaxed text-slate-600 border border-slate-200">
+          <PackageSearch size={14} className="mt-0.5 shrink-0 text-slate-400" />
+          {stockRuleText(states)}
+        </p>
+      )}
       {reorderMutation.isError && (
         <div className="mb-3">
           <Alert error={reorderMutation.error} />
@@ -347,7 +349,7 @@ function StateRow({
 
           {/* El número de orden hace legible la secuencia sin contar filas. */}
           <span
-            className="flex size-5 shrink-0 items-center justify-center rounded-full text-[10px] font-bold text-white"
+            className="flex size-5 shrink-0 items-center justify-center rounded-full text-[10px] font-semibold text-white"
             style={{ backgroundColor: state.color }}
           >
             {position}
@@ -469,7 +471,7 @@ function StateRow({
                   className={cn(
                     'rounded-full px-2.5 py-1 text-xs font-medium ring-1 transition-colors',
                     draft.allowedRoles.includes(role.value)
-                      ? 'bg-slate-900 text-white ring-slate-900'
+                      ? 'bg-brand-50 text-brand-700 ring-brand-200'
                       : 'bg-white text-slate-500 ring-slate-300 hover:bg-slate-50',
                   )}
                 >
@@ -484,7 +486,7 @@ function StateRow({
 
             <CheckboxField
               label="Notificar al cliente"
-              hint="pendiente de integrar WhatsApp"
+              hint="le avisa por WhatsApp con el link de seguimiento, si tu plan incluye los avisos"
               checked={draft.notifyCustomer}
               onChange={(notifyCustomer) => setDraft({ ...draft, notifyCustomer })}
             />
@@ -505,8 +507,8 @@ function StateRow({
 
             {state.kind === 'fulfillment' && (
               <CheckboxField
-                label="Descontar stock"
-                hint="resta las unidades del pedido del inventario"
+                label="Descontar stock desde aquí"
+                hint="las unidades salen del inventario cuando el pedido llega a este estado o a uno posterior. Solo un estado puede tenerlo: marcar este desmarca el otro"
                 checked={draft.deductsStock}
                 onChange={(deductsStock) => setDraft({ ...draft, deductsStock })}
               />
@@ -539,7 +541,7 @@ function StateRow({
                         className={
                           on
                             ? 'rounded-lg bg-brand-600 px-3 py-1.5 text-xs font-medium text-white'
-                            : 'rounded-lg bg-white/70 px-3 py-1.5 text-xs font-medium text-slate-600 ring-1 ring-slate-200 transition-colors hover:bg-white'
+                            : 'rounded-lg bg-white/70 px-3 py-1.5 text-xs font-medium text-slate-600 border border-slate-200 transition-colors hover:bg-white'
                         }
                       >
                         {DELIVERY_LABELS[t]}
@@ -602,7 +604,7 @@ function IconPicker({
   return (
     <div>
       <SectionLabel className="mb-1.5">Ícono</SectionLabel>
-      <div className="max-h-52 space-y-3 overflow-y-auto rounded-xl bg-white p-2 ring-1 ring-slate-200">
+      <div className="max-h-52 space-y-3 overflow-y-auto rounded-xl bg-white p-2 border border-slate-200">
         {ICON_GROUPS.map((group) => (
           <div key={group.label}>
             <p className="mb-1.5 px-0.5 text-[11px] font-medium tracking-wide text-slate-400 uppercase">
@@ -634,5 +636,117 @@ function IconPicker({
         ))}
       </div>
     </div>
+  )
+}
+
+/**
+ * Los estados de pago no se arman: los pone el sistema según lo cobrado.
+ *
+ * Antes se mostraban igual que los del pedido —arrastrables, con marcas de
+ * inicial y final, con «Agregar estado»—, y eso invitaba a tocar algo que el
+ * sistema iba a pisar en el siguiente pago. Aquí solo se dice cuándo aparece
+ * cada uno y se deja cambiar el nombre y el color.
+ */
+function PaymentStatesCard({ states }: { states: WorkflowState[] }) {
+  const queryClient = useQueryClient()
+  const [editing, setEditing] = useState<string | null>(null)
+  const [name, setName] = useState('')
+  const [color, setColor] = useState('')
+
+  const save = useMutation({
+    mutationFn: (id: string) => updateState(id, { name: name.trim(), color }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['workflow'] })
+      setEditing(null)
+    },
+  })
+
+  const when = (s: WorkflowState) =>
+    s.isInitial
+      ? 'Cuando todavía no se cobró nada.'
+      : s.isFinal && s.isCancellation
+        ? 'No lo asigna el sistema: queda de pedidos anteriores.'
+        : s.isFinal
+          ? 'Cuando se cobró el total.'
+          : 'Cuando se cobró una parte.'
+
+  return (
+    <Card
+      title="Estados del pago"
+      description="Los pone el sistema según lo cobrado. Puedes cambiarles el nombre y el color."
+    >
+      <ul className="space-y-2">
+        {states.map((state) => (
+          <li key={state._id} className="rounded-xl border border-slate-200">
+            {editing === state._id ? (
+              <form
+                className="space-y-3 p-3"
+                onSubmit={(e) => {
+                  e.preventDefault()
+                  if (name.trim()) save.mutate(state._id)
+                }}
+              >
+                {save.isError && <Alert error={save.error} />}
+                <Field label="Nombre" htmlFor={`pay-state-${state._id}`}>
+                  <Input
+                    id={`pay-state-${state._id}`}
+                    autoFocus
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                  />
+                </Field>
+                <div className="flex flex-wrap gap-2">
+                  {PALETTE.map((c) => (
+                    <button
+                      key={c}
+                      type="button"
+                      aria-label={`Color ${c}`}
+                      aria-pressed={color === c}
+                      onClick={() => setColor(c)}
+                      className={cn(
+                        'size-7 rounded-full ring-offset-2 transition-shadow',
+                        color === c && 'ring-2 ring-slate-900',
+                      )}
+                      style={{ backgroundColor: c }}
+                    />
+                  ))}
+                </div>
+                <div className="flex gap-2">
+                  <Button type="submit" size="sm" disabled={!name.trim() || save.isPending}>
+                    {save.isPending ? 'Guardando...' : 'Guardar'}
+                  </Button>
+                  <Button type="button" size="sm" variant="secondary" onClick={() => setEditing(null)}>
+                    Cancelar
+                  </Button>
+                </div>
+              </form>
+            ) : (
+              <div className="flex items-center gap-3 px-3 py-2.5">
+                <span
+                  className="flex size-8 shrink-0 items-center justify-center rounded-lg"
+                  style={{ backgroundColor: `${state.color}1a`, color: state.color }}
+                >
+                  <StateIcon name={state.icon} size={16} />
+                </span>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-medium text-slate-900">{state.name}</p>
+                  <p className="text-xs text-slate-500">{when(state)}</p>
+                </div>
+                <IconButton
+                  label={`Editar ${state.name}`}
+                  onClick={() => {
+                    setEditing(state._id)
+                    setName(state.name)
+                    setColor(state.color)
+                  }}
+                >
+                  <Pencil size={15} />
+                </IconButton>
+              </div>
+            )}
+          </li>
+        ))}
+      </ul>
+    </Card>
   )
 }

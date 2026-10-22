@@ -25,14 +25,14 @@ export function TenantsPage() {
 
   function selectTenant(tenant: Tenant) {
     setActiveTenant(tenant)
-    navigate('/orders')
+    navigate('/today')
   }
 
   return (
     <div className="mx-auto max-w-2xl px-4 py-10 sm:px-6 sm:py-16">
       <div className="mb-8 flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <h1 className="text-xl font-bold text-slate-900">Tus negocios</h1>
+          <h1 className="text-xl font-semibold tracking-tight text-slate-900">Tus negocios</h1>
           <p className="text-sm text-slate-500">Hola {user?.name}, elige con cuál trabajar</p>
         </div>
         <Button
@@ -55,17 +55,17 @@ export function TenantsPage() {
               key={tenant._id}
               type="button"
               onClick={() => selectTenant(tenant)}
-              className="flex w-full items-center justify-between gap-3 rounded-xl bg-white p-4 text-left ring-1 ring-slate-200 transition-shadow hover:ring-brand-400 sm:p-5"
+              className="flex w-full items-center justify-between gap-3 rounded-xl bg-white p-4 text-left border border-slate-200 transition-colors hover:border-brand-300 focus-ring sm:p-5"
             >
               <div className="flex min-w-0 items-center gap-3">
                 {tenant.logoUrl ? (
                   <img
                     src={tenant.logoUrl}
                     alt=""
-                    className="size-10 rounded-full object-cover ring-1 ring-slate-200"
+                    className="size-10 rounded-lg object-cover border border-slate-200"
                   />
                 ) : (
-                  <div className="flex size-10 items-center justify-center rounded-full bg-slate-100 text-sm font-bold text-slate-400">
+                  <div className="flex size-10 items-center justify-center rounded-lg bg-navy text-sm font-semibold text-white">
                     {tenant.name.charAt(0).toUpperCase()}
                   </div>
                 )}
@@ -76,11 +76,11 @@ export function TenantsPage() {
               </div>
               {/* Un negocio al que se entra por soporte no es "tuyo": que se note. */}
               {tenant.support ? (
-                <span className="shrink-0 rounded-full bg-violet-100 px-2.5 py-1 text-xs font-medium text-violet-700">
+                <span className="shrink-0 rounded-md border border-brand-200 bg-brand-50 px-1.5 py-px text-[11px] font-medium text-brand-700">
                   soporte · {tenant.support.canWrite ? 'cambios' : 'lectura'}
                 </span>
               ) : (
-                <span className="shrink-0 rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-600">
+                <span className="shrink-0 rounded-md border border-slate-200 bg-white px-1.5 py-px text-[11px] font-medium text-slate-600">
                   {tenant.role}
                 </span>
               )}
@@ -126,7 +126,7 @@ export function TenantsPage() {
             <button
               type="button"
               onClick={() => setShowForm(true)}
-              className="w-full rounded-xl border-2 border-dashed border-slate-300 p-5 text-sm font-medium text-slate-500 transition-colors hover:border-brand-400 hover:text-brand-600"
+              className="w-full rounded-xl border border-dashed border-slate-300 p-5 text-sm font-medium text-slate-500 transition-colors hover:border-brand-400 hover:text-brand-600"
             >
               + Crear un negocio nuevo
             </button>

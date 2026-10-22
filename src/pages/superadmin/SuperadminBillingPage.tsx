@@ -11,10 +11,10 @@ import { Alert, Button, Input, PageHeader, Spinner } from '@/components/ui'
 import type { Bill, BillStatus } from '@/types'
 
 const STATUS_CONFIG: Record<BillStatus, { label: string; className: string }> = {
-  pending: { label: 'Pendiente', className: 'bg-amber-100 text-amber-700' },
-  reviewing: { label: 'En revisión', className: 'bg-blue-100 text-blue-700' },
-  paid: { label: 'Pagada', className: 'bg-emerald-100 text-emerald-700' },
-  overdue: { label: 'Vencida', className: 'bg-red-100 text-red-700' },
+  pending: { label: 'Pendiente', className: 'bg-warning-100 text-warning-700' },
+  reviewing: { label: 'En revisión', className: 'bg-info-100 text-info-700' },
+  paid: { label: 'Pagada', className: 'bg-success-100 text-success-700' },
+  overdue: { label: 'Vencida', className: 'bg-danger-100 text-danger-700' },
 }
 
 const ALL_STATUSES: BillStatus[] = ['pending', 'reviewing', 'paid', 'overdue']
@@ -81,7 +81,7 @@ function BillActions({ bill }: { bill: Bill }) {
 
   return (
     <div className="flex items-center gap-1">
-      {error && <span className="text-xs text-red-600">{error}</span>}
+      {error && <span className="text-xs text-danger-600">{error}</span>}
       {bill.status === 'reviewing' && (
         <Button
           size="sm"
@@ -131,7 +131,7 @@ function GenerateBillsPanel() {
       </p>
       {error && <div className="mb-3"><Alert>{error}</Alert></div>}
       {result && (
-        <div className="mb-3 rounded-lg bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
+        <div className="mb-3 rounded-lg bg-success-50 px-4 py-3 text-sm text-success-700">
           {result.created} factura{result.created !== 1 ? 's' : ''} generada
           {result.created !== 1 ? 's' : ''} para {formatPeriod(result.period)}.
         </div>
@@ -200,7 +200,7 @@ export function SuperadminBillingPage() {
             return (
               <div key={s} className="rounded-xl border border-slate-200 bg-white p-4">
                 <p className="text-xs font-medium text-slate-500">{cfg.label}</p>
-                <p className="mt-1 text-2xl font-bold text-slate-900">{statsByStatus[s]}</p>
+                <p className="mt-1 text-2xl font-semibold text-slate-900">{statsByStatus[s]}</p>
               </div>
             )
           })}

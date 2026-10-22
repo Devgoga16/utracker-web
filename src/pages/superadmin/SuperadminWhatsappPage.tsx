@@ -38,7 +38,7 @@ export function SuperadminWhatsappPage() {
   const canSend = digits.length >= 8 && digits.length <= 15
 
   return (
-    <div className="max-w-3xl space-y-5">
+    <div className="space-y-5 [&>*:not(:first-child)]:max-w-3xl">
       <PageHeader
         title="WhatsApp"
         description="El bot compartido que usan los negocios sin sesión propia."
@@ -56,12 +56,12 @@ export function SuperadminWhatsappPage() {
           >
             <SettingRow label="Estado">
               {data?.configured ? (
-                <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-3 py-1 text-sm font-semibold text-emerald-700 ring-1 ring-emerald-200">
+                <span className="inline-flex items-center gap-1.5 rounded-full bg-success-50 px-3 py-1 text-sm font-semibold text-success-700 ring-1 ring-success-200">
                   <Check size={14} />
                   Configurado
                 </span>
               ) : (
-                <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-50 px-3 py-1 text-sm font-semibold text-amber-700 ring-1 ring-amber-200">
+                <span className="inline-flex items-center gap-1.5 rounded-full bg-warning-50 px-3 py-1 text-sm font-semibold text-warning-700 ring-1 ring-warning-200">
                   <ServerCog size={14} />
                   Falta configurar
                 </span>
@@ -69,7 +69,7 @@ export function SuperadminWhatsappPage() {
             </SettingRow>
 
             <SettingRow label="URL de envío" hint="Incluye la sesión. No es secreta." wide>
-              <code className="block truncate rounded-lg bg-slate-50 px-3 py-2 font-mono text-xs text-slate-600 ring-1 ring-slate-200">
+              <code className="block truncate rounded-lg bg-slate-50 px-3 py-2 font-mono text-xs text-slate-600 border border-slate-200">
                 {data?.sendUrl ?? 'Sin definir (WHATSAPP_SEND_URL)'}
               </code>
             </SettingRow>
@@ -131,7 +131,7 @@ export function SuperadminWhatsappPage() {
                 </div>
               )}
               {test.isSuccess && (
-                <p className="mt-2.5 flex items-center gap-1.5 text-sm font-medium text-emerald-700">
+                <p className="mt-2.5 flex items-center gap-1.5 text-sm font-medium text-success-700">
                   <Check size={15} />
                   Enviado a {test.data.to}. Revisa el celular.
                 </p>

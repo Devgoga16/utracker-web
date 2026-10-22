@@ -27,25 +27,22 @@ import { apiErrorMessage } from '@/api/client'
 import { Alert, Button, Card, Field, Input, PageHeader, Spinner } from '@/components/ui'
 import { formatCurrency } from '@/lib/cn'
 import type { Campaign, CampaignDeliveryType, CampaignStatus, Franja, Product } from '@/types'
+// Turnos con nombre que no se confunde con «mañana, el día siguiente».
+import { FRANJA_LABELS } from '@/lib/dates'
 
 const DELIVERY_LABELS: Record<CampaignDeliveryType, string> = {
   pickup: 'Recojo en tienda',
   delivery_own: 'Delivery',
 }
 
-const FRANJA_LABELS: Record<Franja, string> = {
-  morning: 'Mañana',
-  afternoon: 'Tarde',
-  evening: 'Noche',
-}
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 const STATUS_CONFIG: Record<CampaignStatus, { label: string; className: string }> = {
   draft: { label: 'Borrador', className: 'bg-slate-100 text-slate-600' },
-  active: { label: 'Activa', className: 'bg-emerald-100 text-emerald-700' },
+  active: { label: 'Activa', className: 'bg-success-100 text-success-700' },
   ended: { label: 'Finalizada', className: 'bg-slate-100 text-slate-400' },
-  cancelled: { label: 'Cancelada', className: 'bg-red-100 text-red-600' },
+  cancelled: { label: 'Cancelada', className: 'bg-danger-100 text-danger-600' },
 }
 
 function derivedStatus(c: Campaign): CampaignStatus {
@@ -325,7 +322,7 @@ function CampaignForm({
                     onClick={() =>
                       setItems((prev) => prev.filter((i) => i.productId !== item.productId))
                     }
-                    className="mt-4 rounded-lg p-1.5 text-slate-400 hover:bg-red-50 hover:text-red-500"
+                    className="mt-4 rounded-lg p-1.5 text-slate-400 hover:bg-danger-50 hover:text-danger-500"
                   >
                     <Trash2 size={14} />
                   </button>
@@ -434,7 +431,7 @@ function CampaignCard({
                   <img
                     src={item.imageUrl}
                     alt={item.name}
-                    className="size-7 rounded-md object-cover ring-1 ring-slate-200"
+                    className="size-7 rounded-md object-cover border border-slate-200"
                   />
                 ) : (
                   <div className="flex size-7 items-center justify-center rounded-md bg-slate-100">
@@ -510,18 +507,18 @@ function CampaignCard({
           {!confirmDelete ? (
             <button
               onClick={() => setConfirmDelete(true)}
-              className="flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-medium text-red-500 hover:bg-red-50"
+              className="flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-medium text-danger-500 hover:bg-danger-50"
             >
               <Trash2 size={12} />
               Eliminar
             </button>
           ) : (
-            <div className="flex items-center gap-1 rounded-lg border border-red-200 bg-red-50 px-2.5 py-1.5">
-              <span className="text-xs text-red-700">¿Seguro?</span>
+            <div className="flex items-center gap-1 rounded-lg border border-danger-200 bg-danger-50 px-2.5 py-1.5">
+              <span className="text-xs text-danger-700">¿Seguro?</span>
               <button
                 onClick={() => remove.mutate()}
                 disabled={remove.isPending}
-                className="ml-1 text-xs font-semibold text-red-600 hover:underline disabled:opacity-50"
+                className="ml-1 text-xs font-semibold text-danger-600 hover:underline disabled:opacity-50"
               >
                 {remove.isPending ? 'Eliminando...' : 'Sí'}
               </button>
@@ -578,8 +575,9 @@ export function CampaignsPage() {
       )}
 
       <PageHeader
-        title="Ventas programadas"
-        description="Crea campañas con tiempo y stock limitado para impulsar tus ventas."
+        title="Campañas"
+        count={campaigns?.length}
+        description="Ventas por tiempo limitado, con su propio stock y su link."
         actions={
           <Button onClick={() => setPanel('create')}>
             <PlusCircle size={15} />
@@ -591,7 +589,7 @@ export function CampaignsPage() {
       {isLoading ? (
         <Spinner />
       ) : !campaigns?.length ? (
-        <div className="flex flex-col items-center gap-3 rounded-2xl border-2 border-dashed border-slate-200 py-16 text-center">
+        <div className="flex flex-col items-center gap-3 rounded-xl border-2 border-dashed border-slate-200 py-16 text-center">
           <div className="flex size-12 items-center justify-center rounded-full bg-slate-100">
             <Zap size={22} className="text-slate-400" />
           </div>

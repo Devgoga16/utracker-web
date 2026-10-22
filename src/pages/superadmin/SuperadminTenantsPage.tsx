@@ -24,9 +24,9 @@ const STATUS_LABELS: Record<SubscriptionStatus, string> = {
 }
 
 const STATUS_COLORS: Record<SubscriptionStatus, string> = {
-  trial: 'bg-amber-100 text-amber-700',
-  active: 'bg-emerald-100 text-emerald-700',
-  suspended: 'bg-red-100 text-red-700',
+  trial: 'bg-warning-100 text-warning-700',
+  active: 'bg-success-100 text-success-700',
+  suspended: 'bg-danger-100 text-danger-700',
 }
 
 function AssignForm({ tenant, onClose }: { tenant: TenantRow; onClose: () => void }) {
@@ -169,7 +169,7 @@ function ToggleButton({ tenant }: { tenant: TenantRow }) {
       variant={status === 'suspended' ? 'secondary' : 'ghost'}
       disabled={mutation.isPending}
       onClick={() => mutation.mutate()}
-      className={status === 'active' ? 'text-red-600 hover:text-red-700' : ''}
+      className={status === 'active' ? 'text-danger-600 hover:text-danger-700' : ''}
     >
       {mutation.isPending
         ? '...'
@@ -221,11 +221,11 @@ function DeleteTenantDialog({
         role="dialog"
         aria-modal="true"
         aria-label={`Eliminar ${tenant.name}`}
-        className="w-full max-w-md overflow-hidden rounded-2xl bg-white shadow-2xl"
+        className="w-full max-w-md overflow-hidden rounded-xl bg-white shadow-2xl"
       >
         <div className="flex items-start gap-3 border-b border-slate-100 p-5">
-          <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-red-100">
-            <AlertTriangle size={20} className="text-red-600" />
+          <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-danger-100">
+            <AlertTriangle size={20} className="text-danger-600" />
           </span>
           <div className="min-w-0 flex-1">
             <h2 className="font-bold text-slate-900">Eliminar negocio</h2>
@@ -244,11 +244,11 @@ function DeleteTenantDialog({
         <div className="space-y-4 p-5">
           {mutation.isError && <Alert error={mutation.error} />}
 
-          <div className="rounded-xl bg-red-50 p-4 ring-1 ring-red-200">
-            <p className="text-sm font-semibold text-red-900">
+          <div className="rounded-xl bg-danger-50 p-4 ring-1 ring-danger-200">
+            <p className="text-sm font-semibold text-danger-900">
               Esto borra permanentemente:
             </p>
-            <ul className="mt-2 space-y-1 text-[13px] text-red-800">
+            <ul className="mt-2 space-y-1 text-[13px] text-danger-800">
               {WHAT_GETS_DELETED.map((item) => (
                 <li key={item} className="flex gap-2">
                   <span aria-hidden>•</span>
@@ -256,7 +256,7 @@ function DeleteTenantDialog({
                 </li>
               ))}
             </ul>
-            <p className="mt-3 text-[13px] font-semibold text-red-900">
+            <p className="mt-3 text-[13px] font-semibold text-danger-900">
               No hay forma de deshacerlo.
             </p>
           </div>
@@ -436,7 +436,7 @@ export function SuperadminTenantsPage() {
                           onClick={() => setWhatsapping(tenant)}
                           aria-label={`WhatsApp de ${tenant.name}`}
                           title="Sesión de WhatsApp"
-                          className="rounded-lg p-2 text-slate-400 transition-colors hover:bg-emerald-50 hover:text-emerald-600"
+                          className="rounded-lg p-2 text-slate-400 transition-colors hover:bg-success-50 hover:text-success-600"
                         >
                           <MessageCircle size={15} />
                         </button>
@@ -445,7 +445,7 @@ export function SuperadminTenantsPage() {
                           onClick={() => setDeleting(tenant)}
                           aria-label={`Eliminar ${tenant.name}`}
                           title="Eliminar negocio"
-                          className="rounded-lg p-2 text-slate-400 transition-colors hover:bg-red-50 hover:text-red-600"
+                          className="rounded-lg p-2 text-slate-400 transition-colors hover:bg-danger-50 hover:text-danger-600"
                         >
                           <Trash2 size={15} />
                         </button>
@@ -524,7 +524,7 @@ export function SuperadminTenantsPage() {
                   type="button"
                   onClick={() => setWhatsapping(tenant)}
                   aria-label={`WhatsApp de ${tenant.name}`}
-                  className="flex size-9 items-center justify-center rounded-lg text-slate-400 active:bg-emerald-50 active:text-emerald-600"
+                  className="flex size-9 items-center justify-center rounded-lg text-slate-400 active:bg-success-50 active:text-success-600"
                 >
                   <MessageCircle size={16} />
                 </button>
@@ -532,7 +532,7 @@ export function SuperadminTenantsPage() {
                   type="button"
                   onClick={() => setDeleting(tenant)}
                   aria-label={`Eliminar ${tenant.name}`}
-                  className="flex size-9 items-center justify-center rounded-lg text-slate-400 active:bg-red-50 active:text-red-600"
+                  className="flex size-9 items-center justify-center rounded-lg text-slate-400 active:bg-danger-50 active:text-danger-600"
                 >
                   <Trash2 size={16} />
                 </button>

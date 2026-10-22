@@ -1,10 +1,8 @@
 import { useMemo, useState } from 'react'
-import { Link } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   ArrowDown,
   ArrowUp,
-  ChevronLeft,
   ListFilter,
   Package,
   Plus,
@@ -128,12 +126,12 @@ function AssignDialog({
         role="dialog"
         aria-modal="true"
         aria-label={`Asignar ${filter.name}`}
-        className="flex max-h-[90dvh] w-full max-w-2xl flex-col overflow-hidden rounded-t-2xl bg-white shadow-2xl sm:rounded-2xl"
+        className="flex max-h-[90dvh] w-full max-w-2xl flex-col overflow-hidden rounded-t-2xl bg-white shadow-2xl sm:rounded-xl"
       >
         <div className="shrink-0 border-b border-slate-100 p-5">
           <div className="flex items-start gap-3">
             <div className="min-w-0 flex-1">
-              <h2 className="font-bold text-slate-900">Asignar «{filter.name}»</h2>
+              <h2 className="font-semibold text-slate-900">Asignar «{filter.name}»</h2>
               <p className="mt-0.5 text-sm text-slate-500">
                 {assigned} de {products.length} productos · se guarda solo
               </p>
@@ -323,20 +321,20 @@ function FilterCard({
           <IconButton
             label={`Eliminar ${filter.name}`}
             onClick={() => setConfirmDelete(true)}
-            className="shrink-0 hover:bg-red-50 hover:text-red-600"
+            className="shrink-0 hover:bg-danger-50 hover:text-danger-600"
           >
             <Trash2 size={15} />
           </IconButton>
         ) : (
-          <div className="flex shrink-0 items-center gap-1.5 rounded-lg bg-red-50 px-2.5 py-1.5 ring-1 ring-red-200">
-            <span className="text-xs text-red-700">
+          <div className="flex shrink-0 items-center gap-1.5 rounded-lg bg-danger-50 px-2.5 py-1.5 ring-1 ring-danger-200">
+            <span className="text-xs text-danger-700">
               {used > 0 ? `Quita de ${used}` : '¿Seguro?'}
             </span>
             <button
               type="button"
               onClick={() => remove.mutate()}
               disabled={remove.isPending}
-              className="text-xs font-semibold text-red-600 hover:underline disabled:opacity-50"
+              className="text-xs font-semibold text-danger-600 hover:underline disabled:opacity-50"
             >
               Sí
             </button>
@@ -371,7 +369,7 @@ function FilterCard({
                 type="button"
                 aria-label={`Quitar ${v}`}
                 onClick={() => save.mutate({ values: filter.values.filter((x) => x !== v) })}
-                className="rounded-full p-0.5 transition-colors hover:bg-slate-200 hover:text-red-600"
+                className="rounded-full p-0.5 transition-colors hover:bg-slate-200 hover:text-danger-600"
               >
                 <X size={11} />
               </button>
@@ -391,7 +389,7 @@ function FilterCard({
           onBlur={addValue}
           placeholder="+ valor"
           aria-label={`Nuevo valor para ${filter.name}`}
-          className="w-24 rounded-full bg-slate-50 px-3 py-1.5 text-xs ring-1 ring-slate-200 outline-none placeholder:text-slate-400 focus:w-32 focus:bg-white focus:ring-2 focus:ring-brand-500"
+          className="w-24 rounded-full bg-slate-50 px-3 py-1.5 text-xs border border-slate-200 outline-none placeholder:text-slate-400 focus:w-32 focus:bg-white focus:ring-2 focus:ring-brand-500"
         />
       </div>
 
@@ -412,7 +410,7 @@ function FilterCard({
         </span>
       </div>
 
-      {save.isError && <p className="mt-2 text-xs text-red-600">{apiErrorMessage(save.error)}</p>}
+      {save.isError && <p className="mt-2 text-xs text-danger-600">{apiErrorMessage(save.error)}</p>}
     </Card>
   )
 }
@@ -460,19 +458,12 @@ export function CatalogFiltersPage() {
 
   return (
     <div className="space-y-5">
-      <div>
-        <Link
-          to="/catalog"
-          className="mb-2 inline-flex items-center gap-1 text-sm font-medium text-slate-500 transition-colors hover:text-slate-800"
-        >
-          <ChevronLeft size={15} />
-          Catálogo
-        </Link>
-        <PageHeader
-          title="Filtros"
-          description="Con lo que tus clientes acotan la búsqueda en tu tienda: Talla, Sabor, Color…"
-        />
-      </div>
+      <PageHeader
+        backTo="/catalog"
+        backLabel="Catálogo"
+        title="Filtros"
+        description="Con lo que tus clientes acotan la búsqueda en tu tienda: Talla, Sabor, Color…"
+      />
 
       {isLoading ? (
         <Spinner />
@@ -514,7 +505,7 @@ export function CatalogFiltersPage() {
                   type="button"
                   disabled={applyTemplate.isPending}
                   onClick={() => applyTemplate.mutate(tpl)}
-                  className="flex items-center gap-1.5 rounded-lg bg-slate-50 px-3 py-2 text-sm font-medium text-slate-700 ring-1 ring-slate-200 transition-colors hover:bg-white hover:ring-brand-400 disabled:opacity-50"
+                  className="flex items-center gap-1.5 rounded-lg bg-slate-50 px-3 py-2 text-sm font-medium text-slate-700 border border-slate-200 transition-colors hover:bg-white hover:ring-brand-400 disabled:opacity-50"
                 >
                   <span aria-hidden>{tpl.icon}</span>
                   {tpl.label}
@@ -548,7 +539,7 @@ export function CatalogFiltersPage() {
               </Button>
             </form>
             {add.isError && (
-              <p className="mt-2 text-xs text-red-600">{apiErrorMessage(add.error)}</p>
+              <p className="mt-2 text-xs text-danger-600">{apiErrorMessage(add.error)}</p>
             )}
           </Card>
 

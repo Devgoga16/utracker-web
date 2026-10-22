@@ -1,35 +1,48 @@
 import { useEffect, useState } from 'react'
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
+import { useQuery } from '@tanstack/react-query'
 import {
   AlertTriangle,
   BarChart2,
-  ChevronDown,
-  ChevronsLeft,
+  Bug,
   CalendarDays,
+  ChevronDown,
+  ChevronsUpDown,
   ClipboardList,
   CreditCard,
   ExternalLink,
   LifeBuoy,
   ListFilter,
   LogOut,
-  Plug,
+  Menu,
+  MoreHorizontal,
   Package,
   PackageSearch,
+  Plug,
+  Repeat,
+  Search,
   Settings,
   ShieldAlert,
+  ShoppingCart,
   Store as Storefront,
+  Sun,
   Users,
   Workflow,
+  X,
   Zap,
 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
+import { getToday } from '@/api/orders'
 import { useAuthStore } from '@/stores/authStore'
 import { useSubscription } from '@/hooks/useSubscription'
 import { ErrorBoundary, useGlobalErrorReporting } from '@/components/ErrorBoundary'
 import { ReportProblemDialog } from '@/components/ReportProblemDialog'
+import { CommandPalette } from '@/components/CommandPalette'
+import { Banner, Button, Kbd } from '@/components/ui'
+import { Toaster } from '@/components/Toaster'
 import { useSupportStore } from '@/stores/supportStore'
 import { cn, formatDateTime } from '@/lib/cn'
-import type { FeatureKey } from '@/types'
+import type { FeatureKey, MembershipRole } from '@/types'
 
 interface NavItem {
   to: string
@@ -39,6 +52,12 @@ interface NavItem {
   featureKey?: FeatureKey
   /** Exige coincidencia exacta: evita que un padre se marque junto al hijo. */
   end?: boolean
+  /** Si está, solo lo ven estos roles. */
+  roles?: MembershipRole[]
+  /** Nombre corto para la barra inferior, donde caben unas diez letras. */
+  mobileLabel?: string
+  /** Para encontrarlo en el buscador con otras palabras. */
+  keywords?: string
 }
 
 interface NavGroup {
@@ -46,74 +65,96 @@ interface NavGroup {
   items: NavItem[]
 }
 
+const MANAGERS: MembershipRole[] = ['owner', 'admin']
+const TEAM: MembershipRole[] = ['owner', 'admin', 'staff']
+
 /**
- * El menú sigue el orden en que se usa el sistema, no el orden en que se
- * fueron construyendo las pantallas:
- *
- *   Operación     — lo que se mira todos los días
- *   Catálogo      — lo que el negocio vende
- *   Configuración — lo que se toca una vez y se olvida
+ * El menú sigue el orden en que se usa el sistema: lo de todos los días
+ * arriba, lo que se configura una vez abajo. Cada grupo se puede plegar.
  */
 const NAV_GROUPS: NavGroup[] = [
   {
     label: 'Operación',
     items: [
-      { to: '/orders', label: 'Pedidos', icon: ClipboardList },
-      { to: '/calendar', label: 'Calendario', icon: CalendarDays, featureKey: 'orderCalendar' },
-      { to: '/campaigns', label: 'Campañas', icon: Zap, featureKey: 'campaigns' },
-      { to: '/finances', label: 'Finanzas', icon: BarChart2, featureKey: 'finances' },
+      // La pantalla con la que se abre el negocio: qué hacer ahora.
+      { to: '/today', label: 'Hoy', icon: Sun, keywords: 'inicio resumen' },
+      { to: '/orders', label: 'Pedidos', icon: ClipboardList, keywords: 'ventas' },
+      { to: '/pos', label: 'Punto de venta', icon: ShoppingCart, featureKey: 'pos', roles: TEAM, mobileLabel: 'Vender', keywords: 'caja mostrador vender' },
+      { to: '/calendar', label: 'Calendario', icon: CalendarDays, featureKey: 'orderCalendar', keywords: 'agenda semana' },
+      { to: '/campaigns', label: 'Campañas', icon: Zap, featureKey: 'campaigns', roles: MANAGERS, keywords: 'preventa' },
+      { to: '/finances', label: 'Finanzas', icon: BarChart2, featureKey: 'finances', roles: MANAGERS, keywords: 'ingresos cobros' },
     ],
   },
   {
     label: 'Catálogo',
     items: [
       // `end` porque /catalog/filters es su hermano en el menú, no su hijo.
-      { to: '/catalog', label: 'Productos', icon: Package, end: true },
-      { to: '/catalog/filters', label: 'Filtros', icon: ListFilter, featureKey: 'productFilters' },
-      { to: '/inventory', label: 'Inventario', icon: PackageSearch, featureKey: 'inventory' },
+      { to: '/catalog', label: 'Productos', icon: Package, end: true, roles: TEAM, keywords: 'catálogo servicios' },
+      { to: '/catalog/filters', label: 'Filtros', icon: ListFilter, featureKey: 'productFilters', roles: MANAGERS, keywords: 'tallas colores' },
+      { to: '/inventory', label: 'Inventario', icon: PackageSearch, featureKey: 'inventory', roles: TEAM, keywords: 'stock' },
     ],
   },
   {
     label: 'Configuración',
     items: [
-      { to: '/workflow', label: 'Workflow', icon: Workflow },
-      { to: '/team', label: 'Equipo', icon: Users },
-      { to: '/settings', label: 'Ajustes', icon: Settings },
-      { to: '/integration', label: 'Integración', icon: Plug, featureKey: 'storefrontApi' },
-      { to: '/billing', label: 'Suscripción', icon: CreditCard },
-      { to: '/support', label: 'Soporte', icon: LifeBuoy },
+      { to: '/workflow', label: 'Workflow', icon: Workflow, roles: MANAGERS, keywords: 'estados' },
+      { to: '/team', label: 'Equipo', icon: Users, roles: MANAGERS, keywords: 'invitar personal roles' },
+      { to: '/settings', label: 'Ajustes', icon: Settings, roles: MANAGERS, keywords: 'tienda logo whatsapp avisos horario' },
+      { to: '/integration', label: 'Integración', icon: Plug, featureKey: 'storefrontApi', roles: MANAGERS, keywords: 'api llaves' },
+      { to: '/billing', label: 'Suscripción', icon: CreditCard, roles: MANAGERS, keywords: 'plan facturas' },
+      { to: '/support', label: 'Soporte', icon: LifeBuoy, keywords: 'ayuda tickets' },
     ],
   },
 ]
 
 /**
  * Qué va en la barra inferior del celular, por prioridad. Se toman los cinco
- * primeros que el plan permita: así, si un plan no trae Inventario, entra el
- * siguiente en vez de quedar un hueco.
+ * primeros que el plan y el rol permitan.
  */
-const MOBILE_PRIORITY = ['/orders', '/calendar', '/catalog', '/campaigns', '/inventory', '/settings']
+const MOBILE_PRIORITY = ['/today', '/orders', '/pos', '/calendar', '/catalog', '/inventory', '/settings']
 
-const COLLAPSE_KEY = 'utracker:sidebar-collapsed'
+const FOLDED_KEY = 'utracker:nav-folded'
 
+function readFolded(): string[] {
+  try {
+    const raw = JSON.parse(localStorage.getItem(FOLDED_KEY) ?? '[]')
+    return Array.isArray(raw) ? raw : []
+  } catch {
+    return []
+  }
+}
+
+function localDate() {
+  const d = new Date()
+  const pad = (n: number) => String(n).padStart(2, '0')
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
+}
+
+/**
+ * uTracker 2.0: barra lateral gris claro con el negocio arriba, un buscador
+ * para todo, el menú en grupos plegables y la cuenta abajo. El contenido va
+ * en blanco, a todo lo ancho.
+ */
 export function AppLayout() {
   const navigate = useNavigate()
   const location = useLocation()
-  const { user, activeTenant, setActiveTenant, logout } = useAuthStore()
+  const { activeTenant, setActiveTenant, logout } = useAuthStore()
   const { can, isSuspended } = useSubscription()
-  const openReporter = useSupportStore((s) => s.openReporter)
 
-  // Lo que se rompe fuera de React —una promesa sin atrapar, un script suelto—
-  // también tiene que llegar a los logs del sistema.
+  // Lo que se rompe fuera de React también tiene que llegar a los logs.
   useGlobalErrorReporting()
-  const [menuOpen, setMenuOpen] = useState(false)
-  const [collapsed, setCollapsed] = useState(
-    () => localStorage.getItem(COLLAPSE_KEY) === '1',
-  )
+  const [drawerOpen, setDrawerOpen] = useState(false)
+  const [paletteOpen, setPaletteOpen] = useState(false)
 
-  // Un grupo que se queda sin ítems por el plan no debe dejar su título solo.
+  const role = activeTenant?.role
+  // Un grupo que se queda sin ítems por el plan o el rol no deja su título solo.
   const groups = NAV_GROUPS.map((g) => ({
     ...g,
-    items: g.items.filter((item) => !item.featureKey || can(item.featureKey)),
+    items: g.items.filter(
+      (item) =>
+        (!item.featureKey || can(item.featureKey)) &&
+        (!item.roles || !role || item.roles.includes(role)),
+    ),
   })).filter((g) => g.items.length > 0)
 
   const allItems = groups.flatMap((g) => g.items)
@@ -121,280 +162,129 @@ export function AppLayout() {
     .filter((i): i is NavItem => Boolean(i))
     .slice(0, 5)
 
-  // Un menú abierto sobreviviendo a la navegación tapa la pantalla nueva.
-  useEffect(() => setMenuOpen(false), [location.pathname])
+  // Un cajón abierto sobreviviendo a la navegación tapa la pantalla nueva.
+  useEffect(() => setDrawerOpen(false), [location.pathname])
 
+  // «/» o Ctrl+K abren el buscador desde cualquier lado, salvo escribiendo.
   useEffect(() => {
-    localStorage.setItem(COLLAPSE_KEY, collapsed ? '1' : '0')
-  }, [collapsed])
-
-  function handleLogout() {
-    logout()
-    navigate('/login')
-  }
+    const onKey = (e: KeyboardEvent) => {
+      const typing = ['INPUT', 'TEXTAREA', 'SELECT'].includes((e.target as HTMLElement).tagName)
+      if ((e.key === 'k' && (e.ctrlKey || e.metaKey)) || (e.key === '/' && !typing)) {
+        e.preventDefault()
+        setPaletteOpen(true)
+      }
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [])
 
   function switchTenant() {
     setActiveTenant(null)
     navigate('/tenants')
   }
 
-  const tenantInitial = activeTenant?.name?.charAt(0).toUpperCase() ?? '?'
-
-  const tenantAvatar = activeTenant?.logoUrl ? (
-    <img
-      src={activeTenant.logoUrl}
-      alt=""
-      className="size-7 shrink-0 rounded-full object-cover ring-1 ring-slate-200"
+  const sidebar = (
+    <Sidebar
+      groups={groups}
+      onSearch={() => {
+        setDrawerOpen(false)
+        setPaletteOpen(true)
+      }}
+      onSwitchTenant={switchTenant}
+      onLogout={() => {
+        logout()
+        navigate('/login')
+      }}
     />
-  ) : (
-    <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-brand-50 text-xs font-bold text-brand-600">
-      {tenantInitial}
-    </span>
   )
 
   return (
-    <div className="min-h-full">
-      {/* ══ Sidebar (desktop) ══ */}
-      <aside
-        className={cn(
-          'fixed inset-y-0 left-0 z-40 hidden flex-col border-r border-slate-200 bg-white transition-[width] duration-200 md:flex',
-          collapsed ? 'w-[4.5rem]' : 'w-60',
-        )}
-      >
-        {/* Marca */}
-        <div
-          className={cn(
-            'flex h-16 shrink-0 items-center border-b border-slate-100',
-            collapsed ? 'justify-center px-2' : 'gap-2.5 px-4',
-          )}
-        >
-          <img src="/uTrackerLogo.png" alt="" className="size-8 shrink-0" />
-          {!collapsed && (
-            <span className="truncate text-lg font-bold tracking-tight text-slate-900">
-              uTracker
-            </span>
-          )}
-        </div>
-
-        {/* Negocio activo */}
-        <div className={cn('shrink-0 py-3', collapsed ? 'px-2' : 'px-3')}>
-          <button
-            type="button"
-            onClick={switchTenant}
-            title={collapsed ? `${activeTenant?.name} — cambiar de negocio` : undefined}
-            className={cn(
-              'flex w-full items-center rounded-xl bg-slate-50 text-left transition-colors hover:bg-slate-100',
-              collapsed ? 'justify-center p-2' : 'gap-2.5 px-3 py-2.5',
-            )}
-          >
-            {tenantAvatar}
-            {!collapsed && (
-              <>
-                <span className="min-w-0 flex-1">
-                  <span className="block truncate text-sm font-semibold text-slate-900">
-                    {activeTenant?.name}
-                  </span>
-                  <span className="block truncate text-xs text-slate-400">Cambiar de negocio</span>
-                </span>
-                <ChevronDown size={15} className="shrink-0 text-slate-400" />
-              </>
-            )}
-          </button>
-        </div>
-
-        {/* Navegación */}
-        <nav className="min-h-0 flex-1 overflow-y-auto px-3 pb-3">
-          {groups.map((group, i) => (
-            <SidebarGroup
-              key={group.label}
-              items={group.items}
-              collapsed={collapsed}
-              label={group.label}
-              className={i > 0 ? 'mt-5' : undefined}
-            />
-          ))}
-        </nav>
-
-        {/* Atajo a lo que ven los clientes: antes solo vivía dentro de Ajustes. */}
-        {activeTenant?.slug && (
-          <div className={cn('shrink-0', collapsed ? 'px-2 pb-2' : 'px-3 pb-2')}>
-            <a
-              href={`/store/${activeTenant.slug}`}
-              target="_blank"
-              rel="noreferrer"
-              title={collapsed ? 'Ver mi tienda' : undefined}
-              className={cn(
-                'flex items-center rounded-lg text-sm font-medium text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-900',
-                collapsed ? 'justify-center p-2.5' : 'gap-3 px-3 py-2',
-              )}
-            >
-              <Storefront size={18} className="shrink-0" />
-              {!collapsed && (
-                <>
-                  <span className="min-w-0 flex-1 truncate">Ver mi tienda</span>
-                  <ExternalLink size={13} className="shrink-0 text-slate-400" />
-                </>
-              )}
-            </a>
-          </div>
-        )}
-
-        {/* Cuenta */}
-        <div
-          className={cn(
-            'shrink-0 border-t border-slate-100 py-3',
-            collapsed ? 'px-2' : 'px-3',
-          )}
-        >
-          <div
-            className={cn(
-              'flex items-center',
-              collapsed ? 'flex-col gap-2' : 'gap-2.5 px-1',
-            )}
-          >
-            <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-slate-100 text-xs font-semibold text-slate-600">
-              {user?.name?.charAt(0).toUpperCase() ?? '?'}
-            </span>
-            {!collapsed && (
-              <div className="min-w-0 flex-1">
-                <p className="truncate text-sm font-medium text-slate-900">{user?.name}</p>
-                <p className="truncate text-xs text-slate-400">{user?.email}</p>
-              </div>
-            )}
-            <button
-              type="button"
-              onClick={handleLogout}
-              title="Salir"
-              aria-label="Salir"
-              className="shrink-0 rounded-lg p-2 text-slate-400 transition-colors hover:bg-red-50 hover:text-red-600"
-            >
-              <LogOut size={16} />
-            </button>
-          </div>
-
-          <button
-            type="button"
-            onClick={() => setCollapsed((v) => !v)}
-            title={collapsed ? 'Expandir menú' : 'Contraer menú'}
-            className={cn(
-              'mt-2 flex w-full items-center gap-2 rounded-lg px-2 py-2 text-xs font-medium text-slate-400 transition-colors hover:bg-slate-50 hover:text-slate-600',
-              collapsed && 'justify-center',
-            )}
-          >
-            <ChevronsLeft
-              size={16}
-              className={cn('shrink-0 transition-transform', collapsed && 'rotate-180')}
-            />
-            {!collapsed && 'Contraer'}
-          </button>
-        </div>
+    <div className="min-h-full bg-white">
+      {/* ══ Barra lateral (escritorio) ══ */}
+      <aside className="fixed inset-y-0 left-0 z-40 hidden w-64 border-r border-slate-200 bg-slate-50 md:block">
+        {sidebar}
       </aside>
 
-      {/* ══ Contenido ══ */}
-      {/* pb-20 deja libre la altura de la barra inferior en mobile. */}
-      <div
-        className={cn(
-          'min-h-full pb-20 transition-[padding] duration-200 md:pb-0',
-          collapsed ? 'md:pl-[4.5rem]' : 'md:pl-60',
-        )}
-      >
-        {/* Header compacto: solo mobile, el sidebar cubre desktop. */}
-        <header className="sticky top-0 z-30 border-b border-slate-200 bg-white md:hidden">
-          <div className="relative flex items-center gap-2 px-4 py-2.5">
+      {/* ══ Cajón (celular) ══ */}
+      {drawerOpen && (
+        <div className="fixed inset-0 z-50 md:hidden">
+          <button
+            type="button"
+            aria-label="Cerrar menú"
+            onClick={() => setDrawerOpen(false)}
+            className="absolute inset-0 cursor-default bg-slate-950/30"
+          />
+          <div className="relative h-full w-72 max-w-[85vw] border-r border-slate-200 bg-slate-50 shadow-xl transition-transform duration-200 ease-snappy starting:-translate-x-full">
             <button
               type="button"
-              onClick={switchTenant}
-              className="flex min-w-0 flex-1 items-center gap-2 rounded-lg py-1 text-left active:bg-slate-50"
+              aria-label="Cerrar menú"
+              onClick={() => setDrawerOpen(false)}
+              className="absolute top-4 right-3 z-10 flex size-8 items-center justify-center rounded-lg text-slate-400 active:bg-slate-200"
             >
-              {tenantAvatar}
-              <span className="truncate font-semibold text-slate-900">{activeTenant?.name}</span>
-              <ChevronDown size={15} className="shrink-0 text-slate-400" />
+              <X size={17} />
             </button>
-
-            <button
-              type="button"
-              aria-label="Cuenta"
-              aria-expanded={menuOpen}
-              onClick={() => setMenuOpen((v) => !v)}
-              className="flex size-9 shrink-0 items-center justify-center rounded-full bg-slate-100 text-sm font-semibold text-slate-600 active:bg-slate-200"
-            >
-              {user?.name?.charAt(0).toUpperCase() ?? '?'}
-            </button>
-
-            {menuOpen && (
-              <>
-                <button
-                  type="button"
-                  aria-label="Cerrar menú"
-                  onClick={() => setMenuOpen(false)}
-                  className="fixed inset-0 z-30 cursor-default"
-                />
-                <div className="absolute top-full right-4 z-40 mt-1 w-56 rounded-xl bg-white p-1.5 shadow-lg ring-1 ring-slate-200">
-                  <div className="px-3 py-2">
-                    <p className="truncate text-sm font-medium text-slate-900">{user?.name}</p>
-                    <p className="truncate text-xs text-slate-500">{user?.email}</p>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={switchTenant}
-                    className="w-full rounded-lg px-3 py-2.5 text-left text-sm text-slate-700 active:bg-slate-100"
-                  >
-                    Cambiar de negocio
-                  </button>
-                  <NavLink
-                    to="/settings"
-                    className="block w-full rounded-lg px-3 py-2.5 text-left text-sm text-slate-700 active:bg-slate-100"
-                  >
-                    Ajustes
-                  </NavLink>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setMenuOpen(false)
-                      openReporter({ category: 'error' })
-                    }}
-                    className="w-full rounded-lg px-3 py-2.5 text-left text-sm text-slate-700 active:bg-slate-100"
-                  >
-                    Reportar un problema
-                  </button>
-                  <button
-                    type="button"
-                    onClick={handleLogout}
-                    className="w-full rounded-lg px-3 py-2.5 text-left text-sm text-red-600 active:bg-red-50"
-                  >
-                    Salir
-                  </button>
-                </div>
-              </>
-            )}
+            {sidebar}
           </div>
+        </div>
+      )}
+
+      <div className="min-h-full pb-20 md:pb-0 md:pl-64">
+        {/* Cabecera compacta: solo celular, la barra lateral cubre el escritorio. */}
+        <header className="sticky top-0 z-30 flex items-center gap-2 border-b border-slate-200 bg-white/90 px-3 py-2 backdrop-blur md:hidden">
+          <button
+            type="button"
+            aria-label="Abrir menú"
+            onClick={() => setDrawerOpen(true)}
+            className="flex size-9 items-center justify-center rounded-lg text-slate-600 active:bg-slate-100"
+          >
+            <Menu size={19} />
+          </button>
+          <TenantAvatar size="sm" />
+          <span className="min-w-0 flex-1 truncate text-sm font-semibold text-slate-900">
+            {activeTenant?.name}
+          </span>
+          <button
+            type="button"
+            aria-label="Buscar"
+            onClick={() => setPaletteOpen(true)}
+            className="flex size-9 items-center justify-center rounded-lg text-slate-600 active:bg-slate-100"
+          >
+            <Search size={18} />
+          </button>
         </header>
 
-        <main className="mx-auto max-w-6xl px-4 py-6 sm:px-6 sm:py-8">
+        <main className="mx-auto max-w-[1440px] px-4 py-5 sm:px-6 sm:py-6">
           {/* Soporte mirando un negocio ajeno: que no se olvide ni por un momento. */}
-          {activeTenant?.support && (
-            <div className="mb-6 flex flex-wrap items-center gap-3 rounded-xl bg-violet-50 px-4 py-3 text-sm text-violet-900 ring-1 ring-violet-200">
-              <ShieldAlert size={16} className="shrink-0 text-violet-600" />
-              <span className="min-w-0 flex-1">
-                Estás dentro de <strong>{activeTenant.name}</strong> como soporte
-                {activeTenant.support.canWrite ? ' con permiso de cambios' : ' en solo lectura'}.
-                El acceso vence {formatDateTime(activeTenant.support.expiresAt)}.
-              </span>
-              <button
-                type="button"
-                onClick={switchTenant}
-                className="shrink-0 font-semibold underline hover:no-underline"
-              >
-                Salir del negocio
-              </button>
-            </div>
-          )}
-
-          {isSuspended && (
-            <div className="mb-6 flex items-center gap-3 rounded-xl bg-red-50 px-4 py-3 text-sm text-red-700 ring-1 ring-red-200">
-              <AlertTriangle size={16} className="shrink-0" />
-              Tu suscripción está suspendida. Algunas funciones pueden no estar disponibles.
-              Contacta al administrador para reactivarla.
+          {/* Avisos del marco: van por encima de la barra de título de cada pantalla. */}
+          {(activeTenant?.support || isSuspended) && (
+            <div className="-mx-4 -mt-5 mb-5 space-y-2 border-b border-slate-200 bg-slate-50 px-4 py-2.5 sm:-mx-6 sm:-mt-6 sm:px-6">
+              {activeTenant?.support && (
+                <Banner
+                  tone={activeTenant.support.canWrite ? 'warning' : 'info'}
+                  icon={ShieldAlert}
+                  title={
+                    activeTenant.support.canWrite
+                      ? `Soporte con permiso de cambios en ${activeTenant.name}`
+                      : `Soporte en solo lectura en ${activeTenant.name}`
+                  }
+                  action={
+                    <Button size="sm" variant="secondary" onClick={switchTenant}>
+                      Salir del negocio
+                    </Button>
+                  }
+                >
+                  {activeTenant.support.canWrite
+                    ? 'Lo que cambies queda registrado a nombre de soporte.'
+                    : 'Puedes mirar todo, pero no guardar cambios.'}{' '}
+                  El acceso vence {formatDateTime(activeTenant.support.expiresAt)}.
+                </Banner>
+              )}
+              {isSuspended && (
+                <Banner tone="danger" icon={AlertTriangle} title="Tu suscripción está suspendida">
+                  Puedes ver tu información, pero no registrar pedidos nuevos. Escríbenos desde Soporte
+                  para reactivarla.
+                </Banner>
+              )}
             </div>
           )}
 
@@ -404,12 +294,19 @@ export function AppLayout() {
         </main>
       </div>
 
+      <CommandPalette
+        open={paletteOpen}
+        onClose={() => setPaletteOpen(false)}
+        items={allItems.map((i) => ({ to: i.to, label: i.label, icon: i.icon, keywords: i.keywords }))}
+      />
+
       {/* Un solo diálogo de reporte para toda la aplicación. */}
       <ReportProblemDialog />
+      <Toaster />
 
-      {/* ══ Barra inferior (solo mobile) ══ */}
-      <nav className="pb-safe fixed inset-x-0 bottom-0 z-30 border-t border-slate-200 bg-white md:hidden">
-        <div className="grid grid-cols-5">
+      {/* ══ Barra inferior (celular) ══ */}
+      <nav className="pb-safe fixed inset-x-0 bottom-0 z-30 border-t border-slate-200 bg-white/95 backdrop-blur md:hidden">
+        <div className="grid" style={{ gridTemplateColumns: `repeat(${mobileNav.length}, minmax(0, 1fr))` }}>
           {mobileNav.map((item) => (
             <NavLink
               key={item.to}
@@ -424,8 +321,8 @@ export function AppLayout() {
             >
               {({ isActive }) => (
                 <>
-                  <item.icon size={21} strokeWidth={isActive ? 2.3 : 2} />
-                  {item.label}
+                  <item.icon size={20} strokeWidth={isActive ? 2.2 : 1.8} />
+                  {item.mobileLabel ?? item.label}
                 </>
               )}
             </NavLink>
@@ -436,54 +333,229 @@ export function AppLayout() {
   )
 }
 
-function SidebarGroup({
-  items,
-  collapsed,
-  label,
-  className,
+function TenantAvatar({ size = 'md' }: { size?: 'sm' | 'md' }) {
+  const tenant = useAuthStore((s) => s.activeTenant)
+  const cls = size === 'sm' ? 'size-7 rounded-md text-xs' : 'size-9 rounded-lg text-sm'
+  return tenant?.logoUrl ? (
+    <img src={tenant.logoUrl} alt="" className={cn(cls, 'shrink-0 object-cover border border-slate-200')} />
+  ) : (
+    <span className={cn(cls, 'flex shrink-0 items-center justify-center bg-navy font-semibold text-white')}>
+      {tenant?.name?.charAt(0).toUpperCase() ?? '?'}
+    </span>
+  )
+}
+
+function Sidebar({
+  groups,
+  onSearch,
+  onSwitchTenant,
+  onLogout,
 }: {
-  items: NavItem[]
-  collapsed: boolean
-  label?: string
-  className?: string
+  groups: NavGroup[]
+  onSearch: () => void
+  onSwitchTenant: () => void
+  onLogout: () => void
+}) {
+  const { user, activeTenant } = useAuthStore()
+  const { plan } = useSubscription()
+  const openReporter = useSupportStore((s) => s.openReporter)
+  const [folded, setFolded] = useState<string[]>(readFolded)
+  const [accountOpen, setAccountOpen] = useState(false)
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(FOLDED_KEY, JSON.stringify(folded))
+    } catch {
+      /* sin almacenamiento: los grupos vuelven a abrirse, nada más */
+    }
+  }, [folded])
+
+  // Lo que pide atención, junto a «Hoy». Comparte la consulta con esa pantalla.
+  const [date] = useState(localDate)
+  const { data: today } = useQuery({
+    queryKey: ['today', date],
+    queryFn: () => getToday(date),
+    refetchInterval: 60_000,
+    enabled: Boolean(activeTenant),
+  })
+  const attention = today ? today.overdue.length + today.proofs.length : 0
+
+  const toggle = (label: string) =>
+    setFolded((f) => (f.includes(label) ? f.filter((l) => l !== label) : [...f, label]))
+
+  return (
+    <div className="flex h-full flex-col">
+      {/* Negocio activo: desde aquí se cambia de negocio. */}
+      <button
+        type="button"
+        onClick={onSwitchTenant}
+        className="m-3 mb-2 flex items-center gap-3 rounded-lg p-2 pr-9 text-left transition-colors hover:bg-slate-200/60 md:pr-2"
+      >
+        <TenantAvatar />
+        <span className="min-w-0 flex-1">
+          <span className="block truncate text-[13px] font-semibold text-slate-900">{activeTenant?.name}</span>
+          <span className="block truncate text-xs text-slate-500">
+            {plan?.name ? `Plan ${plan.name}` : 'Cambiar de negocio'}
+          </span>
+        </span>
+        <ChevronsUpDown size={15} className="hidden shrink-0 text-slate-400 md:block" />
+      </button>
+
+      <button
+        type="button"
+        onClick={onSearch}
+        className="mx-3 mb-3 flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-[13px] text-slate-400 shadow-[0_1px_2px_rgb(24_24_27/0.03)] transition-colors hover:border-slate-300"
+      >
+        <Search size={14} />
+        <span className="flex-1 text-left">Buscar</span>
+        <Kbd>/</Kbd>
+      </button>
+
+      <nav className="min-h-0 flex-1 overflow-y-auto px-3 pb-3">
+        {groups.map((group) => {
+          const isFolded = folded.includes(group.label)
+          return (
+            <div key={group.label} className="mt-3 first:mt-0">
+              <button
+                type="button"
+                onClick={() => toggle(group.label)}
+                aria-expanded={!isFolded}
+                className="flex w-full items-center gap-1.5 px-2 py-1 text-[11px] font-medium tracking-[0.08em] text-slate-400 uppercase hover:text-slate-600"
+              >
+                <ChevronDown size={12} className={cn('transition-transform duration-150', isFolded && '-rotate-90')} />
+                {group.label}
+              </button>
+              {!isFolded && (
+                <ul className="mt-0.5 space-y-px">
+                  {group.items.map((item) => (
+                    <li key={item.to}>
+                      <NavLink
+                        to={item.to}
+                        end={item.end}
+                        className={({ isActive }) =>
+                          cn(
+                            // Activo: fondo sutil, texto fuerte y una barra naranja a la izquierda. Sin contorno.
+                            'focus-ring relative flex items-center gap-2.5 rounded-lg px-2 py-1.5 text-[13px] transition-colors',
+                            isActive
+                              ? 'bg-slate-200/70 font-medium text-slate-900 before:absolute before:inset-y-1.5 before:-left-3 before:w-[3px] before:rounded-r-full before:bg-brand-500'
+                              : 'text-slate-600 hover:bg-slate-200/50 hover:text-slate-900',
+                          )
+                        }
+                      >
+                        {({ isActive }) => (
+                          <>
+                            <item.icon
+                              size={16}
+                              strokeWidth={1.8}
+                              className={cn('shrink-0', isActive ? 'text-brand-500' : 'text-slate-400')}
+                            />
+                            <span className="min-w-0 flex-1 truncate">{item.label}</span>
+                            {item.to === '/today' && attention > 0 && (
+                              <span className="rounded-md border border-slate-200 bg-white px-1.5 text-[11px] text-slate-600 tabular-nums">
+                                {attention}
+                              </span>
+                            )}
+                          </>
+                        )}
+                      </NavLink>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          )
+        })}
+
+        {activeTenant?.slug && (
+          <a
+            href={`/store/${activeTenant.slug}`}
+            target="_blank"
+            rel="noreferrer"
+            className="mt-4 flex items-center gap-2.5 rounded-lg px-2 py-1.5 text-[13px] text-slate-600 transition-colors hover:bg-slate-200/60 hover:text-slate-900"
+          >
+            <Storefront size={16} strokeWidth={1.8} className="shrink-0 text-slate-400" />
+            <span className="min-w-0 flex-1 truncate">Ver mi tienda</span>
+            <ExternalLink size={12} className="shrink-0 text-slate-400" />
+          </a>
+        )}
+      </nav>
+
+      {/* Cuenta */}
+      <div className="pb-safe relative border-t border-slate-200 p-3">
+        <div className="flex items-center gap-2.5 px-1">
+          <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-slate-200 text-xs font-semibold text-slate-700">
+            {user?.name?.charAt(0).toUpperCase() ?? '?'}
+          </span>
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-[13px] font-medium text-slate-900">{user?.name}</p>
+            <p className="truncate text-xs text-slate-500">{user?.email}</p>
+          </div>
+          <button
+            type="button"
+            aria-label="Opciones de la cuenta"
+            aria-expanded={accountOpen}
+            onClick={() => setAccountOpen((v) => !v)}
+            className="flex size-8 shrink-0 items-center justify-center rounded-lg text-slate-500 hover:bg-slate-200/60"
+          >
+            <MoreHorizontal size={16} />
+          </button>
+        </div>
+
+        {accountOpen && (
+          <>
+            <button
+              type="button"
+              aria-label="Cerrar"
+              onClick={() => setAccountOpen(false)}
+              className="fixed inset-0 z-10 cursor-default"
+            />
+            <div className="absolute right-3 bottom-full left-3 z-20 mb-1 rounded-xl border border-slate-200 bg-white p-1 shadow-[0_12px_32px_-8px_rgb(24_24_27/0.25)] transition-[opacity,transform] duration-150 ease-snappy starting:translate-y-1 starting:opacity-0">
+              <MenuItem icon={Repeat} onClick={onSwitchTenant}>
+                Cambiar de negocio
+              </MenuItem>
+              <MenuItem
+                icon={Bug}
+                onClick={() => {
+                  setAccountOpen(false)
+                  openReporter({ category: 'error' })
+                }}
+              >
+                Reportar un problema
+              </MenuItem>
+              <div className="my-1 border-t border-slate-100" />
+              <MenuItem icon={LogOut} onClick={onLogout} danger>
+                Salir
+              </MenuItem>
+            </div>
+          </>
+        )}
+      </div>
+    </div>
+  )
+}
+
+function MenuItem({
+  icon: Icon,
+  onClick,
+  danger,
+  children,
+}: {
+  icon: LucideIcon
+  onClick: () => void
+  danger?: boolean
+  children: React.ReactNode
 }) {
   return (
-    <div className={className}>
-      {label && !collapsed && (
-        <p className="mb-1 px-3 text-[11px] font-semibold tracking-wide text-slate-400 uppercase">
-          {label}
-        </p>
+    <button
+      type="button"
+      onClick={onClick}
+      className={cn(
+        'flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left text-[13px] transition-colors',
+        danger ? 'text-danger-600 hover:bg-danger-50' : 'text-slate-700 hover:bg-slate-100',
       )}
-      {/* Con el sidebar contraído el separador reemplaza al título del grupo. */}
-      {label && collapsed && <div className="mx-2 mb-2 border-t border-slate-100" />}
-
-      <ul className="space-y-0.5">
-        {items.map((item) => (
-          <li key={item.to}>
-            <NavLink
-              to={item.to}
-              end={item.end}
-              title={collapsed ? item.label : undefined}
-              className={({ isActive }) =>
-                cn(
-                  'flex items-center rounded-lg text-sm font-medium transition-colors',
-                  collapsed ? 'justify-center p-2.5' : 'gap-3 px-3 py-2',
-                  isActive
-                    ? 'bg-brand-50 text-brand-700'
-                    : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900',
-                )
-              }
-            >
-              {({ isActive }) => (
-                <>
-                  <item.icon size={18} strokeWidth={isActive ? 2.3 : 2} className="shrink-0" />
-                  {!collapsed && <span className="truncate">{item.label}</span>}
-                </>
-              )}
-            </NavLink>
-          </li>
-        ))}
-      </ul>
-    </div>
+    >
+      <Icon size={15} className={danger ? 'text-danger-500' : 'text-slate-400'} />
+      {children}
+    </button>
   )
 }

@@ -94,9 +94,9 @@ export function ReportProblemDialog() {
           </>
         }
       >
-        <div className="flex items-start gap-3 rounded-xl bg-emerald-50 p-4 ring-1 ring-emerald-200">
-          <Check size={18} className="mt-0.5 shrink-0 text-emerald-600" />
-          <p className="text-sm text-emerald-800">
+        <div className="flex items-start gap-3 rounded-xl bg-success-50 p-4 ring-1 ring-success-200">
+          <Check size={18} className="mt-0.5 shrink-0 text-success-600" />
+          <p className="text-sm text-success-800">
             Soporte ya lo tiene, con los detalles técnicos adjuntos. Cuando te respondan te
             avisamos por WhatsApp al número del negocio.
           </p>
@@ -187,7 +187,7 @@ export function ReportProblemDialog() {
 
         {/* Lo técnico se adjunta solo; se muestra para que nadie se sorprenda de qué se envía. */}
         {(failures.length > 0 || logRef) && (
-          <div className="rounded-xl bg-slate-50 p-3 ring-1 ring-slate-200">
+          <div className="rounded-xl bg-slate-50 p-3 border border-slate-200">
             <p className="flex items-center gap-1.5 text-xs font-semibold text-slate-600">
               <Paperclip size={13} />
               Se adjunta automáticamente

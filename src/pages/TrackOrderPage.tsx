@@ -3,7 +3,7 @@ import { useParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { AlertTriangle, ChevronLeft, ChevronRight, MessageCircle, X } from 'lucide-react'
 import { trackOrder, type TrackingStep } from '@/api/tracking'
-import { Alert, Card, Spinner, StateBadge } from '@/components/ui'
+import { Alert, Card, Spinner } from '@/components/ui'
 import { StateIcon } from '@/lib/icons'
 import { formatCurrency, formatDateTime } from '@/lib/cn'
 import type { OrderType } from '@/types'
@@ -155,32 +155,27 @@ export function TrackOrderPage() {
             <dd className="font-bold">{formatCurrency(data.totalAmount)}</dd>
           </div>
 
-          {/* Desglose de pagos */}
+          {/*
+            Solo lo que el cliente necesita saber: cuánto pagó, si hay algo en
+            revisión y cuánto le falta. Antes se separaba adelanto de saldo y
+            además se repetía el estado de pago: tres maneras de decir lo mismo.
+          */}
           {data.payments.totalPaid > 0 && (
-            <>
-              {data.payments.advance > 0 && (
-                <div className="flex items-center justify-between">
-                  <dt className="text-slate-500">Adelanto</dt>
-                  <dd className="font-medium text-emerald-600">
-                    {formatCurrency(data.payments.advance)}
-                  </dd>
-                </div>
-              )}
-              {data.payments.balance > 0 && (
-                <div className="flex items-center justify-between">
-                  <dt className="text-slate-500">Saldo pagado</dt>
-                  <dd className="font-medium text-emerald-600">
-                    {formatCurrency(data.payments.balance)}
-                  </dd>
-                </div>
-              )}
-              <div className="flex items-center justify-between border-t border-slate-100 pt-2">
-                <dt className="text-slate-500">Total pagado</dt>
-                <dd className="font-semibold text-emerald-700">
-                  {formatCurrency(data.payments.totalPaid)}
-                </dd>
-              </div>
-            </>
+            <div className="flex items-center justify-between">
+              <dt className="text-slate-500">Pagado</dt>
+              <dd className="font-semibold text-emerald-700">
+                {formatCurrency(data.payments.totalPaid)}
+              </dd>
+            </div>
+          )}
+
+          {(data.payments.refunded ?? 0) > 0 && (
+            <div className="flex items-center justify-between">
+              <dt className="text-slate-500">Te devolvimos</dt>
+              <dd className="font-semibold text-slate-700">
+                {formatCurrency(data.payments.refunded ?? 0)}
+              </dd>
+            </div>
           )}
 
           {/* Comprobante enviado que el negocio todavía no confirma. */}
@@ -193,20 +188,22 @@ export function TrackOrderPage() {
             </div>
           )}
 
-          {data.payments.remaining > 0 && (
+          {/* Lo en revisión no se le vuelve a cobrar: si lo cubre, no falta nada. */}
+          {Math.max(0, data.payments.remaining - data.payments.pending) > 0 ? (
             <div className="flex items-center justify-between rounded-lg bg-amber-50 px-3 py-2">
-              <dt className="font-medium text-amber-700">Resta pagar</dt>
+              <dt className="font-medium text-amber-700">Falta pagar</dt>
               <dd className="font-bold text-amber-700">
-                {formatCurrency(data.payments.remaining)}
+                {formatCurrency(data.payments.remaining - data.payments.pending)}
               </dd>
             </div>
-          )}
-
-          {data.payments.remaining === 0 && data.payments.totalPaid > 0 && (
-            <div className="flex items-center justify-between rounded-lg bg-emerald-50 px-3 py-2">
-              <dt className="font-medium text-emerald-700">Pagado en su totalidad</dt>
-              <dd className="text-emerald-600">✓</dd>
-            </div>
+          ) : (
+            data.payments.pending === 0 &&
+            data.payments.totalPaid > 0 && (
+              <div className="flex items-center justify-between rounded-lg bg-emerald-50 px-3 py-2">
+                <dt className="font-medium text-emerald-700">Pagado completo</dt>
+                <dd className="text-emerald-600">✓</dd>
+              </div>
+            )
           )}
 
           {/*
@@ -237,19 +234,6 @@ export function TrackOrderPage() {
                   Regularizar mi pago
                 </a>
               )}
-            </div>
-          )}
-
-          {data.paymentState && (
-            <div className="flex items-center justify-between pt-1">
-              <dt className="text-slate-500">Estado de pago</dt>
-              <dd>
-                <StateBadge
-                  name={data.paymentState.name}
-                  color={data.paymentState.color}
-                  icon={data.paymentState.icon}
-                />
-              </dd>
             </div>
           )}
 

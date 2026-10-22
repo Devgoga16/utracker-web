@@ -16,3 +16,9 @@ export async function login(payload: { email: string; password: string }) {
   const { data } = await api.post<SessionResponse>('/auth/login', payload)
   return data
 }
+
+/** Elegir contraseña nueva. Tras una temporal del superadmin no pide la actual. */
+export async function changePassword(payload: { currentPassword?: string; newPassword: string }) {
+  const { data } = await api.post<SessionResponse>('/auth/password', payload)
+  return data
+}

@@ -5,6 +5,7 @@ import { login } from '@/api/auth'
 import { useAuthStore } from '@/stores/authStore'
 import { Alert, Button, Field, Input } from '@/components/ui'
 import { AuthShell } from '@/components/AuthShell'
+import { CHANGE_PASSWORD_PATH } from '@/lib/paths'
 
 export function LoginPage() {
   const navigate = useNavigate()
@@ -16,7 +17,8 @@ export function LoginPage() {
     mutationFn: () => login({ email, password }),
     onSuccess: (session) => {
       setSession(session)
-      navigate(session.user.isSuperAdmin ? '/superadmin' : '/tenants')
+      if (session.user.mustChangePassword) navigate(CHANGE_PASSWORD_PATH)
+      else navigate(session.user.isSuperAdmin ? '/superadmin' : '/tenants')
     },
   })
 

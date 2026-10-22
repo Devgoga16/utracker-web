@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
+  AtSign,
   CheckCircle2,
   Clock,
   KeyRound,
@@ -21,6 +22,7 @@ import {
 } from '@/api/support'
 import { apiErrorMessage } from '@/api/client'
 import { PlanOverridesDialog } from '@/components/PlanOverridesDialog'
+import { ChangeEmailDialog, ResetPasswordDialog, type AccountTarget } from '@/components/UserAccountDialogs'
 import { useAuthStore } from '@/stores/authStore'
 import {
   Alert,
@@ -65,6 +67,8 @@ export function SuperadminTenantDetailPage() {
   const { id } = useParams<{ id: string }>()
   const [showAccess, setShowAccess] = useState(false)
   const [showOverrides, setShowOverrides] = useState(false)
+  const [account, setAccount] = useState<{ kind: 'email' | 'password'; user: AccountTarget } | null>(null)
+  const qc = useQueryClient()
 
   const { data, isLoading, error } = useQuery({
     queryKey: ['tenant-detail', id],
@@ -99,7 +103,7 @@ export function SuperadminTenantDetailPage() {
             {!tenant.isActive && (
               <>
                 <span className="text-slate-300">·</span>
-                <span className="font-medium text-red-600">Inactivo</span>
+                <span className="font-medium text-danger-600">Inactivo</span>
               </>
             )}
           </span>
@@ -224,7 +228,7 @@ export function SuperadminTenantDetailPage() {
             {tenant.phone ? (
               <p className="mt-1 text-sm text-slate-500">Número {tenant.phone}</p>
             ) : (
-              <p className="mt-1 text-sm text-amber-700">Sin número configurado</p>
+              <p className="mt-1 text-sm text-warning-700">Sin número configurado</p>
             )}
           </Card>
         </div>
@@ -239,6 +243,7 @@ export function SuperadminTenantDetailPage() {
                 <th className="px-4 py-2.5">Email</th>
                 <th className="px-4 py-2.5">Rol</th>
                 <th className="px-4 py-2.5">Desde</th>
+                <th className="px-4 py-2.5" aria-label="Acciones" />
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
@@ -246,12 +251,15 @@ export function SuperadminTenantDetailPage() {
                 <tr key={m._id}>
                   <td className="px-4 py-2.5 font-medium text-slate-900">
                     {m.user?.name ?? 'Usuario eliminado'}
-                    {!m.isActive && <span className="ml-2 text-xs text-red-600">inactivo</span>}
+                    {!m.isActive && <span className="ml-2 text-xs text-danger-600">inactivo</span>}
                   </td>
                   <td className="px-4 py-2.5 text-slate-500">{m.user?.email ?? '—'}</td>
                   <td className="px-4 py-2.5 text-slate-600">{ROLE_LABELS[m.role] ?? m.role}</td>
                   <td className="px-4 py-2.5 text-xs text-slate-400">
                     {formatDateTime(m.createdAt)}
+                  </td>
+                  <td className="px-4 py-2.5 text-right">
+                    {m.user && <AccountActions user={m.user} onAction={setAccount} />}
                   </td>
                 </tr>
               ))}
@@ -273,12 +281,28 @@ export function SuperadminTenantDetailPage() {
               <p className="truncate text-sm text-slate-500">{m.user?.email ?? '—'}</p>
               <p className="mt-1 text-xs text-slate-400">
                 Desde {formatDateTime(m.createdAt)}
-                {!m.isActive && <span className="ml-2 text-red-600">inactivo</span>}
+                {!m.isActive && <span className="ml-2 text-danger-600">inactivo</span>}
               </p>
+              {m.user && (
+                <div className="mt-3">
+                  <AccountActions user={m.user} onAction={setAccount} />
+                </div>
+              )}
             </li>
           ))}
         </ul>
       </Card>
+
+      {account?.kind === 'email' && (
+        <ChangeEmailDialog
+          user={account.user}
+          onClose={() => setAccount(null)}
+          onDone={() => qc.invalidateQueries({ queryKey: ['tenant-detail', id] })}
+        />
+      )}
+      {account?.kind === 'password' && (
+        <ResetPasswordDialog user={account.user} onClose={() => setAccount(null)} onDone={() => {}} />
+      )}
 
       <div className="grid gap-5 lg:grid-cols-2">
         <Card
@@ -350,11 +374,11 @@ function HealthRow({ check }: { check: HealthCheck }) {
     <li className="flex items-start gap-2.5">
       <Icon
         size={16}
-        className={cn('mt-0.5 shrink-0', check.ok ? 'text-emerald-500' : 'text-red-500')}
+        className={cn('mt-0.5 shrink-0', check.ok ? 'text-success-500' : 'text-danger-500')}
       />
       <div className="min-w-0">
         <p className="text-sm font-medium text-slate-800">{check.label}</p>
-        <p className={cn('text-xs', check.ok ? 'text-slate-500' : 'text-red-600')}>
+        <p className={cn('text-xs', check.ok ? 'text-slate-500' : 'text-danger-600')}>
           {check.detail}
         </p>
       </div>
@@ -441,7 +465,7 @@ function ActiveAccessBanner({
         reason: access.reason,
       },
     })
-    navigate('/orders')
+    navigate('/today')
   }
 
   return (
@@ -548,5 +572,27 @@ function GrantAccessDialog({
         </p>
       </div>
     </Modal>
+  )
+}
+
+/** Lo que soporte puede hacer con la cuenta de un miembro. */
+function AccountActions({
+  user,
+  onAction,
+}: {
+  user: AccountTarget
+  onAction: (action: { kind: 'email' | 'password'; user: AccountTarget }) => void
+}) {
+  return (
+    <div className="inline-flex gap-1.5">
+      <Button variant="ghost" size="sm" onClick={() => onAction({ kind: 'email', user })}>
+        <AtSign size={14} />
+        Correo
+      </Button>
+      <Button variant="ghost" size="sm" onClick={() => onAction({ kind: 'password', user })}>
+        <KeyRound size={14} />
+        Contraseña
+      </Button>
+    </div>
   )
 }

@@ -396,7 +396,7 @@ function LogDetail({ log }: { log: SystemLog }) {
           <p className="mb-1 text-[11px] font-semibold tracking-wide text-slate-400 uppercase">
             Contexto
           </p>
-          <pre className="max-h-64 overflow-auto rounded-lg bg-white p-3 font-mono text-[11px] leading-relaxed text-slate-600 ring-1 ring-slate-200">
+          <pre className="max-h-64 overflow-auto rounded-lg bg-white p-3 font-mono text-[11px] leading-relaxed text-slate-600 border border-slate-200">
             {JSON.stringify(log.context, null, 2)}
           </pre>
         </div>
@@ -407,7 +407,7 @@ function LogDetail({ log }: { log: SystemLog }) {
           <p className="mb-1 text-[11px] font-semibold tracking-wide text-slate-400 uppercase">
             Stack
           </p>
-          <pre className="max-h-64 overflow-auto rounded-lg bg-white p-3 font-mono text-[11px] leading-relaxed text-slate-600 ring-1 ring-slate-200">
+          <pre className="max-h-64 overflow-auto rounded-lg bg-white p-3 font-mono text-[11px] leading-relaxed text-slate-600 border border-slate-200">
             {log.stack}
           </pre>
         </div>

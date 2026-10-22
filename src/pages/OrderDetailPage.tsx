@@ -11,16 +11,11 @@ import {
   ExternalLink,
   Link2,
   Trash2,
-  ZoomIn,
 } from 'lucide-react'
-import {
-  deleteOrder,
-  deletePayment,
-  getOrder,
-  registerPayment,
-  updateOrderState,
-  validatePayment,
-} from '@/api/orders'
+import { cancelOrder, deleteOrder, getOrder, updateOrderState } from '@/api/orders'
+import { useRole } from '@/hooks/useRole'
+import { OrderPayments } from '@/components/OrderPayments'
+import { OrderSummaryStrip } from '@/components/OrderStatus'
 import { getWorkflow } from '@/api/tenants'
 import {
   Alert,
@@ -28,18 +23,29 @@ import {
   Button,
   Card,
   Field,
+  IconButton,
   Input,
-  Lightbox,
   PageHeader,
   SectionLabel,
   Spinner,
   StateBadge,
 } from '@/components/ui'
-import { ImageUploader } from '@/components/ImageUploader'
 import { useSubscription } from '@/hooks/useSubscription'
 import { StateIcon } from '@/lib/icons'
 import { cn, formatCurrency, formatDateTime } from '@/lib/cn'
-import type { Franja, PaymentKind, WorkflowKind, WorkflowState } from '@/types'
+import type {
+  Franja,
+  OrderCreatedVia,
+  WorkflowKind,
+  WorkflowState,
+} from '@/types'
+
+const ORIGIN_LABELS: Record<OrderCreatedVia, string> = {
+  manual: 'carga manual',
+  order_link: 'vía link',
+  store: 'tienda online',
+  pos: 'punto de venta',
+}
 
 const FRANJA_LABEL: Record<Franja, string> = {
   morning: 'por la mañana',
@@ -70,17 +76,6 @@ export function OrderDetailPage() {
     },
   })
 
-  const validatePaymentMutation = useMutation({
-    mutationFn: (kind: PaymentKind) => validatePayment(id!, kind),
-    onSuccess: () => {
-      // 'orders' (plural) es la clave real de la consulta: en singular la
-      // invalidación no coincide con nada y la pantalla se queda vieja.
-      queryClient.invalidateQueries({ queryKey: ['orders', id] })
-      // Validar puede mover el estado de pago, y eso se ve en la lista.
-      queryClient.invalidateQueries({ queryKey: ['orders'] })
-    },
-  })
-
   const deleteMutation = useMutation({
     mutationFn: () => deleteOrder(id!),
     onSuccess: () => {
@@ -90,30 +85,18 @@ export function OrderDetailPage() {
   })
 
   const [confirmingDelete, setConfirmingDelete] = useState(false)
-  const [paymentForm, setPaymentForm] = useState<{
-    kind: PaymentKind
-    amount: number
-    proofImageUrl: string
-    note: string
-  } | null>(null)
-  const [proofLightbox, setProofLightbox] = useState<string | null>(null)
+  const [cancelling, setCancelling] = useState(false)
+  const [reason, setReason] = useState('')
+  const { isTeam, isManager } = useRole()
 
-  const deletePaymentMutation = useMutation({
-    mutationFn: (kind: PaymentKind) => deletePayment(id!, kind),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['orders', id] }),
-  })
-
-  const paymentMutation = useMutation({
-    mutationFn: () =>
-      registerPayment(id!, {
-        kind: paymentForm!.kind,
-        amount: paymentForm!.amount,
-        proofImageUrl: paymentForm!.proofImageUrl || undefined,
-        note: paymentForm!.note || undefined,
-      }),
+  const cancelMutation = useMutation({
+    mutationFn: () => cancelOrder(id!, reason.trim() || undefined),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['orders', id] })
-      setPaymentForm(null)
+      setCancelling(false)
+      setReason('')
+      queryClient.invalidateQueries({ queryKey: ['orders'] })
+      // Cancelar devuelve el stock.
+      queryClient.invalidateQueries({ queryKey: ['inventory'] })
     },
   })
 
@@ -125,9 +108,15 @@ export function OrderDetailPage() {
     .filter((p) => p.validated !== false)
     .reduce((s, p) => s + p.amount, 0)
   const remaining = order.totalAmount - totalPaid
-  const paidRatio = order.totalAmount > 0 ? totalPaid / order.totalAmount : 0
-  const hasAdvance = order.payments.some((p) => p.kind === 'advance')
-  const hasBalance = order.payments.some((p) => p.kind === 'balance')
+  const isCancelled = Boolean(order.fulfillmentState?.isCancellation)
+  const isPos = order.createdVia === 'pos'
+
+  // El motivo de la cancelación vive en el historial, en el paso que la registró.
+  const cancelNote = isCancelled
+    ? [...order.stateHistory]
+        .reverse()
+        .find((h) => h.kind === 'fulfillment' && h.state === order.fulfillmentState?._id)?.note
+    : undefined
 
   /**
    * Los estados que no aplican a este tipo de entrega no se ofrecen: en un
@@ -150,7 +139,7 @@ export function OrderDetailPage() {
         description={
           <>
             {order.customer?.phone} · Creado {formatDateTime(order.createdAt)} ·{' '}
-            {order.createdVia === 'order_link' ? 'vía link' : 'carga manual'}
+            {ORIGIN_LABELS[order.createdVia] ?? 'carga manual'}
           </>
         }
         actions={
@@ -164,27 +153,94 @@ export function OrderDetailPage() {
                 </Button>
               </Link>
             )}
-            <Button
-              variant="secondary"
-              onClick={() => setConfirmingDelete(true)}
-              className="text-red-600 ring-red-200 hover:bg-red-50"
-            >
-              <Trash2 size={15} />
-              <span className="hidden sm:inline">Eliminar</span>
-            </Button>
+            {/*
+              Cancelar es lo normal: el pedido queda con su historia y el stock
+              vuelve. Eliminar borra hasta el rastro, así que queda solo para el
+              dueño y el administrador. Una venta de mostrador se anula desde la caja.
+            */}
+            {!isPos && isTeam && !isCancelled && (
+              <Button variant="secondary" onClick={() => setCancelling(true)}>
+                <CircleX size={15} />
+                <span className="hidden sm:inline">Cancelar pedido</span>
+              </Button>
+            )}
+            {!isPos && isManager && (
+              <IconButton label="Eliminar pedido" tone="danger" onClick={() => setConfirmingDelete(true)}>
+                <Trash2 size={15} />
+              </IconButton>
+            )}
           </div>
         }
       />
 
+      {/* Las tres dimensiones del pedido, antes que cualquier detalle. */}
+      <OrderSummaryStrip order={order} />
+
+      {order.voidedAt && (
+        <Alert>
+          Venta anulada el {formatDateTime(order.voidedAt)}. El stock volvió al inventario y el
+          dinero salió de la caja.
+        </Alert>
+      )}
+
+      {isCancelled && !order.voidedAt && (
+        <div className="rounded-xl bg-slate-100 px-4 py-3 text-sm text-slate-700 border border-slate-200">
+          <p className="font-medium text-slate-900">Pedido cancelado</p>
+          {cancelNote && <p className="mt-0.5">Motivo: {cancelNote}</p>}
+          <p className="mt-0.5 text-slate-500">
+            El stock que había descontado volvió al inventario. Si cobraste algo, regístralo como
+            devuelto en Pagos.
+          </p>
+        </div>
+      )}
+
+      {cancelling && (
+        <Card className="ring-warning-200">
+          <p className="text-sm font-medium text-slate-800">¿Cancelar este pedido?</p>
+          <p className="mt-1 text-sm text-slate-500">
+            El pedido queda en tu lista como cancelado, con el motivo en su historial. Lo que haya
+            descontado del inventario vuelve.
+          </p>
+          <div className="mt-3">
+            <Field label="Motivo (opcional)" htmlFor="cancel-reason">
+              <Input
+                id="cancel-reason"
+                autoFocus
+                placeholder="Ej. el cliente ya no lo necesita"
+                value={reason}
+                onChange={(e) => setReason(e.target.value)}
+              />
+            </Field>
+          </div>
+          {cancelMutation.isError && (
+            <div className="mt-3">
+              <Alert error={cancelMutation.error} />
+            </div>
+          )}
+          <div className="mt-4 flex flex-wrap gap-2">
+            <Button
+              variant="danger"
+              disabled={cancelMutation.isPending}
+              onClick={() => cancelMutation.mutate()}
+            >
+              {cancelMutation.isPending ? 'Cancelando...' : 'Sí, cancelar pedido'}
+            </Button>
+            <Button variant="secondary" onClick={() => setCancelling(false)}>
+              Volver
+            </Button>
+          </div>
+        </Card>
+      )}
+
       {confirmingDelete && (
-        <Card className="ring-red-200">
+        <Card className="ring-danger-200">
           <p className="text-sm font-medium text-slate-800">
             ¿Eliminar este pedido? Esta acción no se puede deshacer.
           </p>
 
           {/* Borrar y cancelar no hacen lo mismo con el stock: conviene decirlo
               antes, no después. */}
-          <ul className="mt-3 space-y-1.5 rounded-lg bg-amber-50 p-3 text-[13px] text-amber-900 ring-1 ring-amber-200">
+          <ul className="mt-3 space-y-1.5 rounded-lg bg-warning-50 p-3 text-[13px] text-warning-900 ring-1 ring-warning-200">
             <li className="flex gap-2">
               <span aria-hidden>•</span>
               <span>
@@ -212,7 +268,7 @@ export function OrderDetailPage() {
               {deleteMutation.isPending ? 'Eliminando...' : 'Sí, eliminar'}
             </Button>
             <Button variant="secondary" onClick={() => setConfirmingDelete(false)}>
-              Cancelar
+              No, volver
             </Button>
           </div>
           {deleteMutation.isError && (
@@ -237,16 +293,6 @@ export function OrderDetailPage() {
             isPending={stateMutation.isPending}
             onSelect={(stateId, link) => stateMutation.mutate({ kind: 'fulfillment', stateId, link })}
           />
-
-          <Card title="Estado del pago" description="Se actualiza solo al registrar pagos.">
-            {order.paymentState && (
-              <StateBadge
-                name={order.paymentState.name}
-                color={order.paymentState.color}
-                icon={order.paymentState.icon}
-              />
-            )}
-          </Card>
 
           <TrackingLinkCard token={order.trackingToken} />
         </div>
@@ -280,7 +326,7 @@ export function OrderDetailPage() {
                   <td colSpan={2} className="py-3 pl-4 font-semibold sm:pl-5">
                     Total
                   </td>
-                  <td className="py-3 pr-4 text-right text-base font-bold tabular-nums sm:pr-5">
+                  <td className="py-3 pr-4 text-right text-base font-semibold tabular-nums sm:pr-5">
                     {formatCurrency(order.totalAmount)}
                   </td>
                 </tr>
@@ -289,7 +335,7 @@ export function OrderDetailPage() {
           </Card>
 
           {order.scheduledFor && (
-            <div className="flex items-center gap-2.5 rounded-xl bg-slate-50 px-4 py-3 text-sm ring-1 ring-slate-200">
+            <div className="flex items-center gap-2.5 rounded-xl bg-slate-50 px-4 py-3 text-sm border border-slate-200">
               <Calendar size={15} className="shrink-0 text-slate-400" />
               <span className="text-slate-600">
                 <span className="font-medium text-slate-900">Entrega preferida:</span>{' '}
@@ -303,239 +349,7 @@ export function OrderDetailPage() {
             </div>
           )}
 
-          <Card
-            title="Pagos"
-            actions={
-              !paymentForm &&
-              (!hasAdvance || !hasBalance) && (
-                <Button
-                  size="sm"
-                  variant="secondary"
-                  onClick={() =>
-                    setPaymentForm({
-                      kind: hasAdvance ? 'balance' : 'advance',
-                      amount: remaining > 0 ? remaining : 0,
-                      proofImageUrl: '',
-                      note: '',
-                    })
-                  }
-                >
-                  Registrar pago
-                </Button>
-              )
-            }
-          >
-            <div className="rounded-xl bg-slate-50 p-3.5">
-              <div className="grid grid-cols-3 gap-2 text-center text-xs">
-                <div>
-                  <p className="text-slate-500">Total</p>
-                  <p className="mt-0.5 font-semibold tabular-nums text-slate-900">
-                    {formatCurrency(order.totalAmount)}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-slate-500">Pagado</p>
-                  <p className="mt-0.5 font-semibold tabular-nums text-emerald-700">
-                    {formatCurrency(totalPaid)}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-slate-500">Saldo</p>
-                  <p
-                    className={cn(
-                      'mt-0.5 font-semibold tabular-nums',
-                      remaining > 0 ? 'text-amber-700' : 'text-slate-400',
-                    )}
-                  >
-                    {formatCurrency(remaining)}
-                  </p>
-                </div>
-              </div>
-
-              <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-slate-200">
-                <div
-                  className="h-full rounded-full bg-emerald-500 transition-[width] duration-500"
-                  style={{ width: `${Math.min(100, paidRatio * 100)}%` }}
-                />
-              </div>
-            </div>
-
-            {order.payments.length > 0 && (
-              <ul className="mt-4 space-y-3">
-                {order.payments.map((p, i) => (
-                  <li
-                    key={i}
-                    className={cn(
-                      'flex items-start gap-3 text-sm',
-                      // Pendiente de revisión: se destaca para que no pase de largo.
-                      p.validated === false && 'rounded-xl bg-amber-50 p-3 ring-1 ring-amber-200',
-                    )}
-                  >
-                    <div className="min-w-0 flex-1">
-                      <p className="flex flex-wrap items-center gap-1.5 font-medium text-slate-900">
-                        {p.kind === 'advance' ? 'Adelanto' : 'Saldo'}
-                        <span
-                          className={cn(
-                            'font-semibold tabular-nums',
-                            p.validated === false ? 'text-amber-700' : 'text-emerald-700',
-                          )}
-                        >
-                          {formatCurrency(p.amount)}
-                        </span>
-                        {p.validated === false && (
-                          <span className="rounded-full bg-amber-200 px-2 py-0.5 text-[10px] font-bold tracking-wide text-amber-900 uppercase">
-                            Por validar
-                          </span>
-                        )}
-                      </p>
-                      <p className="text-xs text-slate-400">{formatDateTime(p.registeredAt)}</p>
-                      {p.note && <p className="mt-0.5 text-xs text-slate-500">{p.note}</p>}
-
-                      {p.validated === false ? (
-                        <>
-                          <p className="mt-1.5 text-xs text-amber-800">
-                            El cliente subió este comprobante. Revísalo y confirma que el dinero
-                            llegó: hasta entonces no cuenta como pagado.
-                          </p>
-                          <div className="mt-2 flex flex-wrap gap-2">
-                            <Button
-                              size="sm"
-                              disabled={validatePaymentMutation.isPending}
-                              onClick={() => validatePaymentMutation.mutate(p.kind)}
-                            >
-                              <Check size={14} />
-                              {validatePaymentMutation.isPending ? 'Validando...' : 'Validar pago'}
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="secondary"
-                              disabled={deletePaymentMutation.isPending}
-                              onClick={() => deletePaymentMutation.mutate(p.kind)}
-                              className="text-red-600 hover:bg-red-50"
-                            >
-                              Rechazar
-                            </Button>
-                          </div>
-                        </>
-                      ) : (
-                        <button
-                          type="button"
-                          disabled={deletePaymentMutation.isPending}
-                          onClick={() => deletePaymentMutation.mutate(p.kind)}
-                          className="mt-1 text-xs text-slate-400 transition-colors hover:text-red-600 disabled:opacity-50"
-                        >
-                          Eliminar
-                        </button>
-                      )}
-                    </div>
-
-                    {p.proofImageUrl && (
-                      <button
-                        type="button"
-                        onClick={() => setProofLightbox(p.proofImageUrl!)}
-                        className="group relative shrink-0"
-                        aria-label="Ver comprobante"
-                      >
-                        <img
-                          src={p.proofImageUrl}
-                          alt=""
-                          className="size-16 rounded-lg object-cover ring-1 ring-slate-200 transition-opacity group-hover:opacity-80"
-                        />
-                        <span className="absolute inset-0 flex items-center justify-center rounded-lg transition-colors group-hover:bg-black/30">
-                          <ZoomIn
-                            size={16}
-                            className="text-white opacity-0 transition-opacity group-hover:opacity-100"
-                          />
-                        </span>
-                      </button>
-                    )}
-                  </li>
-                ))}
-              </ul>
-            )}
-
-            {paymentForm && (
-              <div className="mt-4 space-y-3 border-t border-slate-100 pt-4">
-                {paymentMutation.isError && <Alert error={paymentMutation.error} />}
-
-                <div className="flex gap-2">
-                  {(['advance', 'balance'] as PaymentKind[]).map((k) => {
-                    const taken = order.payments.some((p) => p.kind === k)
-                    return (
-                      <button
-                        key={k}
-                        type="button"
-                        disabled={taken}
-                        onClick={() => setPaymentForm({ ...paymentForm, kind: k })}
-                        className={cn(
-                          'flex-1 rounded-lg px-3 py-2 text-sm font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-40',
-                          paymentForm.kind === k
-                            ? 'bg-brand-50 text-brand-700 ring-2 ring-brand-500'
-                            : 'bg-white text-slate-700 ring-1 ring-slate-300 hover:bg-slate-50',
-                        )}
-                      >
-                        {k === 'advance' ? 'Adelanto' : 'Saldo'}
-                        {taken && ' (ya registrado)'}
-                      </button>
-                    )
-                  })}
-                </div>
-
-                <Field label="Monto" htmlFor="pay-amount">
-                  <Input
-                    id="pay-amount"
-                    type="number"
-                    inputMode="decimal"
-                    min={0}
-                    step="0.01"
-                    value={paymentForm.amount || ''}
-                    onChange={(e) =>
-                      setPaymentForm({ ...paymentForm, amount: Number(e.target.value) })
-                    }
-                  />
-                </Field>
-
-                <Field label="Nota (opcional)" htmlFor="pay-note">
-                  <Input
-                    id="pay-note"
-                    value={paymentForm.note}
-                    onChange={(e) => setPaymentForm({ ...paymentForm, note: e.target.value })}
-                  />
-                </Field>
-
-                <div>
-                  <p className="mb-1.5 text-sm font-medium text-slate-700">
-                    Foto del comprobante (opcional)
-                  </p>
-                  <ImageUploader
-                    max={1}
-                    folder="payments"
-                    value={paymentForm.proofImageUrl ? [paymentForm.proofImageUrl] : []}
-                    onChange={(urls) =>
-                      setPaymentForm({ ...paymentForm, proofImageUrl: urls[0] ?? '' })
-                    }
-                  />
-                </div>
-
-                <div className="flex gap-2">
-                  <Button
-                    className="flex-1 sm:flex-none"
-                    disabled={!paymentForm.amount || paymentMutation.isPending}
-                    onClick={() => paymentMutation.mutate()}
-                  >
-                    {paymentMutation.isPending ? 'Guardando...' : 'Guardar pago'}
-                  </Button>
-                  <Button
-                    variant="secondary"
-                    className="flex-1 sm:flex-none"
-                    onClick={() => setPaymentForm(null)}
-                  >
-                    Cancelar
-                  </Button>
-                </div>
-              </div>
-            )}
-          </Card>
+          <OrderPayments order={order} />
 
           {order.delivery && (
             <Card title="Entrega">
@@ -553,9 +367,9 @@ export function OrderDetailPage() {
                     {order.delivery.attempts.map((attempt, i) => (
                       <li key={i} className="flex items-start gap-2 text-sm">
                         {attempt.succeeded ? (
-                          <CircleCheck size={16} className="mt-0.5 shrink-0 text-emerald-600" />
+                          <CircleCheck size={16} className="mt-0.5 shrink-0 text-success-600" />
                         ) : (
-                          <CircleX size={16} className="mt-0.5 shrink-0 text-red-600" />
+                          <CircleX size={16} className="mt-0.5 shrink-0 text-danger-600" />
                         )}
                         <div className="min-w-0">
                           <p className="break-words text-slate-700">
@@ -591,6 +405,7 @@ export function OrderDetailPage() {
                   <span className="ml-auto text-xs whitespace-nowrap text-slate-400">
                     {formatDateTime(entry.changedAt)}
                   </span>
+                  {entry.note && <p className="w-full text-xs text-slate-500">{entry.note}</p>}
                 </li>
               ))}
             </ol>
@@ -598,7 +413,6 @@ export function OrderDetailPage() {
         </div>
       </div>
 
-      <Lightbox url={proofLightbox} onClose={() => setProofLightbox(null)} />
     </div>
   )
 }
@@ -636,7 +450,7 @@ function TrackingLinkCard({ token }: { token: string }) {
       title="Link de seguimiento"
       description="Mándaselo al cliente para que siga su pedido. No necesita cuenta."
     >
-      <div className="rounded-lg bg-slate-50 px-3 py-2.5 ring-1 ring-slate-200">
+      <div className="rounded-lg bg-slate-50 px-3 py-2.5 border border-slate-200">
         <p className="font-mono text-xs break-all text-slate-600">{url}</p>
       </div>
       <div className="mt-3 flex gap-2">
@@ -698,10 +512,10 @@ function StatePicker({
           href={currentLink}
           target="_blank"
           rel="noreferrer"
-          className="mb-3 flex items-center gap-2 rounded-lg bg-blue-50 px-3 py-2 text-xs ring-1 ring-blue-100 transition-colors hover:bg-blue-100"
+          className="mb-3 flex items-center gap-2 rounded-lg bg-info-50 px-3 py-2 text-xs ring-1 ring-info-100 transition-colors hover:bg-info-100"
         >
-          <Link2 size={13} className="shrink-0 text-blue-600" />
-          <span className="truncate text-blue-700">{currentLink}</span>
+          <Link2 size={13} className="shrink-0 text-info-600" />
+          <span className="truncate text-info-700">{currentLink}</span>
         </a>
       )}
 
@@ -722,7 +536,7 @@ function StatePicker({
                 isChosen && 'bg-brand-50 ring-2 ring-brand-500',
                 !isCurrent &&
                   !isChosen &&
-                  'text-slate-600 ring-1 ring-slate-200 hover:bg-slate-50 disabled:opacity-50',
+                  'text-slate-600 border border-slate-200 hover:bg-slate-50 disabled:opacity-50',
               )}
               style={
                 isCurrent

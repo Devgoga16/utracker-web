@@ -1,5 +1,12 @@
 import { api } from './client'
-import type { Franja, Order, OrderLink, OrderType, PaymentKind, WorkflowKind } from '@/types'
+import type {
+  Franja,
+  Order,
+  OrderLink,
+  OrderType,
+  PaymentMethodKind,
+  WorkflowKind,
+} from '@/types'
 
 export interface CreateOrderItemInput {
   /** Omit for an ad-hoc line; then name and unitPrice are required. */
@@ -17,15 +24,17 @@ export interface CreateOrderInput {
   type: OrderType
   delivery?: { address?: string; reference?: string; courierName?: string; driver?: string }
   notes?: string
-  advance?: { amount: number; proofImageUrl?: string }
+  /** Lo que dejó pagado al hacer el pedido; puede ser todo. */
+  advance?: { amount: number; proofImageUrl?: string; method?: PaymentMethodKind }
   scheduledFor?: { date: string; franja?: Franja }
 }
 
 export interface RegisterPaymentInput {
-  kind: PaymentKind
   amount: number
   proofImageUrl?: string
   note?: string
+  /** Si hay una caja abierta, el pago entra a su cuadre. */
+  method?: PaymentMethodKind
 }
 
 export async function listOrders(params?: { campaign?: string }) {
@@ -57,8 +66,9 @@ export async function registerPayment(id: string, payload: RegisterPaymentInput)
   return data.order
 }
 
-export async function deletePayment(id: string, kind: PaymentKind) {
-  const { data } = await api.delete<{ order: Order }>(`/orders/${id}/payments/${kind}`)
+/** `paymentId` es el id del pago; acepta 'advance' / 'balance' para pagos viejos sin id. */
+export async function deletePayment(id: string, paymentId: string) {
+  const { data } = await api.delete<{ order: Order }>(`/orders/${id}/payments/${paymentId}`)
   return data.order
 }
 
@@ -82,9 +92,14 @@ export async function createOrderLink(payload: {
 }
 
 /** El negocio confirma que el adelanto del cliente efectivamente llegó. */
-export async function validatePayment(orderId: string, kind: PaymentKind) {
+export async function validatePayment(
+  orderId: string,
+  paymentId: string,
+  method?: PaymentMethodKind,
+) {
   const { data } = await api.patch<{ order: Order }>(
-    `/orders/${orderId}/payments/${kind}/validate`,
+    `/orders/${orderId}/payments/${paymentId}/validate`,
+    { method },
   )
   return data.order
 }
@@ -95,5 +110,39 @@ export async function calendarOrders(from: string, to: string) {
     '/orders/calendar',
     { params: { from, to } },
   )
+  return data
+}
+
+/** Cancela el pedido: vuelve el stock y queda el motivo en el historial. */
+export async function cancelOrder(id: string, reason?: string) {
+  const { data } = await api.post<{ order: Order }>(`/orders/${id}/cancel`, { reason })
+  return data.order
+}
+
+/** Registra dinero devuelto al cliente. */
+export async function refundOrder(
+  id: string,
+  payload: { amount: number; method?: PaymentMethodKind; note?: string },
+) {
+  const { data } = await api.post<{ order: Order }>(`/orders/${id}/refunds`, payload)
+  return data.order
+}
+
+export interface TodayView {
+  date: string
+  tomorrow: string
+  overdue: Order[]
+  today: Order[]
+  tomorrowOrders: Order[]
+  unscheduled: Order[]
+  /** Pedidos con al menos un comprobante del cliente sin revisar. */
+  proofs: Order[]
+  /** Lo que falta cobrar de lo atrasado y lo de hoy. */
+  toCollect: number
+}
+
+/** Lo que pide atención hoy. `date` es el día local de quien mira. */
+export async function getToday(date: string) {
+  const { data } = await api.get<TodayView>('/orders/today', { params: { date } })
   return data
 }

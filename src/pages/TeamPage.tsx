@@ -33,6 +33,7 @@ import {
   Spinner,
 } from '@/components/ui'
 import { formatDateTime } from '@/lib/cn'
+import { getWorkflow } from '@/api/tenants'
 import { timeAgo } from '@/lib/tickets'
 import type { MembershipRole, Team, TeamInvitation, TeamMember } from '@/types'
 
@@ -62,6 +63,7 @@ export function TeamPage() {
   const [inviting, setInviting] = useState(false)
 
   const { data, isLoading, error } = useQuery({ queryKey: ['team'], queryFn: getTeam })
+  const { data: workflow } = useQuery({ queryKey: ['workflow'], queryFn: getWorkflow })
 
   if (isLoading) return <Spinner />
   if (error) return <Alert error={error} />
@@ -69,8 +71,16 @@ export function TeamPage() {
 
   const { seats } = data
   const activeMembers = data.members.filter((m) => m.isActive)
-  const hasLimitedRoles = activeMembers.some(
-    (m) => m.role === 'staff' || m.role === 'driver',
+  /*
+   * Solo se avisa de lo que de verdad falta: un rol presente en el equipo que
+   * no puede mover ni un pedido. Antes el aviso salía siempre, aunque ya
+   * estuviera todo habilitado, y la gente dejaba de leerlo.
+   */
+  const stuckRoles = (['staff', 'driver'] as const).filter(
+    (role) =>
+      activeMembers.some((m) => m.role === role) &&
+      workflow !== undefined &&
+      !workflow.fulfillment.some((s) => s.allowedRoles.includes(role)),
   )
 
   return (
@@ -132,8 +142,8 @@ export function TeamPage() {
       </Card>
 
       {!data.emailEnabled && (
-        <div className="flex items-start gap-3 rounded-xl bg-amber-50 px-4 py-3 text-sm text-amber-900 ring-1 ring-amber-200">
-          <MailWarning size={16} className="mt-0.5 shrink-0 text-amber-600" />
+        <div className="flex items-start gap-3 rounded-xl bg-warning-50 px-4 py-3 text-sm text-warning-900 ring-1 ring-warning-200">
+          <MailWarning size={16} className="mt-0.5 shrink-0 text-warning-600" />
           <span>
             El envío de correos no está configurado en el servidor, así que la invitación no sale
             por mail. Igual te vamos a dar el enlace para que lo mandes por WhatsApp.
@@ -148,13 +158,13 @@ export function TeamPage() {
         Sin este aviso, invitar a un repartidor y verlo sin poder mover nada
         parece un error del sistema, cuando es un permiso que falta marcar.
       */}
-      {hasLimitedRoles && (
+      {stuckRoles.length > 0 && (
         <div className="flex flex-wrap items-start gap-3 rounded-xl bg-brand-50 px-4 py-3 text-sm text-brand-900 ring-1 ring-brand-200">
           <Workflow size={16} className="mt-0.5 shrink-0 text-brand-600" />
           <span className="min-w-0 flex-1">
-            Tienes gente con rol de personal o repartidor. Para que puedan mover pedidos de estado,
-            habilita su rol en cada estado del workflow: por defecto solo pueden el dueño y los
-            administradores.
+            {stuckRoles.map((r) => (r === 'staff' ? 'El personal' : 'El repartidor')).join(' y ')}{' '}
+            todavía no puede mover ningún pedido de estado. Habilita su rol en los estados que le
+            toquen, desde el workflow.
           </span>
           <Link to="/workflow" className="shrink-0">
             <Button size="sm" variant="secondary">
@@ -383,7 +393,7 @@ function MemberActions({
         aria-label="Quitar del equipo"
         title="Quitar del equipo"
         onClick={onRemove}
-        className="flex size-9 items-center justify-center rounded-lg text-slate-400 transition-colors hover:bg-red-50 hover:text-red-600"
+        className="flex size-9 items-center justify-center rounded-lg text-slate-400 transition-colors hover:bg-danger-50 hover:text-danger-600"
       >
         <Trash2 size={15} />
       </button>
@@ -504,9 +514,9 @@ function InviteDialog({
         footer={<Button onClick={onClose}>Listo</Button>}
       >
         <div className="space-y-4">
-          <div className="flex items-start gap-3 rounded-xl bg-emerald-50 p-4 ring-1 ring-emerald-200">
-            <Check size={18} className="mt-0.5 shrink-0 text-emerald-600" />
-            <div className="text-sm text-emerald-900">
+          <div className="flex items-start gap-3 rounded-xl bg-success-50 p-4 ring-1 ring-success-200">
+            <Check size={18} className="mt-0.5 shrink-0 text-success-600" />
+            <div className="text-sm text-success-900">
               {result.emailSent ? (
                 <p>Le llegó un correo con el enlace para entrar.</p>
               ) : (

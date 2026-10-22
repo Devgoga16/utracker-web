@@ -80,14 +80,14 @@ export function SuperadminDashboardPage() {
       <div className="grid gap-4 sm:grid-cols-3">
         {(
           [
-            { label: 'Trial', count: subs.trial, color: 'bg-amber-100 text-amber-700' },
-            { label: 'Activas', count: subs.active, color: 'bg-emerald-100 text-emerald-700' },
-            { label: 'Suspendidas', count: subs.suspended, color: 'bg-red-100 text-red-700' },
+            { label: 'Trial', count: subs.trial, color: 'bg-warning-100 text-warning-700' },
+            { label: 'Activas', count: subs.active, color: 'bg-success-100 text-success-700' },
+            { label: 'Suspendidas', count: subs.suspended, color: 'bg-danger-100 text-danger-700' },
           ] as const
         ).map(({ label, count, color }) => (
           <div key={label} className="rounded-xl border border-slate-200 bg-white p-5">
             <p className="text-sm text-slate-500">{label}</p>
-            <p className="mt-1 text-2xl font-bold text-slate-900">{count}</p>
+            <p className="mt-1 text-2xl font-semibold text-slate-900">{count}</p>
             <span className={`mt-2 inline-block rounded-full px-2 py-0.5 text-xs font-medium ${color}`}>
               suscripciones
             </span>

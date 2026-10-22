@@ -32,7 +32,7 @@ function CopyButton({ text, label }: { text: string; label: string }) {
         setTimeout(() => setCopied(false), 1800)
       }}
     >
-      {copied ? <Check size={15} className="text-emerald-600" /> : <Copy size={15} />}
+      {copied ? <Check size={15} className="text-success-600" /> : <Copy size={15} />}
     </IconButton>
   )
 }
@@ -74,11 +74,11 @@ function KeyRow({ apiKey }: { apiKey: StoreApiKey }) {
       </td>
       <td className="pr-2">
         {confirming ? (
-          <div className="flex items-center gap-1.5 rounded-lg bg-red-50 px-2 py-1 ring-1 ring-red-200">
+          <div className="flex items-center gap-1.5 rounded-lg bg-danger-50 px-2 py-1 ring-1 ring-danger-200">
             <button
               type="button"
               onClick={() => (confirming === 'revoke' ? revoke.mutate() : remove.mutate())}
-              className="text-xs font-semibold text-red-600 hover:underline"
+              className="text-xs font-semibold text-danger-600 hover:underline"
             >
               Sí
             </button>
@@ -96,7 +96,7 @@ function KeyRow({ apiKey }: { apiKey: StoreApiKey }) {
               <IconButton
                 label="Revocar"
                 onClick={() => setConfirming('revoke')}
-                className="hover:bg-amber-50 hover:text-amber-600"
+                className="hover:bg-warning-50 hover:text-warning-600"
               >
                 <Ban size={15} />
               </IconButton>
@@ -104,7 +104,7 @@ function KeyRow({ apiKey }: { apiKey: StoreApiKey }) {
             <IconButton
               label="Eliminar"
               onClick={() => setConfirming('delete')}
-              className="hover:bg-red-50 hover:text-red-600"
+              className="hover:bg-danger-50 hover:text-danger-600"
             >
               <Trash2 size={15} />
             </IconButton>
@@ -144,7 +144,7 @@ export function IntegrationPage() {
   const sample = keys?.find((k) => !k.revokedAt)?.key ?? 'TU_LLAVE'
 
   return (
-    <div className="max-w-3xl space-y-5">
+    <div className="space-y-5 [&>*:not(:first-child)]:max-w-3xl">
       <PageHeader
         title="Integración"
         description="Arma tu tienda en tu propia web usando el catálogo de uTracker."
@@ -182,7 +182,7 @@ export function IntegrationPage() {
             sitio.
           </p>
           {create.isError && (
-            <p className="mt-1.5 text-xs text-red-600">{apiErrorMessage(create.error)}</p>
+            <p className="mt-1.5 text-xs text-danger-600">{apiErrorMessage(create.error)}</p>
           )}
         </SettingRow>
 
@@ -194,7 +194,7 @@ export function IntegrationPage() {
               Todavía no tienes llaves. Crea una arriba para empezar.
             </p>
           ) : (
-            <div className="overflow-x-auto rounded-lg ring-1 ring-slate-200">
+            <div className="overflow-x-auto rounded-lg border border-slate-200">
               <table className="w-full text-sm">
                 <thead className="bg-slate-50 text-left text-[11px] font-semibold tracking-wide text-slate-400 uppercase">
                   <tr>
@@ -236,9 +236,9 @@ export function IntegrationPage() {
                   <td className="py-2 pr-3 align-top">
                     <span
                       className={cn(
-                        'rounded px-1.5 py-0.5 font-mono text-[10px] font-bold',
+                        'rounded px-1.5 py-0.5 font-mono text-[10px] font-semibold',
                         method === 'GET'
-                          ? 'bg-emerald-100 text-emerald-700'
+                          ? 'bg-success-100 text-success-700'
                           : 'bg-brand-100 text-brand-700',
                       )}
                     >

@@ -51,7 +51,7 @@ export function AcceptInvitePage() {
       })
       // Entra directo al negocio que lo invitó, sin pasar por el selector.
       if (res.tenant) setActiveTenant(res.tenant)
-      navigate(res.tenant ? '/orders' : '/tenants', { replace: true })
+      navigate(res.tenant ? '/today' : '/tenants', { replace: true })
     },
   })
 
@@ -86,7 +86,7 @@ export function AcceptInvitePage() {
           <img
             src={invitation.business.logoUrl}
             alt=""
-            className="size-12 shrink-0 rounded-xl object-cover ring-1 ring-slate-200"
+            className="size-12 shrink-0 rounded-xl object-cover border border-slate-200"
           />
         ) : (
           <span className="flex size-12 shrink-0 items-center justify-center rounded-xl bg-brand-50 text-brand-600">
@@ -97,7 +97,7 @@ export function AcceptInvitePage() {
           <p className="text-xs font-medium tracking-wide text-slate-400 uppercase">
             Invitación a un equipo
           </p>
-          <h1 className="truncate text-lg font-bold text-slate-900">
+          <h1 className="truncate text-lg font-semibold text-slate-900">
             {invitation.business.name}
           </h1>
         </div>
@@ -183,7 +183,7 @@ export function AcceptInvitePage() {
 function Shell({ children }: { children: React.ReactNode }) {
   return (
     <div className="flex min-h-screen items-center justify-center bg-slate-50 px-4 py-10">
-      <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-card ring-1 ring-slate-200 sm:p-7">
+      <div className="w-full max-w-md rounded-xl bg-white p-6 border border-slate-200 sm:p-7">
         {children}
       </div>
     </div>

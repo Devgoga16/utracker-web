@@ -17,8 +17,7 @@ import {
   Button,
   Card,
   CheckboxField,
-  Chip,
-  ChipBar,
+  Tabs,
   EmptyState,
   Field,
   IconButton,
@@ -31,6 +30,7 @@ import {
 import { ImageUploader } from '@/components/ImageUploader'
 import { formatCurrency } from '@/lib/cn'
 import type { CatalogKind, Product } from '@/types'
+import { useRole } from '@/hooks/useRole'
 
 const emptyForm: ProductInput = {
   kind: 'product',
@@ -136,7 +136,7 @@ function VariantEditor({
               <IconButton
                 label={`Quitar ${v.name || 'opción'}`}
                 onClick={() => onChange(variants.filter((_, j) => j !== i))}
-                className="shrink-0 hover:bg-red-50 hover:text-red-600"
+                className="shrink-0 hover:bg-danger-50 hover:text-danger-600"
               >
                 <X size={15} />
               </IconButton>
@@ -260,6 +260,8 @@ function AttributePicker({
 type Filter = 'all' | CatalogKind
 
 export function CatalogPage() {
+  // El personal consulta el catálogo; cargarlo y editarlo es del dueño y el admin.
+  const { isManager } = useRole()
   const queryClient = useQueryClient()
   const [form, setForm] = useState<ProductInput>(emptyForm)
   const [showForm, setShowForm] = useState(false)
@@ -344,9 +346,10 @@ export function CatalogPage() {
     <div className="space-y-6">
       <PageHeader
         title="Catálogo"
+        count={counts.all}
         description="Los productos y servicios que ofreces."
         actions={
-          !showForm && (
+          !showForm && isManager && (
             <div className="flex items-center gap-2">
               <Link to="/catalog/filters">
                 <Button variant="secondary">
@@ -728,27 +731,15 @@ export function CatalogPage() {
         </Card>
       )}
 
-      <ChipBar>
-        <Chip active={filter === 'all'} count={counts.all} onClick={() => setFilter('all')}>
-          Todo
-        </Chip>
-        <Chip
-          active={filter === 'product'}
-          count={counts.product}
-          onClick={() => setFilter('product')}
-        >
-          <Package size={14} />
-          Productos
-        </Chip>
-        <Chip
-          active={filter === 'service'}
-          count={counts.service}
-          onClick={() => setFilter('service')}
-        >
-          <Wrench size={14} />
-          Servicios
-        </Chip>
-      </ChipBar>
+      <Tabs
+        value={filter}
+        onChange={(key) => setFilter(key as typeof filter)}
+        items={[
+          { key: 'all', label: 'Todo', count: counts.all },
+          { key: 'product', label: 'Productos', count: counts.product },
+          { key: 'service', label: 'Servicios', count: counts.service },
+        ]}
+      />
 
       {isLoading ? (
         <Spinner />
@@ -758,7 +749,7 @@ export function CatalogPage() {
           title="Nada por aquí"
           description="Carga tus productos y servicios para poder armar pedidos."
           action={
-            !showForm && (
+            !showForm && isManager && (
               <Button onClick={openCreate}>
                 <Plus size={16} />
                 Agregar el primero
@@ -771,6 +762,7 @@ export function CatalogPage() {
           {visible.map((item) => (
             <ProductCard
               key={item._id}
+              canEdit={isManager}
               item={item}
               editing={editingId === item._id}
               confirming={confirmingId === item._id}
@@ -791,6 +783,7 @@ export function CatalogPage() {
 }
 
 function ProductCard({
+  canEdit,
   item,
   editing,
   confirming,
@@ -801,6 +794,7 @@ function ProductCard({
   onCancelDelete,
   onConfirmDelete,
 }: {
+  canEdit: boolean
   item: Product
   editing: boolean
   confirming: boolean
@@ -816,7 +810,7 @@ function ProductCard({
 
   return (
     <div
-      className={`flex flex-col overflow-hidden rounded-xl bg-white shadow-card ring-1 transition-shadow ${
+      className={`flex flex-col overflow-hidden rounded-xl bg-white ring-1 transition-shadow ${
         editing ? 'ring-2 ring-brand-500' : 'ring-slate-200'
       }`}
     >
@@ -858,7 +852,7 @@ function ProductCard({
               {formatCurrency(item.price)}
             </p>
             {item.pricingMode === 'quoted' && (
-              <p className="text-[11px] text-amber-600">a cotizar</p>
+              <p className="text-[11px] text-warning-600">a cotizar</p>
             )}
           </div>
         </div>
@@ -884,7 +878,7 @@ function ProductCard({
                 No
               </Button>
             </div>
-          ) : (
+          ) : canEdit && (
             <div className="flex items-center gap-1 border-t border-slate-100 pt-2">
               <IconButton label={`Editar ${item.name}`} onClick={onEdit}>
                 <Pencil size={14} />

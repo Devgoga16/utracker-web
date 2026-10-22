@@ -45,7 +45,7 @@ export function ImageUploader({ value, onChange, max = 4, folder = 'catalog' }: 
 
   if (storage && !storage.configured) {
     return (
-      <div className="rounded-lg bg-slate-50 px-4 py-3 text-xs text-slate-500 ring-1 ring-slate-200">
+      <div className="rounded-lg bg-slate-50 px-4 py-3 text-xs text-slate-500 border border-slate-200">
         La subida de imágenes está desactivada: faltan las variables <code>R2_*</code> en el{' '}
         <code>.env</code> de la API.
       </div>
@@ -64,7 +64,7 @@ export function ImageUploader({ value, onChange, max = 4, folder = 'catalog' }: 
             <img
               src={url}
               alt=""
-              className="size-20 rounded-lg object-cover ring-1 ring-slate-200"
+              className="size-20 rounded-lg object-cover border border-slate-200"
             />
             {idx === 0 && (
               <span className="pointer-events-none absolute bottom-1 left-1 rounded bg-black/60 px-1 py-0.5 text-[9px] font-semibold leading-none text-white">

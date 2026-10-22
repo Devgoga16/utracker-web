@@ -8,10 +8,10 @@ import { Alert, Button, PageHeader, Spinner } from '@/components/ui'
 import type { Bill, BillStatus } from '@/types'
 
 const STATUS_CONFIG: Record<BillStatus, { label: string; className: string }> = {
-  pending: { label: 'Pendiente', className: 'bg-amber-100 text-amber-700' },
-  reviewing: { label: 'En revisión', className: 'bg-blue-100 text-blue-700' },
-  paid: { label: 'Pagada', className: 'bg-emerald-100 text-emerald-700' },
-  overdue: { label: 'Vencida', className: 'bg-red-100 text-red-700' },
+  pending: { label: 'Pendiente', className: 'bg-warning-100 text-warning-700' },
+  reviewing: { label: 'En revisión', className: 'bg-info-100 text-info-700' },
+  paid: { label: 'Pagada', className: 'bg-success-100 text-success-700' },
+  overdue: { label: 'Vencida', className: 'bg-danger-100 text-danger-700' },
 }
 
 function formatPeriod(period: string) {
@@ -136,7 +136,7 @@ function BillCard({ bill, onViewProof }: { bill: Bill; onViewProof: (url: string
       {bill.proofImageUrl && (
         <button
           onClick={() => onViewProof(bill.proofImageUrl!)}
-          className="mt-2 flex items-center gap-1 text-xs text-blue-600 hover:underline"
+          className="mt-2 flex items-center gap-1 text-xs text-info-600 hover:underline"
         >
           <Eye size={12} />
           Ver comprobante enviado
@@ -146,7 +146,7 @@ function BillCard({ bill, onViewProof }: { bill: Bill; onViewProof: (url: string
       {canUpload && !bill.proofImageUrl && <ProofUploader bill={bill} />}
 
       {bill.status === 'reviewing' && (
-        <p className="mt-2 text-xs text-blue-600">
+        <p className="mt-2 text-xs text-info-600">
           Tu comprobante está siendo revisado. Te avisaremos cuando se confirme.
         </p>
       )}
@@ -192,10 +192,10 @@ export function BillingPage() {
                   <span
                     className={
                       subscription.status === 'active'
-                        ? 'text-emerald-600'
+                        ? 'text-success-600'
                         : subscription.status === 'suspended'
-                          ? 'text-red-600'
-                          : 'text-amber-600'
+                          ? 'text-danger-600'
+                          : 'text-warning-600'
                     }
                   >
                     {subscription.status === 'active'

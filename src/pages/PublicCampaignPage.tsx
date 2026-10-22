@@ -24,6 +24,8 @@ import { Alert, Button, Field, Input, Spinner } from '@/components/ui'
 import { formatCurrency, cn } from '@/lib/cn'
 import { applyBrandColor } from '@/lib/brandColor'
 import type { Campaign, CampaignItem, Franja, Tenant } from '@/types'
+// Turnos con nombre que no se confunde con «mañana, el día siguiente».
+import { FRANJA_SHORT as FRANJA_LABELS } from '@/lib/dates'
 
 type PublicTenant = Pick<Tenant, '_id' | 'name' | 'slug' | 'logoUrl' | 'phone' | 'brandColor'>
 
@@ -45,11 +47,6 @@ function formatShort(d: string) {
   return localDate(d).toLocaleDateString('es-PE', { day: 'numeric', month: 'short' })
 }
 
-const FRANJA_LABELS: Record<string, string> = {
-  morning: 'Mañana',
-  afternoon: 'Tarde',
-  evening: 'Noche',
-}
 
 /* ═══════════════════ Cuenta regresiva ═══════════════════ */
 
