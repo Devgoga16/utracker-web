@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Ban, Check, Code2, Copy, Plus, Trash2 } from 'lucide-react'
+import { Ban, Check, Code2, Copy, Download, Plus, Trash2 } from 'lucide-react'
 import {
   createStoreKey,
   deleteStoreKey,
@@ -20,6 +20,8 @@ import {
   Spinner,
 } from '@/components/ui'
 import { cn } from '@/lib/cn'
+import { buildStorefrontGuide, storefrontGuideFilename } from '@/lib/storefrontGuide'
+import { useAuthStore } from '@/stores/authStore'
 
 function CopyButton({ text, label }: { text: string; label: string }) {
   const [copied, setCopied] = useState(false)
@@ -140,15 +142,50 @@ export function IntegrationPage() {
     },
   })
 
+  const tenant = useAuthStore((s) => s.activeTenant)
+
   // Para los ejemplos: la primera llave viva, o un marcador.
-  const sample = keys?.find((k) => !k.revokedAt)?.key ?? 'TU_LLAVE'
+  const liveKey = keys?.find((k) => !k.revokedAt)?.key ?? null
+  const sample = liveKey ?? 'TU_LLAVE'
+
+  /**
+   * La guía lleva la llave y la API reales para que quien la reciba pueda
+   * copiar y pegar sin tocar nada. Se arma aquí y no en el servidor: todo lo
+   * que necesita ya está en esta pantalla.
+   */
+  const downloadGuide = () => {
+    const md = buildStorefrontGuide({
+      storeName: tenant?.name ?? 'tu negocio',
+      apiBase: API_BASE_URL,
+      storeKey: liveKey,
+      appOrigin: window.location.origin,
+    })
+    const url = URL.createObjectURL(new Blob([md], { type: 'text/markdown;charset=utf-8' }))
+    const link = document.createElement('a')
+    link.href = url
+    link.download = storefrontGuideFilename(tenant?.slug)
+    link.click()
+    URL.revokeObjectURL(url)
+  }
 
   return (
     <div className="space-y-5 [&>*:not(:first-child)]:max-w-3xl">
       <PageHeader
         title="Integración"
         description="Arma tu tienda en tu propia web usando el catálogo de uTracker."
+        actions={
+          <Button variant="secondary" onClick={downloadGuide} disabled={isLoading}>
+            <Download size={15} />
+            Descargar guía (.md)
+          </Button>
+        }
       />
+
+      <p className="text-sm text-slate-500">
+        La guía trae una tienda lista para copiar y pegar en cualquier web (WordPress, Wix,
+        Shopify, HTML propio…) con tu llave ya puesta. Pásasela a quien te arma la web o a una IA.
+        {!liveKey && !isLoading && ' Crea una llave antes de descargarla para que vaya incluida.'}
+      </p>
 
       <SettingGroup
         title="Llaves de tienda"
