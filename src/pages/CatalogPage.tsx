@@ -266,7 +266,8 @@ export function CatalogPage() {
   const [form, setForm] = useState<ProductInput>(emptyForm)
   const [showForm, setShowForm] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
-  const [lightboxUrl, setLightboxUrl] = useState<string | null>(null)
+  // Se guardan todas las fotos del producto para recorrerlas con las flechas.
+  const [lightbox, setLightbox] = useState<{ url: string; images: string[] } | null>(null)
   const [filter, setFilter] = useState<Filter>('all')
   const [confirmingId, setConfirmingId] = useState<string | null>(null)
 
@@ -767,7 +768,7 @@ export function CatalogPage() {
               editing={editingId === item._id}
               confirming={confirmingId === item._id}
               deleting={deleteMutation.isPending && confirmingId === item._id}
-              onImageClick={setLightboxUrl}
+              onImageClick={(url) => setLightbox({ url, images: item.images ?? [] })}
               onEdit={() => openEdit(item)}
               onAskDelete={() => setConfirmingId(item._id)}
               onCancelDelete={() => setConfirmingId(null)}
@@ -777,7 +778,7 @@ export function CatalogPage() {
         </div>
       )}
 
-      <Lightbox url={lightboxUrl} onClose={() => setLightboxUrl(null)} />
+      <Lightbox url={lightbox?.url ?? null} images={lightbox?.images} onClose={() => setLightbox(null)} />
     </div>
   )
 }
@@ -827,12 +828,29 @@ function ProductCard({
           />
           <span className="absolute bottom-2 right-2 flex items-center gap-1 rounded-full bg-black/40 px-2 py-1 text-[11px] font-medium text-white backdrop-blur-sm transition-opacity group-hover:opacity-0">
             <ZoomIn size={11} />
-            Ver foto
+            {item.images.length > 1 ? `Ver ${item.images.length} fotos` : 'Ver foto'}
           </span>
         </button>
       ) : (
         <div className="flex aspect-[4/3] w-full items-center justify-center bg-slate-50 text-slate-300">
           {item.kind === 'service' ? <Wrench size={28} /> : <Package size={28} />}
+        </div>
+      )}
+
+      {/* Las demás fotos, para que se vea de un vistazo que hay más de una. */}
+      {item.images?.length > 1 && (
+        <div className="flex gap-1.5 overflow-x-auto border-b border-slate-100 px-3 py-2">
+          {item.images.slice(1).map((url, i) => (
+            <button
+              key={url}
+              type="button"
+              onClick={() => onImageClick(url)}
+              aria-label={`Ver foto ${i + 2}`}
+              className="focus-ring size-11 shrink-0 overflow-hidden rounded-md bg-slate-100 ring-1 ring-slate-200 transition-opacity hover:opacity-80"
+            >
+              <img src={url} alt="" loading="lazy" className="size-full object-cover" />
+            </button>
+          ))}
         </div>
       )}
 

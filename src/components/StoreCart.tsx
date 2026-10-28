@@ -108,7 +108,7 @@ export function StoreCart({
             <button
               type="button"
               onClick={() => setOpen(true)}
-              className="flex shrink-0 items-center gap-2 rounded-full bg-brand-600 px-6 py-3 font-semibold text-white transition-all hover:bg-brand-700 active:scale-[0.98]"
+              className="flex h-12 shrink-0 items-center gap-2 rounded-lg bg-slate-900 px-6 text-sm font-semibold text-white transition-colors hover:bg-slate-800 active:scale-[0.98]"
             >
               <ShoppingBag size={17} />
               Ver mi pedido
