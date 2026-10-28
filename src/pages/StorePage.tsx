@@ -215,8 +215,6 @@ export function StorePage() {
     return () => observer.disconnect()
   }, [isFlat, categories])
 
-  const catalogRef = useRef<HTMLDivElement>(null)
-
   function jumpTo(category: string) {
     sectionEls.current.get(category)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
   }
@@ -293,18 +291,7 @@ export function StorePage() {
   return (
     <div className="min-h-screen bg-white text-slate-900">
       <AnnouncementBar tenant={tenant} canOrder={canOrderOnline} />
-      <StoreNav tenant={tenant} />
-      <StoreHero
-        tenant={tenant}
-        products={products}
-        canOrder={canOrderOnline}
-        onBrowse={() =>
-          catalogRef.current?.scrollIntoView({
-            behavior: 'smooth',
-            block: 'start',
-          })
-        }
-      />
+      <StoreHeader tenant={tenant} productCount={products.length} canOrder={canOrderOnline} />
       <TrustStrip tenant={tenant} canOrder={canOrderOnline} />
 
       {campaigns.length > 0 && (
@@ -314,8 +301,6 @@ export function StorePage() {
           {campaigns.length > 1 && <CampaignStrip campaigns={campaigns.slice(1)} />}
         </div>
       )}
-
-      <div ref={catalogRef} className="scroll-mt-0" />
 
       {/* Barra fija: buscar, ordenar, filtrar y saltar entre categorías. */}
       {products.length > 0 && (
@@ -555,12 +540,13 @@ function AnnouncementBar({ tenant, canOrder }: { tenant: Tenant; canOrder: boole
 /* ═══════════════════════════ Cabecera ═══════════════════════════ */
 
 function StoreLogo({ tenant, size = 'md' }: { tenant: Tenant; size?: 'md' | 'lg' }) {
-  const box = size === 'lg' ? 'size-12 text-xl' : 'size-9 text-base'
+  const box = size === 'lg' ? 'size-14 text-xl sm:size-16' : 'size-10 text-base'
+  // `contain` y no `cover`: un logo con letras recortado deja de leerse.
   return tenant.logoUrl ? (
     <img
       src={tenant.logoUrl}
       alt={tenant.name}
-      className={cn('shrink-0 rounded-lg bg-white object-cover ring-1 ring-slate-200', box)}
+      className={cn('shrink-0 rounded-xl bg-white object-contain ring-1 ring-slate-200', box)}
     />
   ) : (
     <span
@@ -574,8 +560,23 @@ function StoreLogo({ tenant, size = 'md' }: { tenant: Tenant; size?: 'md' | 'lg'
   )
 }
 
-function StoreNav({ tenant }: { tenant: Tenant }) {
+/**
+ * La cabecera de la tienda: logo, nombre y cómo contactar, en una franja.
+ *
+ * Compacta a propósito. Una portada a media pantalla empuja los productos
+ * fuera de la vista, y en una tienda lo primero que se busca es qué venden.
+ */
+function StoreHeader({
+  tenant,
+  productCount,
+  canOrder,
+}: {
+  tenant: Tenant
+  productCount: number
+  canOrder: boolean
+}) {
   const [copied, setCopied] = useState(false)
+  const isOpen = openNow(tenant)
 
   function share() {
     const url = window.location.href
@@ -589,145 +590,69 @@ function StoreNav({ tenant }: { tenant: Tenant }) {
   }
 
   return (
-    <header className="border-b border-slate-200 bg-white">
-      <div className="mx-auto flex h-16 max-w-6xl items-center gap-3 px-4 sm:px-6">
-        <StoreLogo tenant={tenant} />
-        <p className="min-w-0 flex-1 truncate text-base font-semibold tracking-tight">
-          {tenant.name}
-        </p>
+    <header className="border-b border-slate-200 bg-gradient-to-b from-brand-50/60 to-white">
+      <div className="mx-auto flex max-w-6xl items-center gap-4 px-4 py-5 sm:px-6">
+        <StoreLogo tenant={tenant} size="lg" />
 
-        <button
-          type="button"
-          onClick={share}
-          title="Compartir tienda"
-          aria-label="Compartir tienda"
-          className="flex size-10 items-center justify-center rounded-lg text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-900"
-        >
-          {copied ? <Check size={18} className="text-emerald-600" /> : <Share2 size={18} />}
-        </button>
-
-        {tenant.phone && (
-          <a
-            href={waLink(tenant.phone)}
-            target="_blank"
-            rel="noreferrer"
-            aria-label="Escríbenos por WhatsApp"
-            className="inline-flex h-10 items-center gap-2 rounded-lg border border-slate-200 px-3 text-sm font-medium text-slate-700 transition-colors hover:border-slate-300 hover:bg-slate-50 sm:px-4"
-          >
-            <MessageCircle size={16} className="text-emerald-600" />
-            <span className="hidden sm:inline">Escríbenos</span>
-          </a>
-        )}
-      </div>
-    </header>
-  )
-}
-
-/**
- * La portada: el nombre en grande y, en pantallas anchas, un mosaico con las
- * fotos del propio catálogo. Sin una foto de portada cargada, lo más vistoso
- * que tiene un negocio son sus productos.
- */
-function StoreHero({
-  tenant,
-  products,
-  canOrder,
-  onBrowse,
-}: {
-  tenant: Tenant
-  products: Product[]
-  canOrder: boolean
-  onBrowse: () => void
-}) {
-  const photos = products
-    .filter((p) => p.images?.[0] && !isOutOfStock(p))
-    .slice(0, 3)
-    .map((p) => p.images[0])
-  const isOpen = openNow(tenant)
-
-  return (
-    <section className="relative overflow-hidden border-b border-slate-200 bg-gradient-to-b from-brand-50/70 to-white">
-      <div className="mx-auto grid max-w-6xl items-center gap-10 px-4 py-10 sm:px-6 sm:py-14 lg:grid-cols-[1.1fr_0.9fr] lg:py-16">
-        <div>
-          <div className="flex items-center gap-3">
-            <StoreLogo tenant={tenant} size="lg" />
-            <div className="flex flex-wrap items-center gap-2 text-xs font-medium">
-              <span className="rounded-full bg-white px-2.5 py-1 text-slate-600 ring-1 ring-slate-200">
-                Tienda oficial
-              </span>
-              {isOpen !== null && (
+        <div className="min-w-0 flex-1">
+          <h1 className="truncate text-xl leading-tight font-semibold tracking-tight text-slate-900 sm:text-2xl">
+            {tenant.name}
+          </h1>
+          <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[13px] text-slate-500">
+            <span>
+              {productCount === 0
+                ? 'Catálogo en preparación'
+                : `${productCount} ${productCount === 1 ? 'producto' : 'productos'}`}
+            </span>
+            {isOpen !== null && (
+              <>
+                <span className="text-slate-300">·</span>
                 <span
                   className={cn(
-                    'inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 ring-1',
-                    isOpen
-                      ? 'bg-emerald-50 text-emerald-700 ring-emerald-200'
-                      : 'bg-white text-slate-500 ring-slate-200',
+                    'inline-flex items-center gap-1 font-medium',
+                    isOpen ? 'text-emerald-700' : 'text-slate-400',
                   )}
                 >
                   <Clock size={12} />
                   {isOpen ? 'Abierto ahora' : 'Cerrado ahora'}
                 </span>
-              )}
-            </div>
-          </div>
-
-          <h1 className="mt-6 text-4xl leading-[1.05] font-semibold tracking-tight text-balance text-slate-900 sm:text-5xl">
-            {tenant.name}
-          </h1>
-          <p className="mt-4 max-w-md text-base leading-relaxed text-slate-600 sm:text-lg">
-            {canOrder
-              ? 'Elige tus productos, haz tu pedido en línea y sigue su avance en tiempo real.'
-              : 'Mira nuestro catálogo y haz tu pedido por WhatsApp.'}
-          </p>
-
-          <div className="mt-7 flex flex-wrap gap-3">
-            {products.length > 0 && (
-              <button
-                type="button"
-                onClick={onBrowse}
-                className="inline-flex h-12 items-center gap-2 rounded-lg bg-slate-900 px-6 text-sm font-semibold text-white transition-colors hover:bg-slate-800 active:scale-[0.99]"
-              >
-                Ver catálogo
-                <ArrowRight size={16} />
-              </button>
+              </>
             )}
-            {tenant.phone && (
-              <a
-                href={waLink(tenant.phone)}
-                target="_blank"
-                rel="noreferrer"
-                className="inline-flex h-12 items-center gap-2 rounded-lg border border-slate-300 bg-white px-6 text-sm font-semibold text-slate-800 transition-colors hover:bg-slate-50"
-              >
-                <MessageCircle size={16} className="text-emerald-600" />
-                Escríbenos
-              </a>
+            {canOrder && (
+              <>
+                <span className="hidden text-slate-300 sm:inline">·</span>
+                <span className="hidden sm:inline">Pedidos en línea</span>
+              </>
             )}
           </div>
         </div>
 
-        {photos.length >= 2 && (
-          <div className="relative hidden h-[22rem] lg:block">
-            <img
-              src={photos[0]}
-              alt=""
-              className="absolute top-0 right-0 h-[85%] w-[62%] rounded-2xl object-cover shadow-xl ring-1 ring-black/5"
-            />
-            <img
-              src={photos[1]}
-              alt=""
-              className="absolute bottom-0 left-0 h-[62%] w-[46%] rounded-2xl object-cover shadow-xl ring-4 ring-white"
-            />
-            {photos[2] && (
-              <img
-                src={photos[2]}
-                alt=""
-                className="absolute bottom-4 left-[50%] size-28 rounded-xl object-cover shadow-lg ring-4 ring-white"
-              />
-            )}
-          </div>
-        )}
+        <div className="flex shrink-0 items-center gap-2">
+          <button
+            type="button"
+            onClick={share}
+            title="Compartir tienda"
+            aria-label="Compartir tienda"
+            className="flex size-10 items-center justify-center rounded-lg text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-900"
+          >
+            {copied ? <Check size={18} className="text-emerald-600" /> : <Share2 size={18} />}
+          </button>
+
+          {tenant.phone && (
+            <a
+              href={waLink(tenant.phone)}
+              target="_blank"
+              rel="noreferrer"
+              aria-label="Escríbenos por WhatsApp"
+              className="inline-flex h-10 items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 text-sm font-medium text-slate-700 transition-colors hover:border-slate-300 hover:bg-slate-50 sm:px-4"
+            >
+              <MessageCircle size={16} className="text-emerald-600" />
+              <span className="hidden sm:inline">Escríbenos</span>
+            </a>
+          )}
+        </div>
       </div>
-    </section>
+    </header>
   )
 }
 
@@ -1565,7 +1490,7 @@ function ProductDetail({
         aria-modal="true"
         aria-label={item.name}
         onClick={(e) => e.stopPropagation()}
-        className="animate-sheet relative flex max-h-[92dvh] w-full max-w-lg flex-col overflow-hidden rounded-t-2xl bg-white shadow-2xl sm:rounded-2xl md:max-w-4xl md:flex-row"
+        className="animate-sheet relative flex max-h-[92dvh] w-full max-w-lg flex-col overflow-hidden rounded-t-2xl bg-white shadow-2xl sm:rounded-2xl md:h-[min(620px,88dvh)] md:max-w-4xl md:flex-row"
       >
         <button
           type="button"
@@ -1577,27 +1502,28 @@ function ProductDetail({
         </button>
 
         {/* Fotos */}
-        <div className="shrink-0 bg-slate-50 md:w-1/2">
+        <div className="flex shrink-0 flex-col bg-white md:h-full md:w-1/2 md:border-r md:border-slate-100">
           {images[active] ? (
             <button
               type="button"
               onClick={() => onZoom(images, images[active])}
-              className="block aspect-square w-full overflow-hidden focus:outline-none"
+              className="block aspect-square w-full overflow-hidden focus:outline-none md:aspect-auto md:min-h-0 md:flex-1"
             >
+              {/* Completa, sin recortar: en la ficha se tiene que ver todo el producto. */}
               <img
                 src={images[active]}
                 alt={item.name}
-                className={cn('size-full object-cover', outOfStock && 'opacity-60 grayscale')}
+                className={cn('size-full object-contain p-4', outOfStock && 'opacity-60 grayscale')}
               />
             </button>
           ) : (
-            <div className="flex aspect-square w-full items-center justify-center text-slate-300">
+            <div className="flex aspect-square w-full items-center justify-center bg-slate-50 text-slate-300 md:aspect-auto md:flex-1">
               {isService ? <Wrench size={44} /> : <Package size={44} />}
             </div>
           )}
 
           {images.length > 1 && (
-            <div className="no-scrollbar flex gap-2 overflow-x-auto p-3">
+            <div className="no-scrollbar flex shrink-0 gap-2 overflow-x-auto border-t border-slate-100 p-3">
               {images.map((url, i) => (
                 <button
                   key={url}
@@ -1619,7 +1545,7 @@ function ProductDetail({
         </div>
 
         {/* Información y compra */}
-        <div className="flex min-h-0 flex-1 flex-col">
+        <div className="flex min-h-0 flex-1 flex-col md:h-full">
           <div className="min-h-0 flex-1 overflow-y-auto p-5 sm:p-7">
             <p className="text-[11px] font-medium tracking-wide text-slate-400 uppercase">
               {isService ? 'Servicio' : 'Producto'}
@@ -1705,7 +1631,7 @@ function ProductDetail({
             )}
           </div>
 
-          <div className="pb-safe shrink-0 border-t border-slate-100 p-4 sm:px-7">
+          <div className="shrink-0 border-t border-slate-100 p-4 pb-[max(1rem,env(safe-area-inset-bottom))] sm:px-7">
             {canOrder && !outOfStock ? (
               <>
                 <button
@@ -1759,15 +1685,13 @@ function StoreSkeleton() {
   return (
     <div className="min-h-screen animate-pulse bg-white">
       <div className="h-8 bg-slate-900" />
-      <div className="mx-auto flex h-16 max-w-6xl items-center gap-3 px-4 sm:px-6">
-        <div className="size-9 rounded-lg bg-slate-200" />
-        <div className="h-4 w-36 rounded bg-slate-200" />
-      </div>
-      <div className="border-y border-slate-100 bg-slate-50">
-        <div className="mx-auto max-w-6xl px-4 py-14 sm:px-6">
-          <div className="h-10 w-72 max-w-full rounded-lg bg-slate-200" />
-          <div className="mt-4 h-4 w-96 max-w-full rounded bg-slate-200" />
-          <div className="mt-8 h-12 w-40 rounded-lg bg-slate-200" />
+      <div className="border-b border-slate-100">
+        <div className="mx-auto flex max-w-6xl items-center gap-4 px-4 py-5 sm:px-6">
+          <div className="size-14 rounded-xl bg-slate-200 sm:size-16" />
+          <div className="min-w-0 flex-1">
+            <div className="h-6 w-44 rounded-lg bg-slate-200" />
+            <div className="mt-2 h-3.5 w-28 rounded bg-slate-100" />
+          </div>
         </div>
       </div>
       <div className="mx-auto max-w-6xl px-4 sm:px-6">
