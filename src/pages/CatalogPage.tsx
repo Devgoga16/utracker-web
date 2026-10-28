@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
@@ -7,6 +7,7 @@ import {
   Package,
   Pencil,
   Plus,
+  Search,
   Trash2,
   Wrench,
   X,
@@ -277,6 +278,53 @@ function AttributePicker({
 
 type Filter = 'all' | CatalogKind
 
+const ALL_CATEGORIES = '__all__'
+const NO_CATEGORY = 'Sin categoría'
+
+/** Alfabético, con «Sin categoría» siempre al final. */
+function byCategoryName(a: [string, unknown], b: [string, unknown]) {
+  if (a[0] === NO_CATEGORY) return 1
+  if (b[0] === NO_CATEGORY) return -1
+  return a[0].localeCompare(b[0], 'es')
+}
+
+type SortKey = 'category' | 'recent' | 'name' | 'price_asc' | 'price_desc' | 'stock_asc'
+
+const SORT_LABELS: Record<SortKey, string> = {
+  category: 'Agrupado por categoría',
+  recent: 'Más recientes',
+  name: 'Nombre A–Z',
+  price_asc: 'Precio: menor a mayor',
+  price_desc: 'Precio: mayor a menor',
+  stock_asc: 'Menos stock primero',
+}
+
+const byName = (a: Product, b: Product) => a.name.localeCompare(b.name, 'es')
+
+const SORTERS: Record<SortKey, (a: Product, b: Product) => number> = {
+  category: byName,
+  recent: (a, b) => b.createdAt.localeCompare(a.createdAt),
+  name: byName,
+  price_asc: (a, b) => a.price - b.price || byName(a, b),
+  price_desc: (a, b) => b.price - a.price || byName(a, b),
+  // Lo que no lleva control de stock va al final: no hay nada que reponer.
+  stock_asc: (a, b) =>
+    (a.trackStock ? (a.stock ?? 0) : Infinity) - (b.trackStock ? (b.stock ?? 0) : Infinity) ||
+    byName(a, b),
+}
+
+const SORT_STORAGE_KEY = 'utracker:catalog-sort'
+
+function readSavedSort(): SortKey {
+  try {
+    const saved = localStorage.getItem(SORT_STORAGE_KEY)
+    if (saved && saved in SORT_LABELS) return saved as SortKey
+  } catch {
+    /* sin almacenamiento, el orden por defecto */
+  }
+  return 'category'
+}
+
 /** Las partes opcionales del formulario, que van plegadas. */
 type Section = 'variants' | 'stock' | 'preparation' | 'advance' | 'filters'
 
@@ -290,6 +338,9 @@ export function CatalogPage() {
   // Se guardan todas las fotos del producto para recorrerlas con las flechas.
   const [lightbox, setLightbox] = useState<{ url: string; images: string[] } | null>(null)
   const [filter, setFilter] = useState<Filter>('all')
+  const [search, setSearch] = useState('')
+  const [categoryFilter, setCategoryFilter] = useState<string>(ALL_CATEGORIES)
+  const [sort, setSort] = useState<SortKey>(readSavedSort)
   const [confirmingId, setConfirmingId] = useState<string | null>(null)
   // Secciones opcionales del formulario que están desplegadas.
   const [openSections, setOpenSections] = useState<Set<Section>>(new Set())
@@ -413,7 +464,67 @@ export function CatalogPage() {
       : { text: 'Para que el cliente lo encuentre al filtrar en la tienda', active: false },
   }
   const activeMutation = isEditing ? updateMutation : createMutation
-  const visible = filter === 'all' ? items : items?.filter((i) => i.kind === filter)
+  const byKind = useMemo(
+    () => (filter === 'all' ? (items ?? []) : (items ?? []).filter((i) => i.kind === filter)),
+    [items, filter],
+  )
+
+  // Categorías que de verdad tienen algo, con cuántos: las vacías no ayudan a filtrar.
+  const categoryOptions = useMemo(() => {
+    const counts = new Map<string, number>()
+    for (const i of byKind) {
+      const key = i.category || NO_CATEGORY
+      counts.set(key, (counts.get(key) ?? 0) + 1)
+    }
+    return Array.from(counts.entries()).sort(byCategoryName)
+  }, [byKind])
+
+  const visible = useMemo(() => {
+    const q = search.trim().toLowerCase()
+    const list = byKind.filter((i) => {
+      if (categoryFilter !== ALL_CATEGORIES && (i.category || NO_CATEGORY) !== categoryFilter) {
+        return false
+      }
+      if (!q) return true
+      return (
+        i.name.toLowerCase().includes(q) ||
+        i.category?.toLowerCase().includes(q) ||
+        i.description?.toLowerCase().includes(q)
+      )
+    })
+    return [...list].sort(SORTERS[sort])
+  }, [byKind, search, categoryFilter, sort])
+
+  /**
+   * Agrupado por categoría es la vista por defecto: es como el negocio piensa
+   * su catálogo («las tortas», «los perfumes de Lattafa»). Con otro orden la
+   * lista va plana, si no el orden elegido se partiría entre secciones.
+   */
+  const groups = useMemo(() => {
+    if (sort !== 'category') return [{ label: null as string | null, items: visible }]
+    const map = new Map<string, Product[]>()
+    for (const i of visible) {
+      const key = i.category || NO_CATEGORY
+      const bucket = map.get(key)
+      if (bucket) bucket.push(i)
+      else map.set(key, [i])
+    }
+    return Array.from(map.entries())
+      .sort(byCategoryName)
+      .map(([label, list]) => ({ label, items: list }))
+  }, [visible, sort])
+
+  const filtering = Boolean(search.trim()) || categoryFilter !== ALL_CATEGORIES
+
+  function changeSort(next: SortKey) {
+    setSort(next)
+    // Se recuerda en este navegador: quien ordena por stock, ordena siempre por stock.
+    try {
+      localStorage.setItem(SORT_STORAGE_KEY, next)
+    } catch {
+      /* sin almacenamiento, se olvida y listo */
+    }
+  }
   const counts = {
     all: items?.length ?? 0,
     product: items?.filter((i) => i.kind === 'product').length ?? 0,
@@ -873,9 +984,78 @@ export function CatalogPage() {
         ]}
       />
 
+      {byKind.length > 0 && (
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+          <div className="relative min-w-0 flex-1 sm:max-w-sm">
+            <Search
+              size={15}
+              className="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-slate-400"
+            />
+            <Input
+              type="search"
+              aria-label="Buscar en el catálogo"
+              placeholder="Buscar por nombre o categoría"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="pl-9"
+            />
+          </div>
+          <div className="flex gap-2">
+            <Select
+              aria-label="Categoría"
+              value={categoryFilter}
+              onChange={(e) => setCategoryFilter(e.target.value)}
+              className="min-w-0 flex-1 sm:w-52 sm:flex-none"
+            >
+              <option value={ALL_CATEGORIES}>Todas las categorías</option>
+              {categoryOptions.map(([name, n]) => (
+                <option key={name} value={name}>
+                  {name} ({n})
+                </option>
+              ))}
+            </Select>
+            <Select
+              aria-label="Ordenar"
+              value={sort}
+              onChange={(e) => changeSort(e.target.value as SortKey)}
+              className="min-w-0 flex-1 sm:w-52 sm:flex-none"
+            >
+              {(Object.keys(SORT_LABELS) as SortKey[]).map((key) => (
+                <option key={key} value={key}>
+                  {SORT_LABELS[key]}
+                </option>
+              ))}
+            </Select>
+          </div>
+        </div>
+      )}
+
+      {filtering && (
+        <p className="-mt-2 text-xs text-slate-500">
+          {visible.length} de {byKind.length}
+          <button
+            type="button"
+            onClick={() => {
+              setSearch('')
+              setCategoryFilter(ALL_CATEGORIES)
+            }}
+            className="ml-2 font-medium text-brand-700 hover:underline"
+          >
+            Quitar filtros
+          </button>
+        </p>
+      )}
+
       {isLoading ? (
         <Spinner />
-      ) : !visible?.length ? (
+      ) : byKind.length > 0 && visible.length === 0 ? (
+        <EmptyState
+          compact
+          icon={Search}
+          title="Nada coincide"
+          description="Prueba con otra palabra o quita el filtro de categoría."
+        />
+      ) : !visible.length ? (
         <EmptyState
           icon={Package}
           title="Nada por aquí"
@@ -891,21 +1071,33 @@ export function CatalogPage() {
           }
         />
       ) : (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {visible.map((item) => (
-            <ProductCard
-              key={item._id}
-              canEdit={isManager}
-              item={item}
-              editing={editingId === item._id}
-              confirming={confirmingId === item._id}
-              deleting={deleteMutation.isPending && confirmingId === item._id}
-              onImageClick={(url) => setLightbox({ url, images: item.images ?? [] })}
-              onEdit={() => openEdit(item)}
-              onAskDelete={() => setConfirmingId(item._id)}
-              onCancelDelete={() => setConfirmingId(null)}
-              onConfirmDelete={() => deleteMutation.mutate(item._id)}
-            />
+        <div className="space-y-8">
+          {groups.map((group) => (
+            <section key={group.label ?? '_all'}>
+              {group.label && (
+                <div className="mb-3 flex items-baseline gap-2 border-b border-slate-200 pb-2">
+                  <h2 className="text-base font-semibold text-slate-900">{group.label}</h2>
+                  <span className="text-sm text-slate-400">{group.items.length}</span>
+                </div>
+              )}
+              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                {group.items.map((item) => (
+                  <ProductCard
+                    key={item._id}
+                    canEdit={isManager}
+                    item={item}
+                    editing={editingId === item._id}
+                    confirming={confirmingId === item._id}
+                    deleting={deleteMutation.isPending && confirmingId === item._id}
+                    onImageClick={(url) => setLightbox({ url, images: item.images ?? [] })}
+                    onEdit={() => openEdit(item)}
+                    onAskDelete={() => setConfirmingId(item._id)}
+                    onCancelDelete={() => setConfirmingId(null)}
+                    onConfirmDelete={() => deleteMutation.mutate(item._id)}
+                  />
+                ))}
+              </div>
+            </section>
           ))}
         </div>
       )}
