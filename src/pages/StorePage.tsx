@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
 import { createPortal } from 'react-dom'
-import { useParams } from 'react-router-dom'
+import { useParams, useSearchParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import {
   ArrowDownUp,
@@ -59,9 +59,6 @@ const SORT_LABELS: Record<SortKey, string> = {
 
 const SIN_CATEGORIA = 'Otros'
 
-/** Alto de la barra fija: las secciones frenan ahí al saltar desde una pestaña. */
-const STICKY_OFFSET = 'scroll-mt-36'
-
 function isOutOfStock(p: Product) {
   return p.kind === 'product' && p.trackStock && (p.stock ?? 0) <= 0
 }
@@ -115,8 +112,14 @@ export function StorePage() {
   const [onlyAvailable, setOnlyAvailable] = useState(false)
   const [showSortMenu, setShowSortMenu] = useState(false)
   const [facets, setFacets] = useState<ActiveFacets>({})
-  /** Categoría visible ahora mismo. Solo resalta la pestaña; no filtra nada. */
-  const [currentCategory, setCurrentCategory] = useState<string | null>(null)
+  /**
+   * La categoría elegida va en la URL (?categoria=Decants): así el negocio
+   * puede compartir el link directo a una categoría, y volver atrás la respeta.
+   */
+  const [searchParams, setSearchParams] = useSearchParams()
+  const requestedCategory = searchParams.get('categoria')
+  /** Para volver arriba del catálogo al cambiar de pestaña. */
+  const catalogTopRef = useRef<HTMLDivElement>(null)
   /** Carrito, indexado por producto+variante. */
   const [cart, setCart] = useState<Record<string, CartLine>>({})
 
@@ -140,8 +143,44 @@ export function StorePage() {
     [products],
   )
 
+  const categoryTabs = useMemo(() => {
+    const counts = new Map<string, number>()
+    for (const p of products) {
+      const key = p.category || SIN_CATEGORIA
+      counts.set(key, (counts.get(key) ?? 0) + 1)
+    }
+    return Array.from(counts.entries()).sort((a, b) =>
+      a[0] === SIN_CATEGORIA ? 1 : b[0] === SIN_CATEGORIA ? -1 : a[0].localeCompare(b[0]),
+    )
+  }, [products])
+
+  // Una categoría que ya no existe (renombrada, link viejo) cae en «Todo».
+  const activeCategory =
+    requestedCategory && categoryTabs.some(([name]) => name === requestedCategory)
+      ? requestedCategory
+      : null
+
+  function selectCategory(category: string | null) {
+    setSearchParams(
+      (prev) => {
+        const next = new URLSearchParams(prev)
+        if (category) next.set('categoria', category)
+        else next.delete('categoria')
+        return next
+      },
+      { replace: true },
+    )
+    // Si ya se bajó por la lista, se vuelve al inicio del catálogo.
+    const top = catalogTopRef.current
+    if (top && top.getBoundingClientRect().top < 0) {
+      window.scrollTo({ top: top.getBoundingClientRect().top + window.scrollY, behavior: 'smooth' })
+    }
+  }
+
   const filtered = useMemo(() => {
-    let list = [...products]
+    let list = activeCategory
+      ? products.filter((p) => (p.category || SIN_CATEGORIA) === activeCategory)
+      : [...products]
 
     const q = search.trim().toLowerCase()
     if (q) {
@@ -160,15 +199,17 @@ export function StorePage() {
     else if (sort === 'name_asc') list.sort((a, b) => a.name.localeCompare(b.name))
 
     return list
-  }, [products, search, sort, onlyAvailable, facets])
+  }, [products, activeCategory, search, sort, onlyAvailable, facets])
 
   /**
-   * Buscando o reordenando, las secciones estorban: el resultado va en una
-   * grilla plana. Navegando normal se muestra el catálogo por categorías.
+   * En «Todo» el catálogo va por secciones, una por categoría. Con una
+   * categoría elegida, buscando o reordenando, va en una sola grilla.
    */
   const isFlat = Boolean(search.trim()) || sort !== 'default'
 
   const sections = useMemo(() => {
+    if (activeCategory && !isFlat)
+      return [{ label: activeCategory as string | null, items: filtered }]
     if (isFlat) return [{ label: null as string | null, items: filtered }]
 
     const map = new Map<string, Product[]>()
@@ -183,41 +224,7 @@ export function StorePage() {
         a[0] === SIN_CATEGORIA ? 1 : b[0] === SIN_CATEGORIA ? -1 : a[0].localeCompare(b[0]),
       )
       .map(([label, items]) => ({ label, items }))
-  }, [filtered, isFlat])
-
-  const categories = useMemo(
-    () => sections.map((s) => s.label).filter((l): l is string => Boolean(l)),
-    [sections],
-  )
-
-  /**
-   * Marca la pestaña de la categoría que se está viendo. Se observa una franja
-   * angosta bajo la barra fija para que cambie justo cuando toca.
-   */
-  const sectionEls = useRef(new Map<string, HTMLElement>())
-  useEffect(() => {
-    if (isFlat || categories.length === 0) {
-      setCurrentCategory(null)
-      return
-    }
-
-    const observer = new IntersectionObserver(
-      (entries) => {
-        const visible = entries
-          .filter((e) => e.isIntersecting)
-          .sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top)[0]
-        if (visible) setCurrentCategory(visible.target.getAttribute('data-category'))
-      },
-      { rootMargin: '-150px 0px -70% 0px', threshold: 0 },
-    )
-
-    for (const el of sectionEls.current.values()) observer.observe(el)
-    return () => observer.disconnect()
-  }, [isFlat, categories])
-
-  function jumpTo(category: string) {
-    sectionEls.current.get(category)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
-  }
+  }, [filtered, isFlat, activeCategory])
 
   function clearFilters() {
     setSearch('')
@@ -302,7 +309,9 @@ export function StorePage() {
         </div>
       )}
 
-      {/* Barra fija: buscar, ordenar, filtrar y saltar entre categorías. */}
+      <div ref={catalogTopRef} />
+
+      {/* Barra fija: buscar, ordenar, filtrar y elegir categoría. */}
       {products.length > 0 && (
         <div className="sticky top-0 z-20 mt-8 border-y border-slate-200 bg-white/95 backdrop-blur-md">
           <div className="mx-auto max-w-6xl px-4 sm:px-6">
@@ -365,30 +374,41 @@ export function StorePage() {
               </div>
             )}
 
-            {/* Categorías como pestañas: navegan a su sección, no filtran. */}
-            {!isFlat && categories.length > 1 && (
+            {/* Categorías como pestañas: cada una muestra solo lo suyo. */}
+            {categoryTabs.length > 1 && (
               <nav
                 aria-label="Categorías"
                 className="no-scrollbar -mx-4 -mb-px flex gap-6 overflow-x-auto px-4 sm:-mx-6 sm:px-6"
               >
-                {categories.map((cat) => {
-                  const active = currentCategory === cat
-                  return (
-                    <button
-                      key={cat}
-                      type="button"
-                      onClick={() => jumpTo(cat)}
-                      className={cn(
-                        'shrink-0 border-b-2 pb-2.5 text-sm whitespace-nowrap transition-colors',
-                        active
-                          ? 'border-brand-600 font-semibold text-slate-900'
-                          : 'border-transparent text-slate-500 hover:text-slate-900',
-                      )}
-                    >
-                      {cat}
-                    </button>
-                  )
-                })}
+                {[[null, products.length] as [string | null, number], ...categoryTabs].map(
+                  ([cat, count]) => {
+                    const active = activeCategory === cat
+                    return (
+                      <button
+                        key={cat ?? '_todo'}
+                        type="button"
+                        aria-pressed={active}
+                        onClick={() => selectCategory(cat)}
+                        className={cn(
+                          'flex shrink-0 items-center gap-1.5 border-b-2 pt-0.5 pb-2.5 text-sm whitespace-nowrap transition-colors outline-none focus-visible:text-slate-900 focus-visible:underline',
+                          active
+                            ? 'border-slate-900 font-semibold text-slate-900'
+                            : 'border-transparent text-slate-500 hover:text-slate-900',
+                        )}
+                      >
+                        {cat ?? 'Todo'}
+                        <span
+                          className={cn(
+                            'text-xs tabular-nums',
+                            active ? 'text-slate-500' : 'text-slate-400',
+                          )}
+                        >
+                          {count}
+                        </span>
+                      </button>
+                    )
+                  },
+                )}
               </nav>
             )}
 
@@ -433,14 +453,7 @@ export function StorePage() {
             />
           ) : (
             sections.map((section) => (
-              <section
-                key={section.label ?? '_flat'}
-                data-category={section.label ?? ''}
-                ref={(el) => {
-                  if (section.label && el) sectionEls.current.set(section.label, el)
-                }}
-                className={cn('pt-10', STICKY_OFFSET)}
-              >
+              <section key={section.label ?? '_flat'} className="pt-10">
                 {section.label && (
                   <div className="mb-5 flex items-end justify-between gap-4 border-b border-slate-200 pb-3">
                     <h2 className="text-xl font-semibold tracking-tight text-slate-900 sm:text-2xl">
