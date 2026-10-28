@@ -29,6 +29,7 @@ import {
 } from '@/components/ui'
 import { ImageUploader } from '@/components/ImageUploader'
 import { formatCurrency } from '@/lib/cn'
+import { round2 } from '@/lib/pos'
 import type { CatalogKind, Product } from '@/types'
 import { useRole } from '@/hooks/useRole'
 
@@ -74,6 +75,11 @@ function productToForm(p: Product): ProductInput {
 /**
  * Variantes del producto y, opcionalmente, a qué filtro corresponden.
  *
+ * Cada opción se escribe con su precio final («Pedazo: S/ 3»), que es como lo
+ * piensa el negocio. Por dentro se guarda la diferencia con el precio base,
+ * que es lo que usa el resto del sistema; se convierte aquí y en ningún otro
+ * lado.
+ *
  * Al elegir el filtro, el servidor agrega esos nombres a sus valores y se los
  * asigna al producto: la lista se escribe una sola vez en vez de repetirla en
  * variantes y en filtros.
@@ -100,14 +106,25 @@ function VariantEditor({
     onChange(variants.map((v, j) => (j === i ? { ...v, ...patch } : v)))
   }
 
+  const finalPrice = (v: { priceModifier: number }) => round2(basePrice + (v.priceModifier || 0))
+
   return (
     <div className="space-y-3 rounded-xl bg-slate-50 p-3.5">
       <div>
         <span className="block text-sm font-medium text-slate-700">Opciones del producto</span>
         <p className="text-xs text-slate-500">
-          Tallas, sabores, tamaños… El cliente elige una al pedir y el precio se ajusta.
+          Tallas, tamaños, porciones… El cliente elige una al pedir. Escribe el precio de cada
+          opción tal como lo cobras: por ejemplo, «Torta entera» S/ 30 y «Pedazo» S/ 3.
         </p>
       </div>
+
+      {variants.length > 0 && (
+        <div className="flex gap-2 px-0.5 text-xs font-medium text-slate-500">
+          <span className="flex-1">Opción</span>
+          <span className="w-32 shrink-0">Precio</span>
+          <span className="w-8 shrink-0" aria-hidden />
+        </div>
+      )}
 
       {variants.length > 0 && (
         <ul className="space-y-2">
@@ -120,19 +137,23 @@ function VariantEditor({
                 onChange={(e) => update(i, { name: e.target.value })}
               />
               <div className="relative w-32 shrink-0">
+                <span className="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-sm text-slate-400">
+                  S/
+                </span>
                 <Input
-                  aria-label="Diferencia de precio"
+                  aria-label={`Precio de ${v.name || 'la opción'}`}
                   type="number"
                   inputMode="decimal"
-                  step="0.5"
-                  placeholder="0"
-                  value={v.priceModifier}
-                  onChange={(e) => update(i, { priceModifier: Number(e.target.value) || 0 })}
+                  min={0}
+                  step="0.01"
+                  placeholder="0.00"
+                  value={finalPrice(v) || ''}
+                  onChange={(e) =>
+                    update(i, { priceModifier: round2(Number(e.target.value || 0) - basePrice) })
+                  }
+                  className="pl-8"
                 />
               </div>
-              <span className="w-20 shrink-0 text-right text-xs tabular-nums text-slate-500">
-                {formatCurrency(basePrice + (v.priceModifier || 0))}
-              </span>
               <IconButton
                 label={`Quitar ${v.name || 'opción'}`}
                 onClick={() => onChange(variants.filter((_, j) => j !== i))}
@@ -149,6 +170,7 @@ function VariantEditor({
         type="button"
         variant="secondary"
         size="sm"
+        // Una opción nueva arranca con el precio base: casi siempre se ajusta.
         onClick={() => onChange([...variants, { name: '', priceModifier: 0 }])}
       >
         <Plus size={15} />
@@ -503,7 +525,20 @@ export function CatalogPage() {
                   step="0.01"
                   required
                   value={form.price || ''}
-                  onChange={(e) => setForm({ ...form, price: Number(e.target.value) })}
+                  onChange={(e) => {
+                    const price = Number(e.target.value)
+                    // Las opciones guardan su precio final: si sube el frasco,
+                    // el decant sigue costando lo mismo.
+                    const delta = price - (form.price || 0)
+                    setForm({
+                      ...form,
+                      price,
+                      variants: form.variants?.map((v) => ({
+                        ...v,
+                        priceModifier: round2(v.priceModifier - delta),
+                      })),
+                    })
+                  }}
                 />
               </Field>
 
