@@ -8,6 +8,7 @@ import {
 } from '@/api/billing'
 import { apiErrorMessage } from '@/api/client'
 import { Alert, Button, Input, PageHeader, Spinner } from '@/components/ui'
+import { BillDiscounts } from '@/components/BillDiscounts'
 import type { Bill, BillStatus } from '@/types'
 
 const STATUS_CONFIG: Record<BillStatus, { label: string; className: string }> = {
@@ -265,6 +266,16 @@ export function SuperadminBillingPage() {
                   <td className="px-4 py-3 text-slate-600">{bill.planName}</td>
                   <td className="px-4 py-3 text-right font-medium text-slate-900">
                     {formatCurrency(bill.amount)}
+                    {bill.discounts?.length ? (
+                      <p
+                        className="text-xs font-normal text-success-700"
+                        title={bill.discounts.map((d) => d.label).join(' · ')}
+                      >
+                        {bill.discounts.length === 1
+                          ? '1 descuento'
+                          : `${bill.discounts.length} descuentos`}
+                      </p>
+                    ) : null}
                   </td>
                   <td className="px-4 py-3 text-slate-600">
                     {new Date(bill.dueDate).toLocaleDateString('es-PE')}
@@ -326,6 +337,8 @@ export function SuperadminBillingPage() {
                   Vence {new Date(bill.dueDate).toLocaleDateString('es-PE')}
                 </span>
               </div>
+
+              <BillDiscounts bill={bill} />
 
               <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-slate-100 pt-3">
                 {bill.proofImageUrl && (

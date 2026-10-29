@@ -6,6 +6,7 @@ import {
   Building2,
   CreditCard,
   ExternalLink,
+  Gift,
   Globe,
   LifeBuoy,
   LogOut,
@@ -38,6 +39,7 @@ const NAV: NavItem[] = [
   { to: '/superadmin/users', label: 'Usuarios', icon: Users },
   { to: '/superadmin/plans', label: 'Planes', icon: CreditCard },
   { to: '/superadmin/billing', label: 'Facturación', icon: Receipt },
+  { to: '/superadmin/referrals', label: 'Referidos', icon: Gift },
   { to: '/superadmin/whatsapp', label: 'WhatsApp', icon: MessageCircle },
 ]
 

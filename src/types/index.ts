@@ -71,12 +71,43 @@ export interface Campaign {
   updatedAt: string
 }
 
+export interface BillDiscount {
+  label: string
+  amount: number
+}
+
+/** pending: aún no paga su primera cuenta. inactive: pagó, pero ya no está al día. */
+export type ReferralStatus = 'pending' | 'active' | 'inactive' | 'rejected'
+
+export interface ReferralSummary {
+  code: string
+  discountPerReferral: number
+  promoMonths: number
+  activeCount: number
+  monthlyDiscount: number
+  referrals: { _id: string; name: string; createdAt: string; status: ReferralStatus }[]
+}
+
+export interface AdminReferral {
+  _id: string
+  name: string
+  slug: string
+  phone: string | null
+  createdAt: string
+  referrer: { _id: string; name: string; slug: string; phone?: string } | null
+  status: ReferralStatus
+}
+
 export interface Bill {
   _id: string
   tenant: string | { _id: string; name: string; slug: string }
   period: string // "2026-08"
   planName: string
+  /** Lo que se cobra, ya con descuentos. */
   amount: number
+  /** Precio del plan antes de descuentos. Falta en cuentas viejas. */
+  baseAmount?: number
+  discounts?: BillDiscount[]
   dueDate: string
   status: BillStatus
   proofImageUrl?: string

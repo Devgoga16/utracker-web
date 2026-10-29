@@ -27,6 +27,8 @@ import { SuperadminTenantsPage } from '@/pages/superadmin/SuperadminTenantsPage'
 import { SuperadminBillingPage } from '@/pages/superadmin/SuperadminBillingPage'
 import { SuperadminWhatsappPage } from '@/pages/superadmin/SuperadminWhatsappPage'
 import { BillingPage } from '@/pages/BillingPage'
+import { ReferralsPage } from '@/pages/ReferralsPage'
+import { SuperadminReferralsPage } from '@/pages/superadmin/SuperadminReferralsPage'
 import { CampaignsPage } from '@/pages/CampaignsPage'
 import { PublicCampaignPage } from '@/pages/PublicCampaignPage'
 import { HostedCheckoutPage } from '@/pages/HostedCheckoutPage'
@@ -78,6 +80,7 @@ export const router = createBrowserRouter([
               { path: '/superadmin/tickets/:id', element: <SuperadminTicketDetailPage /> },
               { path: '/superadmin/logs', element: <SuperadminLogsPage /> },
               { path: '/superadmin/billing', element: <SuperadminBillingPage /> },
+              { path: '/superadmin/referrals', element: <SuperadminReferralsPage /> },
               { path: '/superadmin/whatsapp', element: <SuperadminWhatsappPage /> },
             ],
           },
@@ -108,6 +111,7 @@ export const router = createBrowserRouter([
               { path: '/settings', element: <SettingsPage /> },
               { path: '/integration', element: <IntegrationPage /> },
               { path: '/billing', element: <BillingPage /> },
+              { path: '/referrals', element: <ReferralsPage /> },
               { path: '/team', element: <TeamPage /> },
               { path: '/support', element: <SupportPage /> },
               { path: '/support/:id', element: <TicketDetailPage /> },

@@ -5,6 +5,7 @@ import { getMyBills, submitBillingProof, uploadBillingProofFile } from '@/api/bi
 import { apiErrorMessage } from '@/api/client'
 import { useSubscription } from '@/hooks/useSubscription'
 import { Alert, Button, PageHeader, Spinner } from '@/components/ui'
+import { BillDiscounts } from '@/components/BillDiscounts'
 import type { Bill, BillStatus } from '@/types'
 
 const STATUS_CONFIG: Record<BillStatus, { label: string; className: string }> = {
@@ -132,6 +133,8 @@ function BillCard({ bill, onViewProof }: { bill: Bill; onViewProof: (url: string
         </div>
         <StatusBadge status={bill.status} />
       </div>
+
+      <BillDiscounts bill={bill} />
 
       {bill.proofImageUrl && (
         <button

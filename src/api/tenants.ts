@@ -6,7 +6,7 @@ export async function listMyTenants() {
   return data.tenants
 }
 
-export async function createTenant(payload: { name: string }) {
+export async function createTenant(payload: { name: string; referralCode?: string }) {
   const { data } = await api.post<{ tenant: Tenant }>('/tenants', payload)
   return data.tenant
 }

@@ -4,6 +4,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { createTenant, listMyTenants } from '@/api/tenants'
 import { useAuthStore } from '@/stores/authStore'
 import { Alert, Button, Card, Field, Input, Spinner } from '@/components/ui'
+import { clearPendingReferral, readPendingReferral } from '@/lib/referral'
 import type { Tenant } from '@/types'
 
 export function TenantsPage() {
@@ -16,8 +17,11 @@ export function TenantsPage() {
   const { data: tenants, isLoading } = useQuery({ queryKey: ['tenants'], queryFn: listMyTenants })
 
   const createMutation = useMutation({
-    mutationFn: () => createTenant({ name: newName }),
+    // Si llegó con un link de invitación, el negocio nuevo queda como invitado.
+    mutationFn: () =>
+      createTenant({ name: newName, referralCode: readPendingReferral() ?? undefined }),
     onSuccess: (tenant) => {
+      clearPendingReferral()
       queryClient.invalidateQueries({ queryKey: ['tenants'] })
       selectTenant({ ...tenant, role: 'owner' })
     },
