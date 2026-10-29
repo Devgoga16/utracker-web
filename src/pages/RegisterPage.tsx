@@ -1,13 +1,19 @@
 import { useEffect, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
-import { useMutation, useQuery } from '@tanstack/react-query'
+import { useMutation } from '@tanstack/react-query'
 import { Gift } from 'lucide-react'
 import { register } from '@/api/auth'
-import { lookupReferral } from '@/api/referrals'
 import { useAuthStore } from '@/stores/authStore'
 import { Alert, Banner, Button, Field, Input } from '@/components/ui'
 import { AuthShell } from '@/components/AuthShell'
-import { readPendingReferral, savePendingReferral } from '@/lib/referral'
+import {
+  clearPendingReferral,
+  normalizeReferralCode,
+  readPendingReferral,
+  savePendingReferral,
+} from '@/lib/referral'
+import { ReferralCodeField } from '@/components/ReferralCodeField'
+import { useReferralLookup } from '@/hooks/useReferralLookup'
 
 export function RegisterPage() {
   const navigate = useNavigate()
@@ -22,19 +28,25 @@ export function RegisterPage() {
   useEffect(() => {
     if (refParam) savePendingReferral(refParam)
   }, [refParam])
-  const referralCode = refParam?.trim().toUpperCase() || readPendingReferral()
 
-  const { data: referrer } = useQuery({
-    queryKey: ['referral-lookup', referralCode],
-    queryFn: () => lookupReferral(referralCode!),
-    enabled: Boolean(referralCode),
-    retry: false,
-    staleTime: Infinity,
-  })
+  /*
+   * También se puede escribir a mano: quien lo vio en una publicidad tiene el
+   * código, no el link. Con link, el campo ya viene lleno.
+   */
+  const [code, setCode] = useState(() =>
+    normalizeReferralCode(refParam ?? readPendingReferral() ?? ''),
+  )
+  const [showCode, setShowCode] = useState(Boolean(code))
+  const lookup = useReferralLookup(code)
+  const referrer = lookup.referrer
+  // Un código mal escrito no se deja pasar callado: perdería su promo sin enterarse.
+  const blockedByCode = Boolean(code) && (lookup.invalid || lookup.checking)
 
   const mutation = useMutation({
     mutationFn: () => register({ name, email, password }),
     onSuccess: (session) => {
+      if (code && referrer) savePendingReferral(code)
+      else clearPendingReferral()
       setSession(session)
       navigate('/tenants')
     },
@@ -57,10 +69,11 @@ export function RegisterPage() {
         className="space-y-4"
         onSubmit={(e) => {
           e.preventDefault()
+          if (blockedByCode) return
           mutation.mutate()
         }}
       >
-        {referrer && (
+        {referrer && refParam && (
           <Banner tone="success" icon={Gift} title={`Te invitó ${referrer.name}`}>
             Tus primeros {referrer.promoMonths} meses del plan Negocio te salen al precio de
             Emprende.
@@ -105,7 +118,29 @@ export function RegisterPage() {
           />
         </Field>
 
-        <Button type="submit" className="w-full py-3" disabled={mutation.isPending}>
+        {showCode ? (
+          <ReferralCodeField
+            value={code}
+            onChange={setCode}
+            lookup={lookup}
+            autoFocus={!refParam && !code}
+          />
+        ) : (
+          <button
+            type="button"
+            onClick={() => setShowCode(true)}
+            className="inline-flex items-center gap-1.5 text-sm font-medium text-brand-600 hover:underline"
+          >
+            <Gift size={14} />
+            ¿Tienes un código de invitación?
+          </button>
+        )}
+
+        <Button
+          type="submit"
+          className="w-full py-3"
+          disabled={mutation.isPending || blockedByCode}
+        >
           {mutation.isPending ? 'Creando tu cuenta…' : 'Crear mi cuenta'}
         </Button>
       </form>

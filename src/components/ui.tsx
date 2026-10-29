@@ -275,7 +275,7 @@ export function SettingGroup({
 interface FieldProps {
   label: string
   htmlFor?: string
-  hint?: string
+  hint?: ReactNode
   children: ReactNode
   className?: string
 }

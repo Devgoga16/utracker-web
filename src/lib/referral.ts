@@ -36,3 +36,7 @@ export function clearPendingReferral() {
 export function referralLink(code: string) {
   return `${window.location.origin}/register?ref=${encodeURIComponent(code)}`
 }
+
+export function normalizeReferralCode(value: string) {
+  return value.toUpperCase().replace(/[^A-Z0-9]/g, '')
+}

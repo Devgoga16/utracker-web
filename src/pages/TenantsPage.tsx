@@ -4,7 +4,9 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { createTenant, listMyTenants } from '@/api/tenants'
 import { useAuthStore } from '@/stores/authStore'
 import { Alert, Button, Card, Field, Input, Spinner } from '@/components/ui'
-import { clearPendingReferral, readPendingReferral } from '@/lib/referral'
+import { clearPendingReferral, normalizeReferralCode, readPendingReferral } from '@/lib/referral'
+import { ReferralCodeField } from '@/components/ReferralCodeField'
+import { useReferralLookup } from '@/hooks/useReferralLookup'
 import type { Tenant } from '@/types'
 
 export function TenantsPage() {
@@ -13,13 +15,16 @@ export function TenantsPage() {
   const { user, setActiveTenant, logout } = useAuthStore()
   const [newName, setNewName] = useState('')
   const [showForm, setShowForm] = useState(false)
+  // Viene del registro (link o escrito a mano); se puede escribir o corregir aquí.
+  const [code, setCode] = useState(() => normalizeReferralCode(readPendingReferral() ?? ''))
+  const lookup = useReferralLookup(code)
+  const blockedByCode = Boolean(code) && (lookup.invalid || lookup.checking)
 
   const { data: tenants, isLoading } = useQuery({ queryKey: ['tenants'], queryFn: listMyTenants })
 
   const createMutation = useMutation({
     // Si llegó con un link de invitación, el negocio nuevo queda como invitado.
-    mutationFn: () =>
-      createTenant({ name: newName, referralCode: readPendingReferral() ?? undefined }),
+    mutationFn: () => createTenant({ name: newName, referralCode: code || undefined }),
     onSuccess: (tenant) => {
       clearPendingReferral()
       queryClient.invalidateQueries({ queryKey: ['tenants'] })
@@ -97,6 +102,7 @@ export function TenantsPage() {
                 className="space-y-4"
                 onSubmit={(e) => {
                   e.preventDefault()
+                  if (blockedByCode) return
                   createMutation.mutate()
                 }}
               >
@@ -116,8 +122,10 @@ export function TenantsPage() {
                   />
                 </Field>
 
+                <ReferralCodeField value={code} onChange={setCode} lookup={lookup} />
+
                 <div className="flex gap-2">
-                  <Button type="submit" disabled={createMutation.isPending}>
+                  <Button type="submit" disabled={createMutation.isPending || blockedByCode}>
                     {createMutation.isPending ? 'Creando...' : 'Crear negocio'}
                   </Button>
                   <Button type="button" variant="secondary" onClick={() => setShowForm(false)}>
