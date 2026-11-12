@@ -29,6 +29,7 @@ import { formatCurrency } from '@/lib/cn'
 import type { Campaign, CampaignDeliveryType, CampaignStatus, Franja, Product } from '@/types'
 // Turnos con nombre que no se confunde con «mañana, el día siguiente».
 import { FRANJA_LABELS } from '@/lib/dates'
+import { publicOrigin } from '@/lib/platform'
 
 const DELIVERY_LABELS: Record<CampaignDeliveryType, string> = {
   pickup: 'Recojo en tienda',
@@ -68,7 +69,7 @@ function formatDateRange(start: string, end: string) {
 }
 
 function campaignLink(token: string) {
-  return `${window.location.origin}/c/${token}`
+  return `${publicOrigin()}/c/${token}`
 }
 
 // ─── Campaign form (panel) ────────────────────────────────────────────────────

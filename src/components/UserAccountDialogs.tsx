@@ -4,6 +4,7 @@ import { Check, Copy, KeyRound, MessageCircle } from 'lucide-react'
 import { changeUserEmail, resetUserPassword } from '@/api/superadmin'
 import { Alert, Banner, Button, Field, Input, Modal } from '@/components/ui'
 import { toast } from '@/stores/toastStore'
+import { publicOrigin } from '@/lib/platform'
 
 /** La persona sobre la que actúa soporte. */
 export interface AccountTarget {
@@ -103,7 +104,7 @@ export function ResetPasswordDialog({
   const result = mutation.data
 
   if (result) {
-    const loginUrl = `${window.location.origin}/login`
+    const loginUrl = `${publicOrigin()}/login`
     const message =
       `Hola ${result.name}, te generamos una contraseña temporal para uTracker.\n\n` +
       `Ingresa en ${loginUrl}\n` +

@@ -1,0 +1,15 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">uTracker</string>
+    <string name="title_activity_main">uTracker</string>
+    <string name="package_name">com.unifytc.utracker</string>
+    <string name="custom_url_scheme">com.unifytc.utracker</string>
+    <string name="shortcut_pos_short">Vender</string>
+    <string name="shortcut_pos_long">Vender en el mostrador</string>
+    <string name="shortcut_new_order_short">Nuevo pedido</string>
+    <string name="shortcut_new_order_long">Registrar un pedido nuevo</string>
+    <string name="shortcut_orders_short">Pedidos</string>
+    <string name="shortcut_orders_long">Ver todos los pedidos</string>
+    <string name="shortcut_today_short">Hoy</string>
+    <string name="shortcut_today_long">Lo que hay que hacer hoy</string>
+</resources>

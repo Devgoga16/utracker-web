@@ -1,6 +1,7 @@
 import axios, { AxiosError, type InternalAxiosRequestConfig } from 'axios'
 import { useAuthStore } from '@/stores/authStore'
 import { recordFailure } from '@/lib/problemReport'
+import { isNativeApp } from '@/lib/platform'
 
 /**
  * Única fuente de verdad de a dónde vive la API.
@@ -11,10 +12,16 @@ import { recordFailure } from '@/lib/problemReport'
  *
  * Ojo: Vite la resuelve al compilar, no al ejecutar. Si la cambias en Vercel
  * hay que volver a desplegar para que tome efecto.
+ *
+ * La app de Android va siempre contra producción salvo que se compile con
+ * VITE_NATIVE_API_URL: así un `.env` local apuntando a localhost no termina
+ * metido en el APK que se instala en el mostrador.
  */
-export const API_BASE_URL = `${(
-  import.meta.env.VITE_API_URL ?? 'http://localhost:4000'
-).replace(/\/$/, '')}/api`
+const API_ORIGIN = isNativeApp
+  ? (import.meta.env.VITE_NATIVE_API_URL ?? 'https://utracker-api.unify-tc.com')
+  : (import.meta.env.VITE_API_URL ?? 'http://localhost:4000')
+
+export const API_BASE_URL = `${API_ORIGIN.replace(/\/$/, '')}/api`
 
 export const api = axios.create({
   baseURL: API_BASE_URL,

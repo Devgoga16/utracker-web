@@ -1,3 +1,5 @@
+import { publicOrigin } from '@/lib/platform'
+
 /**
  * El código de quien invitó, mientras la persona se registra.
  *
@@ -34,7 +36,7 @@ export function clearPendingReferral() {
 }
 
 export function referralLink(code: string) {
-  return `${window.location.origin}/register?ref=${encodeURIComponent(code)}`
+  return `${publicOrigin()}/register?ref=${encodeURIComponent(code)}`
 }
 
 export function normalizeReferralCode(value: string) {

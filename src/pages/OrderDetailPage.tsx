@@ -39,6 +39,7 @@ import type {
   WorkflowKind,
   WorkflowState,
 } from '@/types'
+import { publicOrigin } from '@/lib/platform'
 
 const ORIGIN_LABELS: Record<OrderCreatedVia, string> = {
   manual: 'carga manual',
@@ -437,7 +438,7 @@ function DeliveryRow({
 
 function TrackingLinkCard({ token }: { token: string }) {
   const [copied, setCopied] = useState(false)
-  const url = `${window.location.origin}/track/${token}`
+  const url = `${publicOrigin()}/track/${token}`
 
   async function copy() {
     await navigator.clipboard.writeText(url)

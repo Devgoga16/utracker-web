@@ -24,6 +24,7 @@ import { MethodChips } from '@/components/OrderPayments'
 import type { DaySchedule, Franja, OrderType, PaymentMethodKind, Product } from '@/types'
 // Turnos con nombre que no se confunde con «mañana, el día siguiente».
 import { FRANJA_LABELS } from '@/lib/dates'
+import { publicOrigin } from '@/lib/platform'
 
 const ALL_FRANJAS: Franja[] = ['morning', 'afternoon', 'evening']
 
@@ -336,7 +337,7 @@ export function NewOrderPage() {
       }),
     onSuccess: (data) =>
       setGeneratedLink({
-        url: `${window.location.origin}/order/${data.link.token}`,
+        url: `${publicOrigin()}/order/${data.link.token}`,
         expiresAt: data.expiresAt,
       }),
   })

@@ -3,6 +3,7 @@ import { AppLayout } from '@/components/AppLayout'
 import { SuperadminLayout } from '@/components/SuperadminLayout'
 import { RequireAuth, RequireSuperAdmin, RequireTenant } from '@/components/guards'
 import { CHANGE_PASSWORD_PATH } from '@/lib/paths'
+import { isNativeApp } from '@/lib/platform'
 import { LandingPage } from '@/pages/LandingPage'
 import { LoginPage } from '@/pages/LoginPage'
 import { RegisterPage } from '@/pages/RegisterPage'
@@ -48,7 +49,8 @@ import { SuperadminUsersPage } from '@/pages/superadmin/SuperadminUsersPage'
 import { ChangePasswordPage } from '@/pages/ChangePasswordPage'
 
 export const router = createBrowserRouter([
-  { path: '/', element: <LandingPage /> },
+  // En la app no hay landing que vender: se abre directo en el trabajo del día.
+  { path: '/', element: isNativeApp ? <Navigate to="/today" replace /> : <LandingPage /> },
   { path: '/login', element: <LoginPage /> },
   { path: '/register', element: <RegisterPage /> },
   { path: '/order/:token', element: <PublicOrderLinkPage /> },

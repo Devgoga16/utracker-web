@@ -21,6 +21,7 @@ import { cn } from '@/lib/cn'
 import { BRAND_PRESETS, DEFAULT_BRAND, buildBrandRamp, isValidHex } from '@/lib/brandColor'
 import type { DaySchedule, PaymentMethod } from '@/types'
 import { NotificationsGuide } from '@/components/NotificationsGuide'
+import { publicOrigin } from '@/lib/platform'
 
 type ScheduleDay = { day: number; enabled: boolean; open: string; close: string }
 
@@ -95,7 +96,7 @@ export function SettingsPage() {
     },
   })
 
-  const storeUrl = `${window.location.origin}/store/${activeTenant?.slug}`
+  const storeUrl = `${publicOrigin()}/store/${activeTenant?.slug}`
   const [copied, setCopied] = useState(false)
   function copyStoreUrl() {
     navigator.clipboard.writeText(storeUrl)

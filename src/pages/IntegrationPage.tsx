@@ -22,6 +22,7 @@ import {
 import { cn } from '@/lib/cn'
 import { buildStorefrontGuide, storefrontGuideFilename } from '@/lib/storefrontGuide'
 import { useAuthStore } from '@/stores/authStore'
+import { publicOrigin } from '@/lib/platform'
 
 function CopyButton({ text, label }: { text: string; label: string }) {
   const [copied, setCopied] = useState(false)
@@ -158,7 +159,7 @@ export function IntegrationPage() {
       storeName: tenant?.name ?? 'tu negocio',
       apiBase: API_BASE_URL,
       storeKey: liveKey,
-      appOrigin: window.location.origin,
+      appOrigin: publicOrigin(),
     })
     const url = URL.createObjectURL(new Blob([md], { type: 'text/markdown;charset=utf-8' }))
     const link = document.createElement('a')

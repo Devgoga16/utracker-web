@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Atajos al mantener presionado el ícono. Cada uno abre la app en una pantalla
+  con un link utracker://app/...; la web lo recibe en src/lib/nativeShell.ts,
+  que solo acepta estas rutas.
+-->
+<shortcuts xmlns:android="http://schemas.android.com/apk/res/android">
+    <shortcut
+        android:shortcutId="pos"
+        android:enabled="true"
+        android:icon="@drawable/ic_shortcut_pos"
+        android:shortcutShortLabel="@string/shortcut_pos_short"
+        android:shortcutLongLabel="@string/shortcut_pos_long">
+        <intent
+            android:action="android.intent.action.VIEW"
+            android:data="utracker://app/pos"
+            android:targetPackage="com.unifytc.utracker"
+            android:targetClass="com.unifytc.utracker.MainActivity" />
+    </shortcut>
+    <shortcut
+        android:shortcutId="new_order"
+        android:enabled="true"
+        android:icon="@drawable/ic_shortcut_new_order"
+        android:shortcutShortLabel="@string/shortcut_new_order_short"
+        android:shortcutLongLabel="@string/shortcut_new_order_long">
+        <intent
+            android:action="android.intent.action.VIEW"
+            android:data="utracker://app/orders/new"
+            android:targetPackage="com.unifytc.utracker"
+            android:targetClass="com.unifytc.utracker.MainActivity" />
+    </shortcut>
+    <shortcut
+        android:shortcutId="orders"
+        android:enabled="true"
+        android:icon="@drawable/ic_shortcut_orders"
+        android:shortcutShortLabel="@string/shortcut_orders_short"
+        android:shortcutLongLabel="@string/shortcut_orders_long">
+        <intent
+            android:action="android.intent.action.VIEW"
+            android:data="utracker://app/orders"
+            android:targetPackage="com.unifytc.utracker"
+            android:targetClass="com.unifytc.utracker.MainActivity" />
+    </shortcut>
+    <shortcut
+        android:shortcutId="today"
+        android:enabled="true"
+        android:icon="@drawable/ic_shortcut_today"
+        android:shortcutShortLabel="@string/shortcut_today_short"
+        android:shortcutLongLabel="@string/shortcut_today_long">
+        <intent
+            android:action="android.intent.action.VIEW"
+            android:data="utracker://app/today"
+            android:targetPackage="com.unifytc.utracker"
+            android:targetClass="com.unifytc.utracker.MainActivity" />
+    </shortcut>
+</shortcuts>
